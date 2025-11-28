@@ -1,0 +1,38 @@
+@startuml
+actor       User       as u1
+control     "Nwc\n.exe"     as nwc
+control     "Nwc-concat\n.py"      as nwconcpy
+control     "Nwc-convert\n.py"      as nwconvpy
+control     "Nwc-conv\n.exe"  as nwconvexe
+control     "Fluidsynth\n.exe"   as fluid
+control     "Ffmpeg\n.exe" as ffmpeg
+control     "Lt-generate\n.py" as ltgenerate
+control     "Lt-upload\n.ps"    as ltupload
+control     "Tenacity\n.exe"  as tenacity
+database    PDrive as pdrive
+database    "Git\nrepository" as repos
+database    "C:/Temp" as temp
+
+autonumber
+u1 -> nwc : start GUI
+u1 -> repos : (manual) create multi .nwctxt's
+u1 -> nwconcpy : run script
+nwconcpy -> repos : create merged nwctxt, create structuur .tex, update lied .tex
+nwconcpy -> temp : create labeltrack.txt
+u1 -> nwconvpy : run script
+nwconvpy -> nwconvexe : call
+nwconvexe -> temp : convert .nwctxt to .mid
+nwconvpy -> fluid : call
+fluid -> temp : convert .mid to.wav
+nwconvpy -> ffmpeg : call
+ffmpeg -> temp : convert .wav to .flac
+u1 -> repos : (manual) create liedtekst.tex
+u1 -> ltgenerate : run script
+ltgenerate -> repos : render liedtekst .pdf, render structuur .pdf
+u1 -> ltupload : run script
+ltupload -> pdrive : upload pdf's to drive
+u1 -> tenacity : start GUI
+tenacity <- temp : import .flac 
+tenacity <- temp : import labeltrack
+u1 -> tenacity : (manual) make recording
+@enduml
