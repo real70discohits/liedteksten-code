@@ -1,0 +1,11 @@
+# exclude subdirectories
+- */
+
+# exclude templates
+- Template*.pdf
+
+# include all pdf's
++ *.pdf
+
+# exclude everything else
+- *
