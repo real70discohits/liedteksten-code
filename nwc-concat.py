@@ -759,7 +759,7 @@ def main():
     # Resolve configured paths
     input_folder = resolve_path(config.input_folder, config_dir)
     output_folder = resolve_path(config.output_folder, config_dir)
-    temp_folder = resolve_path(config.temp_folder, config_dir)
+    audio_output_folder = resolve_path(config.audio_output_folder, config_dir)
 
     # Validate input folder exists
     if not validate_folder_exists(input_folder, "Input folder"):
@@ -768,7 +768,7 @@ def main():
     # Ensure output folders are writable
     if not ensure_folder_writable(output_folder, "Output folder"):
         sys.exit(1)
-    if not ensure_folder_writable(temp_folder, "Temp folder"):
+    if not ensure_folder_writable(audio_output_folder, "Temp folder"):
         sys.exit(1)
 
     # Open song folder
@@ -845,7 +845,7 @@ def main():
     print(f"✅ Success! Created: {tex_file}")
 
     # Generate label track file for Tenacity
-    labeltrack_file = temp_folder / f"{songtitle} labeltrack t_{tempo}.txt"
+    labeltrack_file = audio_output_folder / f"{songtitle} labeltrack t_{tempo}.txt"
     print(f"Generating: {labeltrack_file}")
     write_labeltrack_file(labeltrack_file, measurecount_and_starttime_per_lieddeel)
     print(f"✅ Success! Created: {labeltrack_file}")

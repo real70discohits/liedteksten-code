@@ -17,9 +17,9 @@
     // Output folder where generated files will be saved
     // Generated files: concatenated .nwctxt, structure .tex, etc.
     // Default: ".." (parent directory)
-    "output_folder": "..",
+    "output_folder": "../_dist",
 
-    // Temporary folder for label track files
+    // Destination folder for label track, .mid, .wav and .flac files
     // Default: "c:/temp" on Windows, "/tmp" on Linux/Mac
-    "temp_folder": "c:/temp"
+    "audio_output_folder": "c:/temp"
 }

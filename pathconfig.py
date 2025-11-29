@@ -13,23 +13,23 @@ from typing import Optional
 class PathConfig:
     """Container for path configuration settings."""
 
-    def __init__(self, input_folder: str, output_folder: str, temp_folder: str):
+    def __init__(self, input_folder: str, output_folder: str, audio_output_folder: str):
         """Initialize PathConfig with folder paths.
 
         Args:
             input_folder: Path to input folder (relative or absolute)
             output_folder: Path to output folder (relative or absolute)
-            temp_folder: Path to temporary folder (relative or absolute)
+            audio_output_folder: Path to temporary folder (relative or absolute)
         """
         self.input_folder = input_folder
         self.output_folder = output_folder
-        self.temp_folder = temp_folder
+        self.audio_output_folder = audio_output_folder
 
     def __repr__(self) -> str:
         """Return string representation of configuration."""
         return (f"PathConfig(input_folder='{self.input_folder}', "
                 f"output_folder='{self.output_folder}', "
-                f"temp_folder='{self.temp_folder}')")
+                f"audio_output_folder='{self.audio_output_folder}')")
 
 
 def _load_jsonc(filepath: Path) -> dict:
@@ -128,13 +128,13 @@ def load_path_config(config_file: Optional[Path] = None) -> PathConfig:
     try:
         input_folder = data['input_folder']
         output_folder = data['output_folder']
-        temp_folder = data['temp_folder']
+        audio_output_folder = data['audio_output_folder']
     except KeyError as e:
         print(f"❌ Error: Missing required field in configuration: {e}")
-        print(f"   Required fields: input_folder, output_folder, temp_folder")
+        print(f"   Required fields: input_folder, output_folder, audio_output_folder")
         sys.exit(1)
 
-    return PathConfig(input_folder, output_folder, temp_folder)
+    return PathConfig(input_folder, output_folder, audio_output_folder)
 
 
 def resolve_path(base_path: str, config_dir: Path) -> Path:
