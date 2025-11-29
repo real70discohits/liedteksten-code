@@ -1,0 +1,16 @@
+{
+    // Path configuration for liedteksten scripts
+    // Paths can be relative (to this config file) or absolute
+
+    // Input folder where source files are located (NWC files, etc.)
+    // Default: "../NWC" (parent directory, NWC subfolder)
+    "input_folder": "../NWC",
+
+    // Output folder where generated files will be saved
+    // Default: ".." (parent directory)
+    "output_folder": "..",
+
+    // Temporary folder for label track files
+    // Default: "c:/temp" on Windows, "/tmp" on Linux/Mac
+    "temp_folder": "c:/temp"
+}
