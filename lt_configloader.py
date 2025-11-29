@@ -1,9 +1,9 @@
 """ (helper) Configuration classes for reading settings from json. """
 
 from dataclasses import dataclass
-import commentjson  # in plaats van json: Ondersteunt // en /* */ comments
 from typing import Optional
 from pathlib import Path
+import commentjson  # in plaats van json: Ondersteunt // en /* */ comments
 
 
 @dataclass
@@ -34,7 +34,7 @@ class ConfigLoader:
     def load_from_file(filepath: str | Path) -> list[ConfigItem]:
         """Leest JSON-configuratie in en parsed naar ConfigItem objecten."""
         with open(filepath, 'r', encoding='utf-8') as f:
-            data = commentjson.load(f)  
+            data = commentjson.load(f)
 
         config_items = []
         for item in data:
