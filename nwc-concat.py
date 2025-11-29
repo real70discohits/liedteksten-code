@@ -6,12 +6,12 @@ Creates:
 - Concatenated .nwctxt file with all sections
 - LaTeX structure file with song metadata, parts overview, and composition
 
-Usage: 
+Usage:
     python nwc-concat.py "Song Title"
     python nwc-concat.py "Song Title" --keep-tempi
 
-Dependencies: 
-- (none)
+Dependencies:
+- pathconfig module (for path configuration)
 
 """
 
@@ -20,6 +20,8 @@ import json
 import sys
 from pathlib import Path
 import re
+from pathconfig import (load_path_config, resolve_path, validate_folder_exists,
+                        validate_file_exists, ensure_folder_writable)
 
 
 def load_jsonc(filepath):
@@ -539,14 +541,15 @@ def write_labeltrack_file(labeltrack_file, measurecount_and_starttime_per_liedde
             f.write(f'{start}\t{start}\t{lieddeel}' + '\n')
 
 
-def update_liedtekst_tex_file(liedtitel, tempo, maatsoort):
+def update_liedtekst_tex_file(liedtitel, tempo, maatsoort, song_folder=None):
     """Update tempo and maatsoort in .tex file
-    
+
     Args:
         liedtitel: Song title (string)
         tempo: Tempo value (int)
         maatsoort: Time signature in format "int/int" (string)
-    
+        song_folder: Path to song folder (Path object). If None, uses parent directory.
+
     Returns:
         bool: True if successful, False otherwise
     """
@@ -565,10 +568,14 @@ def update_liedtekst_tex_file(liedtitel, tempo, maatsoort):
         print(f"❌ Error: Maatsoort must be in format 'int/int', got: {maatsoort}")
         return False
 
+    # Determine tex file location (in song folder)
+    if song_folder is None:
+        tex_file = Path(f"../{liedtitel}/{liedtitel}.tex")
+    else:
+        tex_file = Path(song_folder) / f"{liedtitel}.tex"
+
     # Check if .tex file exists
-    tex_file = Path(f"..//{liedtitel}.tex")
-    if not tex_file.exists():
-        print(f"❌ Error: File '{tex_file}' does not exist")
+    if not validate_file_exists(tex_file, f"Liedtekst .tex file for '{liedtitel}'"):
         return False
 
     # Read file
@@ -731,7 +738,10 @@ def get_pickup_beats(nwctxt_filepath):
 
 
 def main():
-    """main
+    """Main entry point for nwc-concat script.
+
+    Loads path configuration, validates folders, and concatenates
+    NoteWorthy Composer files based on song structure.
     """
     parser = argparse.ArgumentParser(description='Concatenate NoteWorthy Composer files')
     parser.add_argument('songtitle', help='Title of the song')
@@ -742,16 +752,38 @@ def main():
     songtitle = args.songtitle
     keep_tempi = args.keep_tempi
 
-    # Open subfolder
-    subfolder = Path("..\\NWC\\" + songtitle)
-    if not subfolder.exists() or not subfolder.is_dir():
-        print(f"❌ Error: Subfolder '{songtitle}' does not exist")
+    # Load path configuration
+    config = load_path_config()
+    config_dir = Path(__file__).parent
+
+    # Resolve configured paths
+    input_folder = resolve_path(config.input_folder, config_dir)
+    output_folder = resolve_path(config.output_folder, config_dir)
+    temp_folder = resolve_path(config.temp_folder, config_dir)
+
+    # Validate input folder exists
+    if not validate_folder_exists(input_folder, "Input folder"):
         sys.exit(1)
 
-    # Load 'volgorde' file
-    volgorde_file = subfolder / f"{songtitle} volgorde.jsonc"
-    if not volgorde_file.exists():
-        print(f"❌ Error: volgorde file '{volgorde_file}' does not exist")
+    # Ensure output folders are writable
+    if not ensure_folder_writable(output_folder, "Output folder"):
+        sys.exit(1)
+    if not ensure_folder_writable(temp_folder, "Temp folder"):
+        sys.exit(1)
+
+    # Open song folder
+    song_folder = input_folder / songtitle
+    if not validate_folder_exists(song_folder, f"Song folder '{songtitle}'"):
+        sys.exit(1)
+
+    # Open nwc subfolder within song folder
+    nwc_folder = song_folder / "nwc"
+    if not validate_folder_exists(nwc_folder, f"NWC subfolder for '{songtitle}'"):
+        sys.exit(1)
+
+    # Load 'volgorde' file from nwc subfolder
+    volgorde_file = nwc_folder / f"{songtitle} volgorde.jsonc"
+    if not validate_file_exists(volgorde_file, "Song sequence file (volgorde)"):
         sys.exit(1)
 
     try:
@@ -776,10 +808,9 @@ def main():
     pickup_beats = 0
 
     for lieddeel in volgorde_lieddelen:
-        lieddeel_nwctxt = subfolder / f"{songtitle} {lieddeel}.nwctxt"
+        lieddeel_nwctxt = nwc_folder / f"{songtitle} {lieddeel}.nwctxt"
 
-        if not lieddeel_nwctxt.exists():
-            print(f"❌ Error: Lieddeel file '{lieddeel_nwctxt}' does not exist")
+        if not validate_file_exists(lieddeel_nwctxt, f"Lieddeel file '{lieddeel}'"):
             sys.exit(1)
 
         # Extract tempo and timesig from first section, only once per deel
@@ -802,24 +833,24 @@ def main():
         print(f"Adding lieddeel: {lieddeel}{measure_str}")
 
     # Concatenate files
-    output_nwctxt = f"{songtitle}.nwctxt"
+    output_nwctxt = output_folder / f"{songtitle}.nwctxt"
     print(f"\nConcatenating {len(file_list)} lieddelen...")
-    concatenate_nwctxt_files(file_list, output_nwctxt, keep_tempi=keep_tempi)
+    concatenate_nwctxt_files(file_list, str(output_nwctxt), keep_tempi=keep_tempi)
     print(f"✅ Success! Concatenated .nwctxt files to {output_nwctxt}")
 
     # Generate complete LaTeX structure file
-    tex_file = Path(f"{songtitle} structuur.tex")
+    tex_file = output_folder / f"{songtitle} structuur.tex"
     print(f"Generating: {tex_file}")
     write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel)
     print(f"✅ Success! Created: {tex_file}")
 
     # Generate label track file for Tenacity
-    labeltrack_file = Path(f"c:\\temp\\{songtitle} labeltrack t_{tempo}.txt")
+    labeltrack_file = temp_folder / f"{songtitle} labeltrack t_{tempo}.txt"
     print(f"Generating: {labeltrack_file}")
     write_labeltrack_file(labeltrack_file, measurecount_and_starttime_per_lieddeel)
     print(f"✅ Success! Created: {labeltrack_file}")
 
-    update_liedtekst_tex_file(songtitle, tempo, timesig)
+    update_liedtekst_tex_file(songtitle, tempo, timesig, song_folder)
     print(f"✅ Success! Updated liedtekst tempo and timesig for {songtitle}")
 
 
