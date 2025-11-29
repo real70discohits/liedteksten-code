@@ -29,12 +29,24 @@ class ConfigItem:
     action: Action
 
 class ConfigLoader:
-    """Dada"""
+    """Configuration loader for song-specific settings."""
+
     @staticmethod
     def load_from_file(filepath: str | Path) -> list[ConfigItem]:
-        """Leest JSON-configuratie in en parsed naar ConfigItem objecten."""
+        """Load JSON configuration and parse to ConfigItem objects.
+
+        Args:
+            filepath: Path to the configuration file
+
+        Returns:
+            List of ConfigItem objects
+
+        Raises:
+            FileNotFoundError: If the file doesn't exist
+            Various exceptions for invalid JSON or config structure
+        """
         with open(filepath, 'r', encoding='utf-8') as f:
-            data = commentjson.load(f)  
+            data = commentjson.load(f)
 
         config_items = []
         for item in data:
@@ -54,6 +66,21 @@ class ConfigLoader:
                 description=description, condition=condition, action=action))
 
         return config_items
+
+    @staticmethod
+    def load_from_file_optional(filepath: str | Path) -> list[ConfigItem]:
+        """Load JSON configuration, returning empty list if file doesn't exist.
+
+        Args:
+            filepath: Path to the configuration file
+
+        Returns:
+            List of ConfigItem objects, or empty list if file doesn't exist
+        """
+        if not Path(filepath).exists():
+            return []
+
+        return ConfigLoader.load_from_file(filepath)
 
 
 def get_config(configs: list[ConfigItem], lied_id: int,
