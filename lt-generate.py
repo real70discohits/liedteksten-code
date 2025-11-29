@@ -149,7 +149,7 @@ def compile_tex_file(
                 ],
                 capture_output=True,
                 text=True,
-                check=False,  # wat doet dit?
+                check=False,
                 env=env
             )
 
@@ -301,9 +301,6 @@ def compile_structuur_file(songtitle, input_folder, output_folder, cleanup=True,
         print(f"ℹ️  No metadata found in {tex_file}, skipping structuur generation")
         return False
 
-    # song_title = title_match.group(1)
-    # song_id = id_match.group(1)
-
     # Construct path to structuur.tex file (in output folder)
     bare_filename = songtitle
     structuur_tex = output_folder / f"{bare_filename} structuur.tex"
@@ -314,22 +311,25 @@ def compile_structuur_file(songtitle, input_folder, output_folder, cleanup=True,
 
     print(f"\n📄 Compiling structuur file: {structuur_tex}")
 
-    # Output name for the PDF (same as .tex but in root folder)
+    # Output name for the PDF (same as .tex)
     output_name = f"{bare_filename} structuur"
 
     # Convert path to forward slashes for pdflatex (works cross-platform)
     tex_path_for_latex = str(structuur_tex).replace('\\', '/')
 
     # input_folder contains the song folders with .tex files
-    tex_input_dir = os.path.abspath(input_folder)
+    tex_input_dir = os.path.abspath(output_folder)
     env = os.environ.copy()
     env['TEXINPUTS'] = f'{tex_input_dir}//;' + env.get('TEXINPUTS', '')
 
     # Compile twice for proper references (tables, etc.)
     for _ in range(2):
         result = subprocess.run(
-            [engine, f'{output_name}', tex_path_for_latex],
-            capture_output=False,
+            [engine, 
+                f'-jobname={output_name}'
+                , tex_path_for_latex
+            ],
+            capture_output=True,
             text=True,
             check=False
         )
