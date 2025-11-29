@@ -2,11 +2,20 @@
     // Path configuration for liedteksten scripts
     // Paths can be relative (to this config file) or absolute
 
-    // Input folder where source files are located (NWC files, etc.)
-    // Default: "../NWC" (parent directory, NWC subfolder)
-    "input_folder": "../NWC",
+    // Input folder structure (per song):
+    // {input_folder}/
+    //   ├── <Song Title>/
+    //   │   ├── <Song Title>.tex          (song lyrics)
+    //   │   └── nwc/                       (music notation files)
+    //   │       ├── <Song Title> intro.nwctxt
+    //   │       ├── <Song Title> verse.nwctxt
+    //   │       └── <Song Title> volgorde.jsonc
+    //
+    // Default: ".." (parent directory)
+    "input_folder": "..",
 
     // Output folder where generated files will be saved
+    // Generated files: concatenated .nwctxt, structure .tex, etc.
     // Default: ".." (parent directory)
     "output_folder": "..",
 

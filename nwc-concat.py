@@ -541,14 +541,14 @@ def write_labeltrack_file(labeltrack_file, measurecount_and_starttime_per_liedde
             f.write(f'{start}\t{start}\t{lieddeel}' + '\n')
 
 
-def update_liedtekst_tex_file(liedtitel, tempo, maatsoort, output_folder=None):
+def update_liedtekst_tex_file(liedtitel, tempo, maatsoort, song_folder=None):
     """Update tempo and maatsoort in .tex file
 
     Args:
         liedtitel: Song title (string)
         tempo: Tempo value (int)
         maatsoort: Time signature in format "int/int" (string)
-        output_folder: Path to output folder (Path object). If None, uses parent directory.
+        song_folder: Path to song folder (Path object). If None, uses parent directory.
 
     Returns:
         bool: True if successful, False otherwise
@@ -568,11 +568,11 @@ def update_liedtekst_tex_file(liedtitel, tempo, maatsoort, output_folder=None):
         print(f"❌ Error: Maatsoort must be in format 'int/int', got: {maatsoort}")
         return False
 
-    # Determine tex file location
-    if output_folder is None:
-        tex_file = Path(f"../{liedtitel}.tex")
+    # Determine tex file location (in song folder)
+    if song_folder is None:
+        tex_file = Path(f"../{liedtitel}/{liedtitel}.tex")
     else:
-        tex_file = Path(output_folder) / f"{liedtitel}.tex"
+        tex_file = Path(song_folder) / f"{liedtitel}.tex"
 
     # Check if .tex file exists
     if not validate_file_exists(tex_file, f"Liedtekst .tex file for '{liedtitel}'"):
@@ -771,13 +771,18 @@ def main():
     if not ensure_folder_writable(temp_folder, "Temp folder"):
         sys.exit(1)
 
-    # Open subfolder for this song
-    subfolder = input_folder / songtitle
-    if not validate_folder_exists(subfolder, f"Song subfolder '{songtitle}'"):
+    # Open song folder
+    song_folder = input_folder / songtitle
+    if not validate_folder_exists(song_folder, f"Song folder '{songtitle}'"):
         sys.exit(1)
 
-    # Load 'volgorde' file
-    volgorde_file = subfolder / f"{songtitle} volgorde.jsonc"
+    # Open nwc subfolder within song folder
+    nwc_folder = song_folder / "nwc"
+    if not validate_folder_exists(nwc_folder, f"NWC subfolder for '{songtitle}'"):
+        sys.exit(1)
+
+    # Load 'volgorde' file from nwc subfolder
+    volgorde_file = nwc_folder / f"{songtitle} volgorde.jsonc"
     if not validate_file_exists(volgorde_file, "Song sequence file (volgorde)"):
         sys.exit(1)
 
@@ -803,7 +808,7 @@ def main():
     pickup_beats = 0
 
     for lieddeel in volgorde_lieddelen:
-        lieddeel_nwctxt = subfolder / f"{songtitle} {lieddeel}.nwctxt"
+        lieddeel_nwctxt = nwc_folder / f"{songtitle} {lieddeel}.nwctxt"
 
         if not validate_file_exists(lieddeel_nwctxt, f"Lieddeel file '{lieddeel}'"):
             sys.exit(1)
@@ -845,7 +850,7 @@ def main():
     write_labeltrack_file(labeltrack_file, measurecount_and_starttime_per_lieddeel)
     print(f"✅ Success! Created: {labeltrack_file}")
 
-    update_liedtekst_tex_file(songtitle, tempo, timesig, output_folder)
+    update_liedtekst_tex_file(songtitle, tempo, timesig, song_folder)
     print(f"✅ Success! Updated liedtekst tempo and timesig for {songtitle}")
 
 
