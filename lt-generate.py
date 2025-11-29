@@ -34,7 +34,7 @@ from pathconfig import load_path_config, resolve_path, validate_file_exists
 # with measurenumbers and without. So the multiple output pdf's on
 # a single call to this method only happens if a song has multiple transpositions.
 def compile_tex_file(
-    songtitle, input_folder, cleanup=True, engine='pdflatex',
+    songtitle, input_folder, output_folder, cleanup=True, engine='pdflatex',
     show_measures=False, show_chords=False, show_tabs=False, tab_orientation='left'):
 
     # ***  Verify .tex file exists ***
@@ -144,6 +144,7 @@ def compile_tex_file(
         while i < 2:
             result = subprocess.run(
                 [engine,
+                    f'-output-directory={output_folder}',
                     f'-jobname={output_name}'
                     , pdflatex_args
                 ],
@@ -168,7 +169,7 @@ def compile_tex_file(
 
                 if cleanup:
                     for ext in ['.aux', '.log', '.out', '.toc']:
-                        aux_file = Path(f"{output_name}{ext}")
+                        aux_file = output_folder / f"{output_name}{ext}"
                         if aux_file.exists():
                             aux_file.unlink()
             else:
@@ -325,13 +326,15 @@ def compile_structuur_file(songtitle, input_folder, output_folder, cleanup=True,
     # Compile twice for proper references (tables, etc.)
     for _ in range(2):
         result = subprocess.run(
-            [engine, 
+            [engine,
+                f'-output-directory={output_folder}',
                 f'-jobname={output_name}'
                 , tex_path_for_latex
             ],
             capture_output=True,
             text=True,
-            check=False
+            check=False,
+            env=env
         )
 
         if result.returncode != 0:
@@ -342,7 +345,7 @@ def compile_structuur_file(songtitle, input_folder, output_folder, cleanup=True,
     # Cleanup auxiliary files
     if cleanup:
         for ext in ['.aux', '.log', '.out', '.toc']:
-            aux_file = Path(f"{output_name}{ext}")
+            aux_file = output_folder / f"{output_name}{ext}"
             if aux_file.exists():
                 aux_file.unlink()
 
@@ -439,23 +442,23 @@ def main():
 
     if only < 2:
         # generate liedtekst pdf
-        success = sum(compile_tex_file(f, input_folder, not args.no_cleanup, args.engine) for f in songtitles)
+        success = sum(compile_tex_file(f, input_folder, output_folder, not args.no_cleanup, args.engine) for f in songtitles)
 
     if only == 2 or only == 0:
         # generate liedtekst pdf with measurenumbers
-        success = success + sum(compile_tex_file(f, input_folder, not args.no_cleanup, args.engine, show_measures=True) for f in songtitles)
+        success = success + sum(compile_tex_file(f, input_folder, output_folder, not args.no_cleanup, args.engine, show_measures=True) for f in songtitles)
 
     if only == 3 or only == 0:
         # generate liedtekst pdf with chords
-        success = success + sum(compile_tex_file(f, input_folder, not args.no_cleanup, args.engine, show_measures=False, show_chords=True) for f in songtitles)
+        success = success + sum(compile_tex_file(f, input_folder, output_folder, not args.no_cleanup, args.engine, show_measures=False, show_chords=True) for f in songtitles)
 
     if only == 4 or only == 0:
         # generate liedtekst pdf with measurenumbers and chords
-        success = success + sum(compile_tex_file(f, input_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True) for f in songtitles)
+        success = success + sum(compile_tex_file(f, input_folder, output_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True) for f in songtitles)
 
     if only == 5 or only == 0:
         # generate liedtekst pdf with measurenumbers, chords and guitartabs
-        success = success + sum(compile_tex_file(f, input_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True, show_tabs=True, tab_orientation=tab_orientation) for f in songtitles)
+        success = success + sum(compile_tex_file(f, input_folder, output_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True, show_tabs=True, tab_orientation=tab_orientation) for f in songtitles)
 
     # Generate structuur PDF for each liedtekst
     print("\n" + "="*60)
