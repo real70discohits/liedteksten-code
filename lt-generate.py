@@ -34,13 +34,18 @@ from pathconfig import load_path_config, resolve_path, validate_file_exists
 # with measurenumbers and without. So the multiple output pdf's on
 # a single call to this method only happens if a song has multiple transpositions.
 def compile_tex_file(
-    configurations:list[ConfigItem], songtitle, input_folder, cleanup=True, engine='pdflatex',
+    songtitle, input_folder, cleanup=True, engine='pdflatex',
     show_measures=False, show_chords=False, show_tabs=False, tab_orientation='left'):
 
     # ***  Verify .tex file exists ***
     tex_file = input_folder / songtitle / f"{songtitle}.tex"
     if not validate_file_exists(tex_file, f"LaTeX file for '{songtitle}'"):
         return False
+
+    # ***  Load song-specific configuration ***
+    song_folder = input_folder / songtitle
+    lt_config_file = song_folder / "lt-config.jsonc"
+    configurations = ConfigLoader.load_from_file_optional(lt_config_file)
 
     # ***  Read .tex file  ***
     with open(tex_file, 'r', encoding='utf-8') as f:
@@ -429,32 +434,28 @@ def main():
     # in the list of lines that start with "success = ..." below.
     only = args.only
 
-    # ***  Read .json configuration file  ***
-    lt_config_file = input_folder.parent / "lt-config.jsonc"
-    configurations = ConfigLoader.load_from_file(lt_config_file)
-
     success = 0
     structuur_success = 0
 
     if only < 2:
         # generate liedtekst pdf
-        success = sum(compile_tex_file(configurations, f, input_folder, not args.no_cleanup, args.engine) for f in songtitles)
+        success = sum(compile_tex_file(f, input_folder, not args.no_cleanup, args.engine) for f in songtitles)
 
     if only == 2 or only == 0:
         # generate liedtekst pdf with measurenumbers
-        success = success + sum(compile_tex_file(configurations, f, input_folder, not args.no_cleanup, args.engine, show_measures=True) for f in songtitles)
+        success = success + sum(compile_tex_file(f, input_folder, not args.no_cleanup, args.engine, show_measures=True) for f in songtitles)
 
     if only == 3 or only == 0:
         # generate liedtekst pdf with chords
-        success = success + sum(compile_tex_file(configurations, f, input_folder, not args.no_cleanup, args.engine, show_measures=False, show_chords=True) for f in songtitles)
+        success = success + sum(compile_tex_file(f, input_folder, not args.no_cleanup, args.engine, show_measures=False, show_chords=True) for f in songtitles)
 
     if only == 4 or only == 0:
         # generate liedtekst pdf with measurenumbers and chords
-        success = success + sum(compile_tex_file(configurations, f, input_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True) for f in songtitles)
+        success = success + sum(compile_tex_file(f, input_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True) for f in songtitles)
 
     if only == 5 or only == 0:
         # generate liedtekst pdf with measurenumbers, chords and guitartabs
-        success = success + sum(compile_tex_file(configurations, f, input_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True, show_tabs=True, tab_orientation=tab_orientation) for f in songtitles)
+        success = success + sum(compile_tex_file(f, input_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True, show_tabs=True, tab_orientation=tab_orientation) for f in songtitles)
 
     # Generate structuur PDF for each liedtekst
     print("\n" + "="*60)
