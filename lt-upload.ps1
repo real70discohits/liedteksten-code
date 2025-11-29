@@ -18,7 +18,7 @@
 
 
 #   P R O D U C T I O N:    move all pdf's to PDrive    (use --dry-run to test)
-rclone moveto '../_dist' ProtonDrive:'Creatie/Muziek/Uploads/' --progress --filter-from lt-upload-filter.txt 
+rclone move '../_dist' ProtonDrive:'Creatie/Muziek/Uploads/' --progress --filter-from lt-upload-filter.txt 
 
 
 #   E X A M P L E:   move single file to PDrive
