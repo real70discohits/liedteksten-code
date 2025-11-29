@@ -1,0 +1,5 @@
+[MESSAGES CONTROL]
+
+# Disable specific warnings
+disable=
+    f-string-without-interpolation  # W1309: Allow f-strings without interpolation
