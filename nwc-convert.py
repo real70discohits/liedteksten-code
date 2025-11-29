@@ -146,7 +146,7 @@ def run_conversion_step(step_num, description, command, output_file):
         )
 
         if result.returncode != 0:
-            print(f"✗ Command failed with return code {result.returncode}")
+            print(f"❌ Command failed with return code {result.returncode}")
             if result.stderr:
                 print(f"\nSTDERR:\n{result.stderr}")
             if result.stdout:
@@ -154,18 +154,18 @@ def run_conversion_step(step_num, description, command, output_file):
             return False
 
         if not output_file.exists():
-            print(f"✗ Expected output file was not created: {output_file}")
+            print(f"❌ Expected output file was not created: {output_file}")
             return False
 
         file_size_mb = output_file.stat().st_size / (1024 * 1024)
-        print(f"✓ Success! Created: {output_file.name} ({file_size_mb:.2f} MB)\n")
+        print(f"✅ Success! Created: {output_file.name} ({file_size_mb:.2f} MB)\n")
         return True
 
     except subprocess.TimeoutExpired:
-        print(f"✗ Command timed out (exceeded 5 minutes)")
+        print(f"❌ Command timed out (exceeded 5 minutes)")
         return False
     except Exception as e:
-        print(f"✗ Unexpected error: {e}")
+        print(f"❌ Unexpected error: {e}")
         return False
 
 
@@ -226,7 +226,7 @@ Examples:
 
     # ===== VERIFY TOOLS =====
     if not verify_tools():
-        print("ERROR: Tool verification failed.")
+        print("❌ ERROR: Tool verification failed.")
         print("\nPlease ensure the following are installed and accessible via PATH:")
         print("  - nwc-conv (NoteWorthy Composer converter)")
         print("  - fluidsynth (MIDI to audio synthesizer)")
@@ -241,7 +241,7 @@ Examples:
     input_path = get_input_file_path(args.input, output_folder)
 
     if not input_path.exists():
-        print("ERROR: Input file not found:")
+        print("❌ ERROR: Input file not found:")
         print(f"  {input_path}")
         print("\nPlease verify the file path and try again.")
         sys.exit(1)
@@ -254,7 +254,7 @@ Examples:
     try:
         output_dir.mkdir(parents=True, exist_ok=True)
     except Exception as e:
-        print(f"ERROR: Could not create output directory:")
+        print(f"❌ ERROR: Could not create output directory:")
         print(f"  {output_dir}")
         print(f"  {e}")
         sys.exit(1)
@@ -264,7 +264,7 @@ Examples:
     # ===== VALIDATE SOUNDFONT =====
     soundfont_path = Path(args.soundfont)
     if not soundfont_path.exists():
-        print(f"ERROR: Soundfont file not found:")
+        print(f"❌ ERROR: Soundfont file not found:")
         print(f"  {soundfont_path}")
         print(f"\nSpecify an existing soundfont with: --soundfont <path>")
         sys.exit(1)
@@ -312,7 +312,7 @@ Examples:
 
     # ===== SUCCESS =====
     print("=" * 60)
-    print("✓ SUCCESS: All conversions completed!")
+    print("✅ SUCCESS: All conversions completed!")
     print("=" * 60)
     print(f"\nFinal output:\n  {flac_path}\n")
 
