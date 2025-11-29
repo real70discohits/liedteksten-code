@@ -12,7 +12,7 @@ Usage:
     python nwc-convert.py myfile --out D:\audio
     python nwc-convert.py myfile --soundfont path/to/soundfont.sf2
 
-Dependencies: 
+Dependencies:
 - noteworthy composer (nwc), specifically nwc-conv.exe
 - fluidsynth
 - ffmpeg
@@ -27,6 +27,7 @@ import sys
 import subprocess
 from pathlib import Path
 import argparse
+from pathconfig import load_path_config, resolve_path
 
 
 def verify_tools():
@@ -39,11 +40,11 @@ def verify_tools():
         'fluidsynth': ('fluidsynth -V', 'FluidSynth runtime version'),
         'ffmpeg': ('ffmpeg', 'ffmpeg version')
     }
-    
+
     print("=" * 60)
     print("Verifying required tools...")
     print("=" * 60)
-    
+
     for tool_name, (cmd, expected_output) in tools.items():
         try:
             result = subprocess.run(
@@ -54,7 +55,7 @@ def verify_tools():
                 timeout=5
             )
             output = result.stdout + result.stderr
-            
+
             if expected_output.lower() in output.lower():
                 print(f"✓ {tool_name:15} is available")
             else:
@@ -62,33 +63,53 @@ def verify_tools():
                 print(f"  Expected output containing: '{expected_output}'")
                 print(f"  Got: {output[:150]}")
                 return False
-                
+
         except subprocess.TimeoutExpired:
             print(f"✗ {tool_name:15} verification timed out")
             return False
         except Exception as e:
             print(f"✗ {tool_name:15} failed: {e}")
             return False
-    
+
     print()
     return True
 
 
-def get_input_file_path(input_arg):
+def get_input_file_path(input_arg, base_folder=None):
+    """Process input argument to get a valid file path.
+
+    Args:
+        input_arg: Input file path or name
+        base_folder: Base folder to search in (default: current directory)
+
+    Returns:
+        Resolved Path object
+
+    Behavior:
+        - If input_arg is absolute path, use as-is
+        - If no extension, assume .nwctxt
+        - If no path specified, look in base_folder (default: current directory)
     """
-    Process input argument to get a valid file path.
-    - If no extension, assume .nwctxt
-    - If no path specified, use parent directory
-    """
-    path = Path(f"..//{input_arg}")
+    path = Path(input_arg)
+
+    # If absolute path, use as-is (just add extension if missing)
+    if path.is_absolute():
+        if path.suffix == '':
+            path = path.with_suffix('.nwctxt')
+        return path
+
+    # For relative paths, use base_folder
+    if base_folder is None:
+        base_folder = Path.cwd()
+    else:
+        base_folder = Path(base_folder)
+
+    # Construct path in base folder
+    path = base_folder / input_arg
 
     # If no extension, add .nwctxt
     if path.suffix == '':
         path = path.with_suffix('.nwctxt')
-
-    # If not absolute path, make it relative to current directory
-    if not path.is_absolute():
-        path = Path.cwd() / path
 
     return path
 
@@ -102,19 +123,19 @@ def get_output_path(input_path, output_dir, extension):
 def run_conversion_step(step_num, description, command, output_file):
     """
     Run a single conversion step.
-    
+
     Args:
         step_num: Step number for display (1, 2, 3)
         description: Human-readable description of what's happening
         command: Shell command to execute
         output_file: Expected output file path
-    
+
     Returns:
         True if successful, False otherwise
     """
     print(f"Step {step_num}/3: {description}")
     print(f"Command: {command}\n")
-    
+
     try:
         result = subprocess.run(
             command,
@@ -123,7 +144,7 @@ def run_conversion_step(step_num, description, command, output_file):
             text=True,
             timeout=300  # 5 minute timeout per step
         )
-        
+
         if result.returncode != 0:
             print(f"✗ Command failed with return code {result.returncode}")
             if result.stderr:
@@ -131,15 +152,15 @@ def run_conversion_step(step_num, description, command, output_file):
             if result.stdout:
                 print(f"\nSTDOUT:\n{result.stdout}")
             return False
-        
+
         if not output_file.exists():
             print(f"✗ Expected output file was not created: {output_file}")
             return False
-        
+
         file_size_mb = output_file.stat().st_size / (1024 * 1024)
         print(f"✓ Success! Created: {output_file.name} ({file_size_mb:.2f} MB)\n")
         return True
-        
+
     except subprocess.TimeoutExpired:
         print(f"✗ Command timed out (exceeded 5 minutes)")
         return False
@@ -149,7 +170,31 @@ def run_conversion_step(step_num, description, command, output_file):
 
 
 def main():
-    """main. """
+    """Main entry point for nwc-convert script.
+
+    Loads path configuration and converts NWCTXT files to FLAC format.
+    """
+    # Load path configuration
+    config = load_path_config()
+    config_dir = Path(__file__).parent
+
+    # Resolve configured paths
+    output_folder = resolve_path(config.output_folder, config_dir)
+    audio_output_folder = resolve_path(config.audio_output_folder, config_dir)
+
+    # Determine defaults from config
+    default_out = str(audio_output_folder)
+    default_soundfont = 'FluidR3_GM_GS.sf2'  # Default filename
+
+    # If soundfont_path is configured, use it
+    if config.soundfont_path:
+        soundfont_config = Path(config.soundfont_path)
+        if soundfont_config.is_absolute():
+            default_soundfont = str(soundfont_config)
+        else:
+            # If just a filename, look in current directory
+            default_soundfont = str(Path.cwd() / soundfont_config)
+
     parser = argparse.ArgumentParser(
         description='Convert NWCTXT file to FLAC via MIDI and WAV formats',
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -168,13 +213,13 @@ Examples:
     )
     parser.add_argument(
         '--out',
-        default='c:\\temp',
-        help='Output directory (default: c:\\temp)'
+        default=default_out,
+        help=f'Output directory (default: {default_out})'
     )
     parser.add_argument(
         '--soundfont',
-        default='c:\\temp\\FluidR3_GM_GS.sf2',
-        help='Path to FluidSynth soundfont file (default: c:\\temp\\FluidR3_GM_GS.sf2)'
+        default=default_soundfont,
+        help=f'Path to FluidSynth soundfont file (default: {default_soundfont})'
     )
 
     args = parser.parse_args()
@@ -193,7 +238,7 @@ Examples:
     print("Processing input file...")
     print("=" * 60 + "\n")
 
-    input_path = get_input_file_path(args.input)
+    input_path = get_input_file_path(args.input, output_folder)
 
     if not input_path.exists():
         print("ERROR: Input file not found:")
@@ -213,9 +258,9 @@ Examples:
         print(f"  {output_dir}")
         print(f"  {e}")
         sys.exit(1)
-    
+
     print(f"Output directory: {output_dir}\n")
-    
+
     # ===== VALIDATE SOUNDFONT =====
     soundfont_path = Path(args.soundfont)
     if not soundfont_path.exists():
@@ -223,18 +268,18 @@ Examples:
         print(f"  {soundfont_path}")
         print(f"\nSpecify an existing soundfont with: --soundfont <path>")
         sys.exit(1)
-    
+
     print(f"Soundfont: {soundfont_path}\n")
-    
+
     # ===== GENERATE OUTPUT PATHS =====
     midi_path = get_output_path(input_path, output_dir, '.mid')
     wav_path = get_output_path(input_path, output_dir, '.wav')
     flac_path = get_output_path(input_path, output_dir, '.flac')
-    
+
     print("=" * 60)
     print("Starting conversion pipeline...")
     print("=" * 60 + "\n")
-    
+
     # ===== STEP 1: NWC → MIDI =====
     cmd1 = f'nwc-conv "{input_path}" "{midi_path}" -1'
     if not run_conversion_step(
@@ -244,7 +289,7 @@ Examples:
         midi_path
     ):
         sys.exit(1)
-    
+
     # ===== STEP 2: MIDI → WAV =====
     cmd2 = f'fluidsynth -n -F "{wav_path}" "{soundfont_path}" "{midi_path}"'
     if not run_conversion_step(
@@ -254,7 +299,7 @@ Examples:
         wav_path
     ):
         sys.exit(1)
-    
+
     # ===== STEP 3: WAV → FLAC =====
     cmd3 = f'ffmpeg -y -i "{wav_path}" "{flac_path}"'
     if not run_conversion_step(
@@ -264,7 +309,7 @@ Examples:
         flac_path
     ):
         sys.exit(1)
-    
+
     # ===== SUCCESS =====
     print("=" * 60)
     print("✓ SUCCESS: All conversions completed!")

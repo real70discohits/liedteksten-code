@@ -13,23 +13,27 @@ from typing import Optional
 class PathConfig:
     """Container for path configuration settings."""
 
-    def __init__(self, input_folder: str, output_folder: str, audio_output_folder: str):
+    def __init__(self, input_folder: str, output_folder: str, audio_output_folder: str,
+                 soundfont_path: Optional[str] = None):
         """Initialize PathConfig with folder paths.
 
         Args:
             input_folder: Path to input folder (relative or absolute)
             output_folder: Path to output folder (relative or absolute)
-            audio_output_folder: Path to temporary folder (relative or absolute)
+            audio_output_folder: Path to audio output folder (relative or absolute)
+            soundfont_path: Path to soundfont file (optional, relative or absolute)
         """
         self.input_folder = input_folder
         self.output_folder = output_folder
         self.audio_output_folder = audio_output_folder
+        self.soundfont_path = soundfont_path
 
     def __repr__(self) -> str:
         """Return string representation of configuration."""
         return (f"PathConfig(input_folder='{self.input_folder}', "
                 f"output_folder='{self.output_folder}', "
-                f"audio_output_folder='{self.audio_output_folder}')")
+                f"audio_output_folder='{self.audio_output_folder}', "
+                f"soundfont_path='{self.soundfont_path}')")
 
 
 def _load_jsonc(filepath: Path) -> dict:
@@ -134,7 +138,10 @@ def load_path_config(config_file: Optional[Path] = None) -> PathConfig:
         print(f"   Required fields: input_folder, output_folder, audio_output_folder")
         sys.exit(1)
 
-    return PathConfig(input_folder, output_folder, audio_output_folder)
+    # Extract optional fields
+    soundfont_path = data.get('soundfont_path', None)
+
+    return PathConfig(input_folder, output_folder, audio_output_folder, soundfont_path)
 
 
 def resolve_path(base_path: str, config_dir: Path) -> Path:
