@@ -9,30 +9,32 @@ control     "Ffmpeg\n.exe" as ffmpeg
 control     "Lt-generate\n.py" as ltgenerate
 control     "Lt-upload\n.ps"    as ltupload
 control     "Tenacity\n.exe"  as tenacity
+database    "git" as repos
+database    "audio folder" as audio_output_folder
+database    "dist folder" as dist
 database    PDrive as pdrive
-database    "Git\nrepository" as repos
-database    "C:/Temp" as temp
 
 autonumber
 u1 -> nwc : start GUI
-u1 -> repos : (manual) create multi .nwctxt's
+u1 -> repos: (manual) create multi .nwctxt's
 u1 -> nwconcpy : run script
-nwconcpy -> repos : create merged nwctxt, create structuur .tex, update lied .tex
-nwconcpy -> temp : create labeltrack.txt
+nwconcpy -> dist: create merged nwctxt, nwctxt analysis.txt, structuur.tex, update lied .tex
+nwconcpy -> audio_output_folder: create labeltrack.txt
 u1 -> nwconvpy : run script
 nwconvpy -> nwconvexe : call
-nwconvexe -> temp : convert .nwctxt to .mid
+nwconvexe -> audio_output_folder: convert .nwctxt to .mid
 nwconvpy -> fluid : call
-fluid -> temp : convert .mid to.wav
+fluid -> audio_output_folder: convert .mid to.wav
 nwconvpy -> ffmpeg : call
-ffmpeg -> temp : convert .wav to .flac
-u1 -> repos : (manual) create liedtekst.tex
+ffmpeg -> audio_output_folder: convert .wav to .flac
+u1 -> repos: (manual) create liedtekst.tex
+dist -> repos: use analysis.txt
 u1 -> ltgenerate : run script
-ltgenerate -> repos : render liedtekst .pdf, render structuur .pdf
+ltgenerate -> dist: render liedtekst .pdf, render structuur .pdf
 u1 -> ltupload : run script
 ltupload -> pdrive : upload pdf's to drive
 u1 -> tenacity : start GUI
-tenacity <- temp : import .flac 
-tenacity <- temp : import labeltrack
+tenacity <- audio_output_folder: import .flac 
+tenacity <- audio_output_folder: import labeltrack
 u1 -> tenacity : (manual) make recording
 @enduml
