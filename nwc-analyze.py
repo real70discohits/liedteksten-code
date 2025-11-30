@@ -275,17 +275,20 @@ def format_output(analysis, song_number=None):
     return "\n".join(lines)
 
 
-def main():
-    """Main entry point."""
-    if len(sys.argv) < 2:
-        print("Usage: python nwc-analyze.py <path-to-nwctxt-file>")
-        sys.exit(1)
+def write_analysis_to_file(nwctxt_file_path):
+    """Analyze a .nwctxt file and write results to output folder.
 
-    file_path = Path(sys.argv[1])
+    Args:
+        nwctxt_file_path: Path to the .nwctxt file (string or Path object)
+
+    Returns:
+        Path to the created analysis file, or None if failed
+    """
+    file_path = Path(nwctxt_file_path)
 
     if not file_path.exists():
         print(f"❌ Error: File not found: {file_path}")
-        sys.exit(1)
+        return None
 
     # Load path configuration
     config = load_path_config()
@@ -295,26 +298,42 @@ def main():
     # Analyze the file
     analysis = analyze_nwctxt(file_path)
 
-    if analysis:
-        # Try to find song number
-        song_number = find_song_number(file_path)
+    if not analysis:
+        return None
 
-        # Format output
-        output = format_output(analysis, song_number)
+    # Try to find song number
+    song_number = find_song_number(file_path)
 
-        # Create output filename
-        output_filename = f"{file_path.stem} analysis.txt"
+    # Format output
+    output = format_output(analysis, song_number)
 
-        # Write to file
-        output_file = output_folder / output_filename
+    # Create output filename
+    output_filename = f"{file_path.stem} analysis.txt"
 
-        try:
-            with open(output_file, 'w', encoding='utf-8') as f:
-                f.write(output)
-            print(f"✅ Analysis written to: {output_file}")
-        except Exception as e:
-            print(f"❌ Error writing output file: {e}")
-            sys.exit(1)
+    # Write to file
+    output_file = output_folder / output_filename
+
+    try:
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write(output)
+        print(f"✅ Analysis written to: {output_file}")
+        return output_file
+    except Exception as e:
+        print(f"❌ Error writing output file: {e}")
+        return None
+
+
+def main():
+    """Main entry point."""
+    if len(sys.argv) < 2:
+        print("Usage: python nwc-analyze.py <path-to-nwctxt-file>")
+        sys.exit(1)
+
+    file_path = sys.argv[1]
+    result = write_analysis_to_file(file_path)
+
+    if not result:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
