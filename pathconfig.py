@@ -36,7 +36,7 @@ class PathConfig:
                 f"soundfont_path='{self.soundfont_path}')")
 
 
-def _load_jsonc(filepath: Path) -> dict:
+def load_jsonc(filepath: Path) -> dict:
     """Load a JSON file with comments (.jsonc).
 
     Uses the commentjson library to support // and /* */ comments.
@@ -79,7 +79,7 @@ def load_path_config(config_file: Optional[Path] = None) -> PathConfig:
         config_file = Path(__file__).parent / "paths.jsonc"
 
     try:
-        data = _load_jsonc(config_file)
+        data = load_jsonc(config_file)
     except FileNotFoundError as e:
         print(f"❌ Error: {e}")
         print(f"   Please create a 'paths.jsonc' configuration file.")

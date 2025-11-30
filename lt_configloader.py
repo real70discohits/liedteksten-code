@@ -54,7 +54,7 @@ class ConfigLoader:
                 description = item.get('description')  # Geeft None als veld ontbreekt
                 condition = Condition(**item['condition'])
                 action = Action(**item['action'])
-            except:
+            except (KeyError, TypeError) as e:
                 print("Exception probable cause(s): in lt-config.jsonc "
                     "each entry must declare all fields, such as "
                     "adjustMargins and adjustFontsize. You cannot omit them: "

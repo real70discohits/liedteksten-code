@@ -6,6 +6,7 @@ including parsing, staff management, and common operations.
 
 from pathlib import Path
 from typing import List, Optional, Tuple
+from constants import NWC_PREFIX_ADDSTAFF, NWC_END_MARKER
 
 
 class NwcStaff:
@@ -76,12 +77,12 @@ class NwcFile:
         for line in lines:
             line = line.rstrip('\n')
 
-            if line.startswith('|AddStaff|'):
+            if line.startswith(NWC_PREFIX_ADDSTAFF):
                 in_header = False
                 if current_staff:
                     self.staffs.append(NwcStaff(current_staff))
                 current_staff = [line]
-            elif line == '!NoteWorthyComposer-End':
+            elif line == NWC_END_MARKER:
                 if current_staff:
                     self.staffs.append(NwcStaff(current_staff))
             elif in_header:
