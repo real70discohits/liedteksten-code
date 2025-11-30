@@ -9,6 +9,7 @@ Usage:
 import sys
 import re
 from pathlib import Path
+from pathconfig import load_path_config, resolve_path
 
 
 def parse_song_info(content):
@@ -19,6 +20,34 @@ def parse_song_info(content):
     # Extract number from filename or content if available
     # For now, we'll need to get it from metadata or filename
     return title
+
+
+def find_song_number(nwctxt_path):
+    """Try to find the song number from associated .tex file.
+
+    Looks for a .tex file in the parent directory with the same base name,
+    and extracts the \liedId value.
+    """
+    # Get the base filename without extension
+    base_name = nwctxt_path.stem
+
+    # Look for .tex file in parent directory
+    parent_dir = nwctxt_path.parent.parent
+    tex_file = parent_dir / f"{base_name}.tex"
+
+    if tex_file.exists():
+        try:
+            with open(tex_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            # Extract \newcommand{\liedId}{number}
+            match = re.search(r'\\newcommand\{\\liedId\}\{(\d+)\}', content)
+            if match:
+                return match.group(1)
+        except Exception:
+            pass
+
+    return None
 
 
 def split_into_staffs(content):
@@ -264,13 +293,38 @@ def main():
         print(f"❌ Error: File not found: {file_path}")
         sys.exit(1)
 
+    # Load path configuration
+    config = load_path_config()
+    config_dir = Path(__file__).parent
+    output_folder = resolve_path(config.output_folder, config_dir)
+
     # Analyze the file
     analysis = analyze_nwctxt(file_path)
 
     if analysis:
-        # Print formatted output
-        output = format_output(analysis)
-        print(output)
+        # Try to find song number
+        song_number = find_song_number(file_path)
+
+        # Format output
+        output = format_output(analysis, song_number)
+
+        # Create output filename
+        title = analysis['title']
+        if song_number:
+            output_filename = f"{title} ({song_number}) analyse.txt"
+        else:
+            output_filename = f"{title} analyse.txt"
+
+        # Write to file
+        output_file = output_folder / output_filename
+
+        try:
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(output)
+            print(f"✅ Analysis written to: {output_file}")
+        except Exception as e:
+            print(f"❌ Error writing output file: {e}")
+            sys.exit(1)
 
 
 if __name__ == "__main__":
