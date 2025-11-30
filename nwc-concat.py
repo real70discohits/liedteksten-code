@@ -22,6 +22,7 @@ from pathlib import Path
 import re
 from pathconfig import load_and_resolve_paths, validate_file_exists, validate_folder_exists
 from nwc_analyze import write_analysis_to_file
+from nwc_utils import parse_nwctxt
 
 def load_jsonc(filepath):
     """Load a JSON file with comments (.jsonc).
@@ -30,36 +31,6 @@ def load_jsonc(filepath):
     """
     with open(filepath, 'r', encoding='utf-8') as f:
         return commentjson.load(f)
-
-
-def parse_nwctxt(filepath):
-    """Parse a .nwctxt file into header and staff sections"""
-    with open(filepath, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
-    
-    # Find header (everything before first |AddStaff|)
-    header_lines = []
-    staff_sections = []
-    current_staff = []
-    in_header = True
-    
-    for line in lines:
-        line = line.rstrip('\n')
-        
-        if line.startswith('|AddStaff|'):
-            in_header = False
-            if current_staff:
-                staff_sections.append(current_staff)
-            current_staff = [line]
-        elif line == '!NoteWorthyComposer-End':
-            if current_staff:
-                staff_sections.append(current_staff)
-        elif in_header:
-            header_lines.append(line)
-        else:
-            current_staff.append(line)
-    
-    return header_lines, staff_sections
 
 
 def concatenate_nwctxt_files(file_list, output_file, keep_tempi=False):
