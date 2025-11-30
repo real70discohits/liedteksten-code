@@ -23,31 +23,16 @@ def parse_song_info(content):
 
 
 def find_song_number(nwctxt_path):
-    """Try to find the song number from associated .tex file.
-
-    Looks for a .tex file in the parent directory with the same base name,
-    and extracts the \liedId value.
+    """Determine the song number
     """
     # Get the base filename without extension
     base_name = nwctxt_path.stem
 
-    # Look for .tex file in parent directory
-    parent_dir = nwctxt_path.parent.parent
-    tex_file = parent_dir / f"{base_name}.tex"
+    # extract any numbers and return the last one or None.
+    numbers = re.findall(r'\d+', base_name)
+    last_number_index = len(numbers) - 1
 
-    if tex_file.exists():
-        try:
-            with open(tex_file, 'r', encoding='utf-8') as f:
-                content = f.read()
-
-            # Extract \newcommand{\liedId}{number}
-            match = re.search(r'\\newcommand\{\\liedId\}\{(\d+)\}', content)
-            if match:
-                return match.group(1)
-        except Exception:
-            pass
-
-    return None
+    return numbers[last_number_index] if last_number_index >= 0 else None
 
 
 def split_into_staffs(content):
@@ -210,6 +195,8 @@ def analyze_nwctxt(file_path):
     # Extract metadata
     title = parse_song_info(content)
 
+    file_name = file_path.stem
+
     # Split into staffs
     staff_sections = split_into_staffs(content)
 
@@ -241,10 +228,12 @@ def analyze_nwctxt(file_path):
 
     return {
         'title': title,
+        'file': file_path.name,
+        'folder': file_path.parent,
         'total_measures': total_measures,
         'has_begintel': has_begintel,
         'vooraf': vooraf,
-        'measure_map': measure_map
+        'measure_map': measure_map,
     }
 
 
@@ -254,9 +243,14 @@ def format_output(analysis, song_number=None):
         return "No analysis available"
 
     lines = []
-    lines.append(f"titel: {analysis['title']}")
+    lines.append('*** NWC ANALYSE ***')
+    lines.append('')
+    lines.append(f"Analyse van: {analysis['file']}")
+    lines.append(f"Locatie: {analysis['folder']}")
+    lines.append('')
+    lines.append(f"liedtitel: {analysis['title']}")
     if song_number:
-        lines.append(f"nummer: {song_number}")
+        lines.append(f"liednummer: {song_number}")
     lines.append(f"totaal aantal maten: {analysis['total_measures']}")
     lines.append(f"heeft begintel: {'ja' if analysis['has_begintel'] else 'nee'}")
     lines.append(f"aantal maten vooraf: {analysis['vooraf']}")
@@ -309,11 +303,7 @@ def main():
         output = format_output(analysis, song_number)
 
         # Create output filename
-        title = analysis['title']
-        if song_number:
-            output_filename = f"{title} ({song_number}) analyse.txt"
-        else:
-            output_filename = f"{title} analyse.txt"
+        output_filename = f"{file_path.stem} analysis.txt"
 
         # Write to file
         output_file = output_folder / output_filename
