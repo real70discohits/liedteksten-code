@@ -100,24 +100,33 @@ def detect_begintel(first_staff):
     return False
 
 
-def count_vooraf_measures(first_staff):
-    """Count empty measures at the beginning of the first staff.
+def count_vooraf_measures(staff_content):
+    """Count measures before the 'liedstart' marker.
 
-    An empty measure contains only |Rest|Dur:Whole or similar.
+    Returns the number of measures before the song actually starts,
+    excluding the begintel (first measure with single beat).
     """
-    # Split by Bar to get measures
-    parts = first_staff.split('|Bar')
-    count = 0
+    # Find the position of "liedstart" marker
+    lines = staff_content.split('\n')
+    liedstart_index = -1
 
-    for i, part in enumerate(parts[1:], 1):  # Skip the part before first bar
-        # Check if this measure only contains rests (no notes)
-        if '|Note|' not in part and '|Rest|' in part:
-            count += 1
-        else:
-            # Stop counting when we hit a non-empty measure
+    for i, line in enumerate(lines):
+        if line.strip().startswith('|Text|Text:"liedstart"'):
+            liedstart_index = i
             break
 
-    return count
+    if liedstart_index == -1:
+        # No liedstart marker found, return 0
+        return 0
+
+    # Count bars before liedstart
+    bars_before = 0
+    for i in range(liedstart_index):
+        if lines[i].strip().startswith('|Bar'):
+            bars_before += 1
+
+    # Subtract 1 for the begintel (first measure doesn't count)
+    return bars_before - 1 if bars_before > 0 else 0
 
 
 def map_lyrics_to_measures(staff_content, syllables):
