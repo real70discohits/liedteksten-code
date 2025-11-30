@@ -22,7 +22,7 @@ from pathlib import Path
 import re
 from pathconfig import (load_path_config, resolve_path, validate_folder_exists,
                         validate_file_exists, ensure_folder_writable)
-
+from nwc_analyze import write_analysis_to_file
 
 def load_jsonc(filepath):
     """Load a JSON file with comments (.jsonc)"""
@@ -768,7 +768,7 @@ def main():
     # Ensure output folders are writable
     if not ensure_folder_writable(output_folder, "Output folder"):
         sys.exit(1)
-    if not ensure_folder_writable(audio_output_folder, "Temp folder"):
+    if not ensure_folder_writable(audio_output_folder, "Audio output folder"):
         sys.exit(1)
 
     # Open song folder
@@ -837,6 +837,9 @@ def main():
     print(f"\nConcatenating {len(file_list)} lieddelen...")
     concatenate_nwctxt_files(file_list, str(output_nwctxt), keep_tempi=keep_tempi)
     print(f"✅ Success! Concatenated .nwctxt files to {output_nwctxt}")
+
+    # Write analysis of concatenated .nwctxt file
+    write_analysis_to_file(output_nwctxt)
 
     # Generate complete LaTeX structure file
     tex_file = output_folder / f"{songtitle} structuur.tex"

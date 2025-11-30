@@ -3,7 +3,7 @@
 Analyzes .nwctxt files and maps lyrics to measure numbers.
 
 Usage:
-    python nwc-analyze.py <path-to-nwctxt-file>
+    python nwc_analyze.py <path-to-nwctxt-file>
 """
 
 import sys
