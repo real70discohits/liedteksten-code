@@ -4,7 +4,7 @@ This module provides functionality to load and validate path configurations
 from a JSON configuration file. It supports both relative and absolute paths.
 """
 
-import json
+import commentjson
 import sys
 from pathlib import Path
 from typing import Optional
@@ -39,6 +39,8 @@ class PathConfig:
 def _load_jsonc(filepath: Path) -> dict:
     """Load a JSON file with comments (.jsonc).
 
+    Uses the commentjson library to support // and /* */ comments.
+
     Args:
         filepath: Path to the JSONC file
 
@@ -47,55 +49,13 @@ def _load_jsonc(filepath: Path) -> dict:
 
     Raises:
         FileNotFoundError: If the configuration file doesn't exist
-        json.JSONDecodeError: If the file contains invalid JSON
+        commentjson.JSONDecodeError: If the file contains invalid JSON
     """
     if not filepath.exists():
         raise FileNotFoundError(f"Configuration file not found: {filepath}")
 
     with open(filepath, 'r', encoding='utf-8') as f:
-        content = f.read()
-
-    # Remove single-line comments
-    lines = content.split('\n')
-    cleaned_lines = []
-    for line in lines:
-        # Find comment position (but not inside strings)
-        in_string = False
-        escape_next = False
-        comment_pos = -1
-
-        for i, char in enumerate(line):
-            if escape_next:
-                escape_next = False
-                continue
-
-            if char == '\\':
-                escape_next = True
-                continue
-
-            if char == '"' and not escape_next:
-                in_string = not in_string
-
-            if not in_string and line[i:i+2] == '//':
-                comment_pos = i
-                break
-
-        if comment_pos >= 0:
-            cleaned_lines.append(line[:comment_pos].rstrip())
-        else:
-            cleaned_lines.append(line)
-
-    cleaned_content = '\n'.join(cleaned_lines)
-
-    # Remove multi-line comments
-    while '/*' in cleaned_content:
-        start = cleaned_content.find('/*')
-        end = cleaned_content.find('*/', start)
-        if end == -1:
-            break
-        cleaned_content = cleaned_content[:start] + cleaned_content[end+2:]
-
-    return json.loads(cleaned_content)
+        return commentjson.load(f)
 
 
 def load_path_config(config_file: Optional[Path] = None) -> PathConfig:
@@ -124,7 +84,7 @@ def load_path_config(config_file: Optional[Path] = None) -> PathConfig:
         print(f"❌ Error: {e}")
         print(f"   Please create a 'paths.jsonc' configuration file.")
         sys.exit(1)
-    except json.JSONDecodeError as e:
+    except (commentjson.JSONLibraryException, ValueError) as e:
         print(f"❌ Error: Invalid JSON in configuration file: {e}")
         sys.exit(1)
 

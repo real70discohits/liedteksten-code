@@ -16,7 +16,7 @@ Dependencies:
 """
 
 import argparse
-import json
+import commentjson
 import sys
 from pathlib import Path
 import re
@@ -25,51 +25,12 @@ from pathconfig import (load_path_config, resolve_path, validate_folder_exists,
 from nwc_analyze import write_analysis_to_file
 
 def load_jsonc(filepath):
-    """Load a JSON file with comments (.jsonc)"""
+    """Load a JSON file with comments (.jsonc).
+
+    Uses the commentjson library to support // and /* */ comments.
+    """
     with open(filepath, 'r', encoding='utf-8') as f:
-        content = f.read()
-        
-    # Remove single-line comments
-    lines = content.split('\n')
-    cleaned_lines = []
-    for line in lines:
-        # Find comment position (but not inside strings)
-        in_string = False
-        escape_next = False
-        comment_pos = -1
-        
-        for i, char in enumerate(line):
-            if escape_next:
-                escape_next = False
-                continue
-                
-            if char == '\\':
-                escape_next = True
-                continue
-                
-            if char == '"' and not escape_next:
-                in_string = not in_string
-                
-            if not in_string and line[i:i+2] == '//':
-                comment_pos = i
-                break
-                
-        if comment_pos >= 0:
-            cleaned_lines.append(line[:comment_pos].rstrip())
-        else:
-            cleaned_lines.append(line)
-    
-    cleaned_content = '\n'.join(cleaned_lines)
-    
-    # Remove multi-line comments
-    while '/*' in cleaned_content:
-        start = cleaned_content.find('/*')
-        end = cleaned_content.find('*/', start)
-        if end == -1:
-            break
-        cleaned_content = cleaned_content[:start] + cleaned_content[end+2:]
-    
-    return json.loads(cleaned_content)
+        return commentjson.load(f)
 
 
 def parse_nwctxt(filepath):
