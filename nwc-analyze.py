@@ -24,7 +24,7 @@ def parse_song_info(content):
 def split_into_staffs(content):
     """Split content into individual staffs."""
     # Split on |AddStaff| to get each staff section
-    staff_sections = content.split('|AddStaff|')
+    staff_sections = content.split('|AddStaff|')  # todo: remove first entry, which is not a staff.
     return staff_sections
 
 
@@ -83,7 +83,7 @@ def parse_lyric_text(lyric_line):
 
 def count_bars_in_staff(staff_content):
     """Count the number of |Bar markers in a staff."""
-    return staff_content.count('|Bar')
+    return staff_content.count('|Bar')    # to do: if song starts with just a single note, don't count the first measure.
 
 
 def detect_begintel(first_staff):
@@ -95,7 +95,7 @@ def detect_begintel(first_staff):
     before_first_bar = first_staff.split('|Bar')[0]
 
     # Check if there's a Note element
-    if '|Note|' in before_first_bar:
+    if '|Rest|' in before_first_bar:
         return True
     return False
 
@@ -128,22 +128,33 @@ def map_lyrics_to_measures(staff_content, syllables):
     measure_map = {}
     current_measure = 0
     syllable_index = 0
+    skip_next_note = False
 
     # Split staff into elements
-    elements = staff_content.split('|')
+    elements = staff_content.split('\n')
 
     for element in elements:
         element = element.strip()
 
-        if element.startswith('Bar'):
+        if element.startswith('|Bar'):
             current_measure += 1
-        elif element.startswith('Note|') and syllable_index < len(syllables):
-            # Assign next syllable to current measure
             if current_measure not in measure_map:
                 measure_map[current_measure] = []
-            measure_map[current_measure].append(syllables[syllable_index])
-            syllable_index += 1
-        elif element.startswith('Rest|'):
+        elif element.startswith('|Note|') and syllable_index < len(syllables):
+            if skip_next_note:
+                if element.count('Slur') > 0 or element.endswith('^'):
+                    skip_next_note = True
+                else:
+                    skip_next_note = False
+            else:
+                # Assign next syllable to current measure
+                if current_measure not in measure_map:
+                    measure_map[current_measure] = []
+                measure_map[current_measure].append(syllables[syllable_index])
+                syllable_index += 1
+                if element.count('Slur') > 0 or element.endswith('^'):
+                    skip_next_note = True
+        elif element.startswith('|Rest|'):
             # Skip rests - no syllable assignment
             pass
 
@@ -162,14 +173,14 @@ def analyze_nwctxt(file_path):
     staff_sections = split_into_staffs(content)
 
     # Use first staff to count total measures
-    first_staff = staff_sections[0] if staff_sections else ""
+    first_staff =  get_staff_by_name(staff_sections, "Bass")
     total_bars = count_bars_in_staff(first_staff)
 
     # Detect begintel
     has_begintel = detect_begintel(first_staff)
 
     # Adjust total if begintel exists
-    total_measures = total_bars - 1 if has_begintel else total_bars
+    total_measures = total_bars if has_begintel else total_bars + 1
 
     # Count vooraf measures
     vooraf = count_vooraf_measures(first_staff)
@@ -222,9 +233,9 @@ def format_output(analysis, song_number=None):
         lines.append(f"{measure_num}\t{text}")
 
     # Fill in empty measures
-    for i in range(1, analysis['total_measures'] + 1):
-        if i not in measure_map:
-            lines.append(f"{i}\t")
+    # for i in range(1, analysis['total_measures'] + 1):
+    #     if i not in measure_map:
+    #         lines.append(f"{i}\t")
 
     return "\n".join(lines)
 
