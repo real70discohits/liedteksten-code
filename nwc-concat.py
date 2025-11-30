@@ -20,17 +20,13 @@ import commentjson
 import sys
 from pathlib import Path
 import re
-from pathconfig import load_and_resolve_paths, validate_file_exists, validate_folder_exists
+from pathconfig import load_and_resolve_paths, validate_file_exists, validate_folder_exists, load_jsonc
 from nwc_analyze import write_analysis_to_file
-from nwc_utils import parse_nwctxt
-
-def load_jsonc(filepath):
-    """Load a JSON file with comments (.jsonc).
-
-    Uses the commentjson library to support // and /* */ comments.
-    """
-    with open(filepath, 'r', encoding='utf-8') as f:
-        return commentjson.load(f)
+from nwc_utils import parse_nwctxt, NwcFile
+from constants import (NWC_PREFIX_ADDSTAFF, NWC_PREFIX_STAFF_PROPERTIES,
+                       NWC_PREFIX_STAFF_INSTRUMENT, NWC_PREFIX_CLEF,
+                       NWC_PREFIX_TIMESIG, NWC_PREFIX_TEMPO, NWC_PREFIX_BAR,
+                       NWC_END_MARKER, FOLDER_NWC, EXT_NWCTXT, EXT_JSONC, EXT_TEX, EXT_TXT)
 
 
 def concatenate_nwctxt_files(file_list, output_file, keep_tempi=False):
@@ -67,20 +63,20 @@ def concatenate_nwctxt_files(file_list, output_file, keep_tempi=False):
         for i in range(min_staffs):
             # Skip staff header lines (already have them from first file)
             staff_data = []
-            skip_prefixes = ['|AddStaff|', '|StaffProperties|', '|StaffInstrument|', 
-                            '|Clef|', '|TimeSig|']
-            
+            skip_prefixes = [NWC_PREFIX_ADDSTAFF, NWC_PREFIX_STAFF_PROPERTIES,
+                            NWC_PREFIX_STAFF_INSTRUMENT, NWC_PREFIX_CLEF, NWC_PREFIX_TIMESIG]
+
             # Only skip tempo lines if keep_tempi is False (default behavior)
             if not keep_tempi:
-                skip_prefixes.append('|Tempo|')
+                skip_prefixes.append(NWC_PREFIX_TEMPO)
             
             for line in staffs[i]:
                 if not any(line.startswith(prefix) for prefix in skip_prefixes):
                     staff_data.append(line)
             
             # Add a double bar between sections for clarity
-            if staff_data and not staff_data[0].startswith('|Bar|'):
-                concatenated_staffs[i].append('|Bar|Style:Double')
+            if staff_data and not staff_data[0].startswith(NWC_PREFIX_BAR):
+                concatenated_staffs[i].append(f'{NWC_PREFIX_BAR}Style:Double')
             
             concatenated_staffs[i].extend(staff_data)
     
@@ -94,8 +90,8 @@ def concatenate_nwctxt_files(file_list, output_file, keep_tempi=False):
         for staff_lines in concatenated_staffs:
             for line in staff_lines:
                 f.write(line + '\n')
-        
-        f.write('!NoteWorthyComposer-End\n')
+
+        f.write(f'{NWC_END_MARKER}\n')
 
 
 def get_measure_count(filepath):
@@ -252,25 +248,26 @@ def extract_chords_from_first_staff(filepath):
 
 def extract_tempo_and_timesig(filepath):
     """Extract tempo and time signature from first staff of .nwctxt file
-    
+
     Returns:
         tuple: (tempo, timesig)
         - tempo: integer tempo value or None if not found
         - timesig: string like "4/4" or None if not found
     """
-    _, staff_sections = parse_nwctxt(filepath)
-    
-    if len(staff_sections) < 1:
+    nwc = NwcFile(filepath)
+
+    if len(nwc.staffs) < 1:
         return None, None
-    
-    first_staff = staff_sections[0]
-    
+
+    first_staff = nwc.get_staff_by_index(0)
+    staff_lines = first_staff.lines
+
     tempo = None
     timesig = None
-    
-    for line in first_staff:
+
+    for line in staff_lines:
         # Look for tempo (only first occurrence)
-        if tempo is None and line.startswith('|Tempo|') and 'Tempo:' in line:
+        if tempo is None and line.startswith(NWC_PREFIX_TEMPO) and 'Tempo:' in line:
             try:
                 # Extract tempo value after "Tempo:"
                 tempo_part = line.split('Tempo:')[1]
@@ -279,21 +276,21 @@ def extract_tempo_and_timesig(filepath):
                 tempo = int(tempo_str)
             except (IndexError, ValueError):
                 pass
-        
+
         # Look for time signature (only first occurrence)
-        if timesig is None and line.startswith('|TimeSig|Signature:'):
+        if timesig is None and line.startswith(f'{NWC_PREFIX_TIMESIG}Signature:'):
             try:
                 # Extract signature after "Signature:"
-                sig_part = line.split('|TimeSig|Signature:')[1]
+                sig_part = line.split(f'{NWC_PREFIX_TIMESIG}Signature:')[1]
                 # Get the signature before the next pipe or end of string
                 timesig = sig_part.split('|')[0]
             except (IndexError, ValueError):
                 pass
-        
+
         # Stop searching once both are found
         if tempo is not None and timesig is not None:
             break
-    
+
     return tempo, timesig
 
 
@@ -668,24 +665,19 @@ def get_pickup_beats(nwctxt_filepath):
     return beats
 
 
-def main():
-    """Main entry point for nwc-concat script.
+def validate_and_setup_folders(songtitle, paths):
+    """Validate input/output folders and song structure.
 
-    Loads path configuration, validates folders, and concatenates
-    NoteWorthy Composer files based on song structure.
+    Args:
+        songtitle: Name of the song
+        paths: ResolvedPaths object with folder paths
+
+    Returns:
+        tuple: (song_folder, nwc_folder)
+
+    Raises:
+        SystemExit: If validation fails
     """
-    parser = argparse.ArgumentParser(description='Concatenate NoteWorthy Composer files')
-    parser.add_argument('songtitle', help='Title of the song')
-    parser.add_argument('--keep-tempi', action='store_true',
-                        help='Keep tempo indicators from all lieddelen (default: remove from lieddelen after first)')
-    args = parser.parse_args()
-
-    songtitle = args.songtitle
-    keep_tempi = args.keep_tempi
-
-    # Load and resolve path configuration
-    paths = load_and_resolve_paths()
-
     # Validate folders
     if not paths.validate_input_folder():
         sys.exit(1)
@@ -698,38 +690,58 @@ def main():
         sys.exit(1)
 
     # Open nwc subfolder within song folder
-    nwc_folder = song_folder / "nwc"
+    nwc_folder = song_folder / FOLDER_NWC
     if not validate_folder_exists(nwc_folder, f"NWC subfolder for '{songtitle}'"):
         sys.exit(1)
 
-    # Load 'volgorde' file from nwc subfolder
-    volgorde_file = nwc_folder / f"{songtitle} volgorde.jsonc"
+    return song_folder, nwc_folder
+
+
+def load_song_structure(songtitle, nwc_folder):
+    """Load song structure from volgorde.jsonc file.
+
+    Args:
+        songtitle: Name of the song
+        nwc_folder: Path to NWC folder
+
+    Returns:
+        list: List of lieddeel names in order
+
+    Raises:
+        SystemExit: If file cannot be loaded or parsed
+    """
+    volgorde_file = nwc_folder / f"{songtitle} volgorde{EXT_JSONC}"
     if not validate_file_exists(volgorde_file, "Song sequence file (volgorde)"):
         sys.exit(1)
 
     try:
         volgorde_data = load_jsonc(volgorde_file)
-        volgorde_lieddelen = volgorde_data['songstructure']
-    except (json.JSONDecodeError, KeyError) as e:
+        return volgorde_data['songstructure']
+    except (commentjson.JSONLibraryException, ValueError, KeyError) as e:
         print(f"❌ Error reading volgorde: {e}")
         sys.exit(1)
 
-    print(f"Processing song: {songtitle}")
-    print(f"Sequence: {' - '.join(volgorde_lieddelen)}")
-    print(f"Tempo handling: {'Keep all tempi' if keep_tempi else 'Remove tempi from lieddelen 2+'}")
 
-    # Build list of files to concatenate
+def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
+    """Process all lieddelen and extract metadata.
+
+    Args:
+        songtitle: Name of the song
+        volgorde_lieddelen: List of lieddeel names
+        nwc_folder: Path to NWC folder
+
+    Returns:
+        tuple: (file_list, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, tempo, timesig, pickup_beats)
+    """
     file_list = []
     measurecount_and_starttime_per_lieddeel = []
     chords_per_lieddeel = {}
-
-    # Extract tempo and timesig from first section
     tempo = None
     timesig = None
     pickup_beats = 0
 
     for lieddeel in volgorde_lieddelen:
-        lieddeel_nwctxt = nwc_folder / f"{songtitle} {lieddeel}.nwctxt"
+        lieddeel_nwctxt = nwc_folder / f"{songtitle} {lieddeel}{EXT_NWCTXT}"
 
         if not validate_file_exists(lieddeel_nwctxt, f"Lieddeel file '{lieddeel}'"):
             sys.exit(1)
@@ -752,6 +764,41 @@ def main():
 
         measure_str = f" ({measure_count} measures)" if measure_count else ""
         print(f"Adding lieddeel: {lieddeel}{measure_str}")
+
+    return file_list, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, tempo, timesig, pickup_beats
+
+
+def main():
+    """Main entry point for nwc-concat script.
+
+    Loads path configuration, validates folders, and concatenates
+    NoteWorthy Composer files based on song structure.
+    """
+    parser = argparse.ArgumentParser(description='Concatenate NoteWorthy Composer files')
+    parser.add_argument('songtitle', help='Title of the song')
+    parser.add_argument('--keep-tempi', action='store_true',
+                        help='Keep tempo indicators from all lieddelen (default: remove from lieddelen after first)')
+    args = parser.parse_args()
+
+    songtitle = args.songtitle
+    keep_tempi = args.keep_tempi
+
+    # Load and resolve path configuration
+    paths = load_and_resolve_paths()
+
+    # Validate and setup folders
+    song_folder, nwc_folder = validate_and_setup_folders(songtitle, paths)
+
+    # Load song structure
+    volgorde_lieddelen = load_song_structure(songtitle, nwc_folder)
+
+    print(f"Processing song: {songtitle}")
+    print(f"Sequence: {' - '.join(volgorde_lieddelen)}")
+    print(f"Tempo handling: {'Keep all tempi' if keep_tempi else 'Remove tempi from lieddelen 2+'}")
+
+    # Process all lieddelen
+    (file_list, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel,
+     tempo, timesig, pickup_beats) = process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder)
 
     # Concatenate files
     output_nwctxt = paths.output_folder / f"{songtitle}.nwctxt"

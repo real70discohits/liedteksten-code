@@ -11,6 +11,9 @@ import re
 from pathlib import Path
 from pathconfig import load_and_resolve_paths
 from nwc_utils import NwcFile
+from constants import (STAFF_NAME_BASS, STAFF_NAME_ZANG, NWC_PREFIX_BAR,
+                       NWC_PREFIX_NOTE, NWC_PREFIX_REST, NWC_PREFIX_TEXT,
+                       NWC_MARKER_LIEDSTART)
 
 
 def parse_song_info(content):
@@ -85,7 +88,7 @@ def parse_lyric_text(lyric_line):
 
 def count_bars_in_staff(staff_content):
     """Count the number of |Bar markers in a staff."""
-    return staff_content.count('|Bar')    # to do: if song starts with just a single note, don't count the first measure.
+    return staff_content.count(NWC_PREFIX_BAR)    # to do: if song starts with just a single note, don't count the first measure.
 
 
 def detect_begintel(first_staff):
@@ -94,10 +97,10 @@ def detect_begintel(first_staff):
     A begintel is typically a single note before the first bar.
     """
     # Look for a Note before the first Bar
-    before_first_bar = first_staff.split('|Bar')[0]
+    before_first_bar = first_staff.split(NWC_PREFIX_BAR)[0]
 
     # Check if there's a Note element
-    if '|Rest|' in before_first_bar:
+    if NWC_PREFIX_REST in before_first_bar:
         return True
     return False
 
@@ -113,7 +116,7 @@ def count_vooraf_measures(staff_content):
     liedstart_index = -1
 
     for i, line in enumerate(lines):
-        if line.strip().startswith('|Text|Text:"liedstart"'):
+        if line.strip().startswith(f'{NWC_PREFIX_TEXT}Text:"{NWC_MARKER_LIEDSTART}"'):
             liedstart_index = i
             break
 
@@ -124,7 +127,7 @@ def count_vooraf_measures(staff_content):
     # Count bars before liedstart
     bars_before = 0
     for i in range(liedstart_index):
-        if lines[i].strip().startswith('|Bar'):
+        if lines[i].strip().startswith(NWC_PREFIX_BAR):
             bars_before += 1
 
     # Subtract 1 for the begintel (first measure with one beat doesn't count)
@@ -150,11 +153,11 @@ def map_lyrics_to_measures(staff_content, syllables):
     for element in elements:
         element = element.strip()
 
-        if element.startswith('|Bar'):
+        if element.startswith(NWC_PREFIX_BAR):
             current_measure += 1
             if current_measure not in measure_map:
                 measure_map[current_measure] = []
-        elif element.startswith('|Note|') and syllable_index < len(syllables):
+        elif element.startswith(NWC_PREFIX_NOTE) and syllable_index < len(syllables):
             if skip_next_note:
                 if element.count('Slur') > 0 or element.endswith('^'):
                     skip_next_note = True
@@ -168,7 +171,7 @@ def map_lyrics_to_measures(staff_content, syllables):
                 syllable_index += 1
                 if element.count('Slur') > 0 or element.endswith('^'):
                     skip_next_note = True
-        elif element.startswith('|Rest|'):
+        elif element.startswith(NWC_PREFIX_REST):
             # Skip rests - no syllable assignment
             pass
 
@@ -187,9 +190,9 @@ def analyze_nwctxt(file_path):
     file_name = file_path.stem
 
     # Get Bass staff to count total measures
-    bass_staff = nwc.get_staff_by_name("Bass")
+    bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
     if not bass_staff:
-        print(f"⚠️  Warning: No 'Bass' staff found in {file_path}")
+        print(f"⚠️  Warning: No '{STAFF_NAME_BASS}' staff found in {file_path}")
         return None
 
     bass_content = bass_staff.get_content()
@@ -205,10 +208,10 @@ def analyze_nwctxt(file_path):
     vooraf = count_vooraf_measures(bass_content)
 
     # Find Zang staff
-    zang_staff = nwc.get_staff_by_name("Zang")
+    zang_staff = nwc.get_staff_by_name(STAFF_NAME_ZANG)
 
     if not zang_staff:
-        print(f"⚠️  Warning: No 'Zang' staff found in {file_path}")
+        print(f"⚠️  Warning: No '{STAFF_NAME_ZANG}' staff found in {file_path}")
         return None
 
     zang_content = zang_staff.get_content()
