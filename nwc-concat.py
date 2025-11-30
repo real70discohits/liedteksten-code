@@ -76,7 +76,7 @@ def concatenate_nwctxt_files(file_list, output_file, keep_tempi=False):
             
             # Add a double bar between sections for clarity
             if staff_data and not staff_data[0].startswith(NWC_PREFIX_BAR):
-                concatenated_staffs[i].append(f'{NWC_PREFIX_BAR}Style:Double')
+                concatenated_staffs[i].append(f'{NWC_PREFIX_BAR}|Style:Double')
             
             concatenated_staffs[i].extend(staff_data)
     
