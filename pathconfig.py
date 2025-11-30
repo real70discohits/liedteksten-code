@@ -233,3 +233,78 @@ def ensure_folder_writable(folder_path: Path, folder_name: str) -> bool:
         return False
 
     return True
+
+
+class ResolvedPaths:
+    """Container for resolved and validated paths.
+
+    This class encapsulates all path resolution and provides convenience
+    methods for validation. Use load_and_resolve_paths() to create instances.
+    """
+
+    def __init__(self, config: PathConfig, config_dir: Path):
+        """Initialize ResolvedPaths with configuration.
+
+        Args:
+            config: PathConfig object with raw path strings
+            config_dir: Directory containing the configuration file
+        """
+        self.config = config
+        self.config_dir = config_dir
+
+        # Resolve all paths
+        self.input_folder = resolve_path(config.input_folder, config_dir)
+        self.output_folder = resolve_path(config.output_folder, config_dir)
+        self.audio_output_folder = resolve_path(config.audio_output_folder, config_dir)
+
+        # Resolve optional paths
+        self.soundfont_path = None
+        if config.soundfont_path:
+            self.soundfont_path = resolve_path(config.soundfont_path, config_dir)
+
+    def validate_input_folder(self) -> bool:
+        """Validate that input folder exists and is accessible.
+
+        Returns:
+            True if validation succeeds, False otherwise
+        """
+        return validate_folder_exists(self.input_folder, "Input folder")
+
+    def ensure_output_folders(self) -> bool:
+        """Ensure output folders exist and are writable.
+
+        Creates folders if they don't exist and validates write access.
+
+        Returns:
+            True if all validations succeed, False otherwise
+        """
+        return (ensure_folder_writable(self.output_folder, "Output folder") and
+                ensure_folder_writable(self.audio_output_folder, "Audio output folder"))
+
+    def __repr__(self) -> str:
+        """Return string representation of resolved paths."""
+        return (f"ResolvedPaths(input_folder={self.input_folder}, "
+                f"output_folder={self.output_folder}, "
+                f"audio_output_folder={self.audio_output_folder}, "
+                f"soundfont_path={self.soundfont_path})")
+
+
+def load_and_resolve_paths() -> ResolvedPaths:
+    """Load configuration and resolve all paths.
+
+    Convenience function for script main() functions. Loads the path
+    configuration and creates a ResolvedPaths object with all paths
+    resolved relative to the configuration directory.
+
+    Returns:
+        ResolvedPaths object with all paths resolved
+
+    Example:
+        paths = load_and_resolve_paths()
+        if not paths.validate_input_folder():
+            sys.exit(1)
+        song_folder = paths.input_folder / songtitle
+    """
+    config = load_path_config()
+    config_dir = Path(__file__).parent
+    return ResolvedPaths(config, config_dir)

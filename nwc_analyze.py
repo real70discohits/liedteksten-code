@@ -9,7 +9,7 @@ Usage:
 import sys
 import re
 from pathlib import Path
-from pathconfig import load_path_config, resolve_path
+from pathconfig import load_and_resolve_paths
 
 
 def parse_song_info(content):
@@ -290,10 +290,9 @@ def write_analysis_to_file(nwctxt_file_path):
         print(f"❌ Error: File not found: {file_path}")
         return None
 
-    # Load path configuration
-    config = load_path_config()
-    config_dir = Path(__file__).parent
-    output_folder = resolve_path(config.output_folder, config_dir)
+    # Load and resolve path configuration
+    paths = load_and_resolve_paths()
+    output_folder = paths.output_folder
 
     # Analyze the file
     analysis = analyze_nwctxt(file_path)
