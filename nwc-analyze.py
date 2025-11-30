@@ -125,8 +125,11 @@ def count_vooraf_measures(staff_content):
         if lines[i].strip().startswith('|Bar'):
             bars_before += 1
 
-    # Subtract 1 for the begintel (first measure doesn't count)
-    return bars_before - 1 if bars_before > 0 else 0
+    # Subtract 1 for the begintel (first measure with one beat doesn't count)
+    if bars_before > 0 and detect_begintel(staff_content):
+        bars_before = bars_before - 1
+
+    return bars_before
 
 
 def map_lyrics_to_measures(staff_content, syllables):
