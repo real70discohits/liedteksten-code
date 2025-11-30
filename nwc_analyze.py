@@ -9,7 +9,8 @@ Usage:
 import sys
 import re
 from pathlib import Path
-from pathconfig import load_path_config, resolve_path
+from pathconfig import load_and_resolve_paths
+from nwc_utils import NwcFile
 
 
 def parse_song_info(content):
@@ -35,19 +36,6 @@ def find_song_number(nwctxt_path):
     return numbers[last_number_index] if last_number_index >= 0 else None
 
 
-def split_into_staffs(content):
-    """Split content into individual staffs."""
-    # Split on |AddStaff| to get each staff section
-    staff_sections = content.split('|AddStaff|')  # todo: remove first entry, which is not a staff.
-    return staff_sections
-
-
-def get_staff_by_name(staff_sections, name):
-    """Find a staff section by its name."""
-    for section in staff_sections:
-        if f'Name:"{name}"' in section:
-            return section
-    return None
 
 
 def parse_lyric_text(lyric_line):
@@ -189,42 +177,47 @@ def map_lyrics_to_measures(staff_content, syllables):
 
 def analyze_nwctxt(file_path):
     """Analyze a .nwctxt file and return lyrics mapping."""
-    with open(file_path, 'r', encoding='utf-8') as f:
-        content = f.read()
+    # Parse the NWC file
+    nwc = NwcFile(file_path)
 
-    # Extract metadata
-    title = parse_song_info(content)
+    # Extract metadata from header
+    header_content = '\n'.join(nwc.header_lines)
+    title = parse_song_info(header_content)
 
     file_name = file_path.stem
 
-    # Split into staffs
-    staff_sections = split_into_staffs(content)
+    # Get Bass staff to count total measures
+    bass_staff = nwc.get_staff_by_name("Bass")
+    if not bass_staff:
+        print(f"⚠️  Warning: No 'Bass' staff found in {file_path}")
+        return None
 
-    # Use first staff to count total measures
-    first_staff =  get_staff_by_name(staff_sections, "Bass")
-    total_bars = count_bars_in_staff(first_staff)
+    bass_content = bass_staff.get_content()
+    total_bars = count_bars_in_staff(bass_content)
 
     # Detect begintel
-    has_begintel = detect_begintel(first_staff)
+    has_begintel = detect_begintel(bass_content)
 
     # Adjust total if begintel exists
     total_measures = total_bars if has_begintel else total_bars + 1
 
     # Count vooraf measures
-    vooraf = count_vooraf_measures(first_staff)
+    vooraf = count_vooraf_measures(bass_content)
 
     # Find Zang staff
-    zang_staff = get_staff_by_name(staff_sections, "Zang")
+    zang_staff = nwc.get_staff_by_name("Zang")
 
     if not zang_staff:
         print(f"⚠️  Warning: No 'Zang' staff found in {file_path}")
         return None
 
+    zang_content = zang_staff.get_content()
+
     # Extract lyrics
-    syllables = parse_lyric_text(zang_staff)
+    syllables = parse_lyric_text(zang_content)
 
     # Map lyrics to measures
-    measure_map = map_lyrics_to_measures(zang_staff, syllables)
+    measure_map = map_lyrics_to_measures(zang_content, syllables)
 
     return {
         'title': title,
@@ -290,10 +283,9 @@ def write_analysis_to_file(nwctxt_file_path):
         print(f"❌ Error: File not found: {file_path}")
         return None
 
-    # Load path configuration
-    config = load_path_config()
-    config_dir = Path(__file__).parent
-    output_folder = resolve_path(config.output_folder, config_dir)
+    # Load and resolve path configuration
+    paths = load_and_resolve_paths()
+    output_folder = paths.output_folder
 
     # Analyze the file
     analysis = analyze_nwctxt(file_path)

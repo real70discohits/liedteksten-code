@@ -21,7 +21,7 @@ import subprocess
 import argparse
 from pathlib import Path
 from lt_configloader import ConfigItem, ConfigLoader, get_config
-from pathconfig import load_path_config, resolve_path, validate_file_exists
+from pathconfig import load_and_resolve_paths, validate_file_exists
 
 
 # pylint: disable=trailing-whitespace,missing-docstring,line-too-long
@@ -397,13 +397,8 @@ def main():
 
     Loads path configuration and generates PDFs from LaTeX song files.
     """
-    # Load path configuration
-    config = load_path_config()
-    config_dir = Path(__file__).parent
-
-    # Resolve configured paths
-    input_folder = resolve_path(config.input_folder, config_dir)
-    output_folder = resolve_path(config.output_folder, config_dir)
+    # Load and resolve path configuration
+    paths = load_and_resolve_paths()
 
     parser = argparse.ArgumentParser(description='Compile .tex files with custom output names')
     parser.add_argument('songtitles', nargs='*', help='Specific songtitles (.tex filenames but without extension) to compile (default: all)')
@@ -423,7 +418,7 @@ def main():
     else:
         # Find all song folders (folders containing a .tex file with same name as folder)
         songtitles = []
-        for folder in input_folder.iterdir():
+        for folder in paths.input_folder.iterdir():
             if folder.is_dir():
                 tex_file = folder / f"{folder.name}.tex"
                 if tex_file.exists():
@@ -445,30 +440,30 @@ def main():
 
     if only < 2:
         # generate liedtekst pdf
-        success = sum(compile_tex_file(f, input_folder, output_folder, not args.no_cleanup, args.engine) for f in songtitles)
+        success = sum(compile_tex_file(f, paths.input_folder, paths.output_folder, not args.no_cleanup, args.engine) for f in songtitles)
 
     if only == 2 or only == 0:
         # generate liedtekst pdf with measurenumbers
-        success = success + sum(compile_tex_file(f, input_folder, output_folder, not args.no_cleanup, args.engine, show_measures=True) for f in songtitles)
+        success = success + sum(compile_tex_file(f, paths.input_folder, paths.output_folder, not args.no_cleanup, args.engine, show_measures=True) for f in songtitles)
 
     if only == 3 or only == 0:
         # generate liedtekst pdf with chords
-        success = success + sum(compile_tex_file(f, input_folder, output_folder, not args.no_cleanup, args.engine, show_measures=False, show_chords=True) for f in songtitles)
+        success = success + sum(compile_tex_file(f, paths.input_folder, paths.output_folder, not args.no_cleanup, args.engine, show_measures=False, show_chords=True) for f in songtitles)
 
     if only == 4 or only == 0:
         # generate liedtekst pdf with measurenumbers and chords
-        success = success + sum(compile_tex_file(f, input_folder, output_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True) for f in songtitles)
+        success = success + sum(compile_tex_file(f, paths.input_folder, paths.output_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True) for f in songtitles)
 
     if only == 5 or only == 0:
         # generate liedtekst pdf with measurenumbers, chords and guitartabs
-        success = success + sum(compile_tex_file(f, input_folder, output_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True, show_tabs=True, tab_orientation=tab_orientation) for f in songtitles)
+        success = success + sum(compile_tex_file(f, paths.input_folder, paths.output_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True, show_tabs=True, tab_orientation=tab_orientation) for f in songtitles)
 
     # Generate structuur PDF for each liedtekst
     print("\n" + "="*60)
     print("Generating structuur PDFs...")
     print("="*60)
     for f in songtitles:
-        if compile_structuur_file(str(f), input_folder, output_folder, not args.no_cleanup, args.engine):
+        if compile_structuur_file(str(f), paths.input_folder, paths.output_folder, not args.no_cleanup, args.engine):
             structuur_success += 1
 
     print(f"\n{'='*60}")

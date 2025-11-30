@@ -27,7 +27,7 @@ import sys
 import subprocess
 from pathlib import Path
 import argparse
-from pathconfig import load_path_config, resolve_path
+from pathconfig import load_and_resolve_paths
 
 
 def verify_tools():
@@ -174,26 +174,16 @@ def main():
 
     Loads path configuration and converts NWCTXT files to FLAC format.
     """
-    # Load path configuration
-    config = load_path_config()
-    config_dir = Path(__file__).parent
-
-    # Resolve configured paths
-    output_folder = resolve_path(config.output_folder, config_dir)
-    audio_output_folder = resolve_path(config.audio_output_folder, config_dir)
+    # Load and resolve path configuration
+    paths = load_and_resolve_paths()
 
     # Determine defaults from config
-    default_out = str(audio_output_folder)
+    default_out = str(paths.audio_output_folder)
     default_soundfont = 'FluidR3_GM_GS.sf2'  # Default filename
 
     # If soundfont_path is configured, use it
-    if config.soundfont_path:
-        soundfont_config = Path(config.soundfont_path)
-        if soundfont_config.is_absolute():
-            default_soundfont = str(soundfont_config)
-        else:
-            # If just a filename, look in current directory
-            default_soundfont = str(Path.cwd() / soundfont_config)
+    if paths.soundfont_path:
+        default_soundfont = str(paths.soundfont_path)
 
     parser = argparse.ArgumentParser(
         description='Convert NWCTXT file to FLAC via MIDI and WAV formats',
@@ -238,7 +228,7 @@ Examples:
     print("Processing input file...")
     print("=" * 60 + "\n")
 
-    input_path = get_input_file_path(args.input, output_folder)
+    input_path = get_input_file_path(args.input, paths.output_folder)
 
     if not input_path.exists():
         print("❌ ERROR: Input file not found:")

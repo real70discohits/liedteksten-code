@@ -16,90 +16,21 @@ Dependencies:
 """
 
 import argparse
-import json
+import commentjson
 import sys
 from pathlib import Path
 import re
-from pathconfig import (load_path_config, resolve_path, validate_folder_exists,
-                        validate_file_exists, ensure_folder_writable)
+from pathconfig import load_and_resolve_paths, validate_file_exists, validate_folder_exists
 from nwc_analyze import write_analysis_to_file
+from nwc_utils import parse_nwctxt
 
 def load_jsonc(filepath):
-    """Load a JSON file with comments (.jsonc)"""
-    with open(filepath, 'r', encoding='utf-8') as f:
-        content = f.read()
-        
-    # Remove single-line comments
-    lines = content.split('\n')
-    cleaned_lines = []
-    for line in lines:
-        # Find comment position (but not inside strings)
-        in_string = False
-        escape_next = False
-        comment_pos = -1
-        
-        for i, char in enumerate(line):
-            if escape_next:
-                escape_next = False
-                continue
-                
-            if char == '\\':
-                escape_next = True
-                continue
-                
-            if char == '"' and not escape_next:
-                in_string = not in_string
-                
-            if not in_string and line[i:i+2] == '//':
-                comment_pos = i
-                break
-                
-        if comment_pos >= 0:
-            cleaned_lines.append(line[:comment_pos].rstrip())
-        else:
-            cleaned_lines.append(line)
-    
-    cleaned_content = '\n'.join(cleaned_lines)
-    
-    # Remove multi-line comments
-    while '/*' in cleaned_content:
-        start = cleaned_content.find('/*')
-        end = cleaned_content.find('*/', start)
-        if end == -1:
-            break
-        cleaned_content = cleaned_content[:start] + cleaned_content[end+2:]
-    
-    return json.loads(cleaned_content)
+    """Load a JSON file with comments (.jsonc).
 
-
-def parse_nwctxt(filepath):
-    """Parse a .nwctxt file into header and staff sections"""
+    Uses the commentjson library to support // and /* */ comments.
+    """
     with open(filepath, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
-    
-    # Find header (everything before first |AddStaff|)
-    header_lines = []
-    staff_sections = []
-    current_staff = []
-    in_header = True
-    
-    for line in lines:
-        line = line.rstrip('\n')
-        
-        if line.startswith('|AddStaff|'):
-            in_header = False
-            if current_staff:
-                staff_sections.append(current_staff)
-            current_staff = [line]
-        elif line == '!NoteWorthyComposer-End':
-            if current_staff:
-                staff_sections.append(current_staff)
-        elif in_header:
-            header_lines.append(line)
-        else:
-            current_staff.append(line)
-    
-    return header_lines, staff_sections
+        return commentjson.load(f)
 
 
 def concatenate_nwctxt_files(file_list, output_file, keep_tempi=False):
@@ -752,27 +683,17 @@ def main():
     songtitle = args.songtitle
     keep_tempi = args.keep_tempi
 
-    # Load path configuration
-    config = load_path_config()
-    config_dir = Path(__file__).parent
+    # Load and resolve path configuration
+    paths = load_and_resolve_paths()
 
-    # Resolve configured paths
-    input_folder = resolve_path(config.input_folder, config_dir)
-    output_folder = resolve_path(config.output_folder, config_dir)
-    audio_output_folder = resolve_path(config.audio_output_folder, config_dir)
-
-    # Validate input folder exists
-    if not validate_folder_exists(input_folder, "Input folder"):
+    # Validate folders
+    if not paths.validate_input_folder():
         sys.exit(1)
-
-    # Ensure output folders are writable
-    if not ensure_folder_writable(output_folder, "Output folder"):
-        sys.exit(1)
-    if not ensure_folder_writable(audio_output_folder, "Audio output folder"):
+    if not paths.ensure_output_folders():
         sys.exit(1)
 
     # Open song folder
-    song_folder = input_folder / songtitle
+    song_folder = paths.input_folder / songtitle
     if not validate_folder_exists(song_folder, f"Song folder '{songtitle}'"):
         sys.exit(1)
 
@@ -833,7 +754,7 @@ def main():
         print(f"Adding lieddeel: {lieddeel}{measure_str}")
 
     # Concatenate files
-    output_nwctxt = output_folder / f"{songtitle}.nwctxt"
+    output_nwctxt = paths.output_folder / f"{songtitle}.nwctxt"
     print(f"\nConcatenating {len(file_list)} lieddelen...")
     concatenate_nwctxt_files(file_list, str(output_nwctxt), keep_tempi=keep_tempi)
     print(f"✅ Success! Concatenated .nwctxt files to {output_nwctxt}")
@@ -842,13 +763,13 @@ def main():
     write_analysis_to_file(output_nwctxt)
 
     # Generate complete LaTeX structure file
-    tex_file = output_folder / f"{songtitle} structuur.tex"
+    tex_file = paths.output_folder / f"{songtitle} structuur.tex"
     print(f"Generating: {tex_file}")
     write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel)
     print(f"✅ Success! Created: {tex_file}")
 
     # Generate label track file for Tenacity
-    labeltrack_file = audio_output_folder / f"{songtitle} labeltrack t_{tempo}.txt"
+    labeltrack_file = paths.audio_output_folder / f"{songtitle} labeltrack t_{tempo}.txt"
     print(f"Generating: {labeltrack_file}")
     write_labeltrack_file(labeltrack_file, measurecount_and_starttime_per_lieddeel)
     print(f"✅ Success! Created: {labeltrack_file}")

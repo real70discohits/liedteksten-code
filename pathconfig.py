@@ -4,7 +4,7 @@ This module provides functionality to load and validate path configurations
 from a JSON configuration file. It supports both relative and absolute paths.
 """
 
-import json
+import commentjson
 import sys
 from pathlib import Path
 from typing import Optional
@@ -39,6 +39,8 @@ class PathConfig:
 def _load_jsonc(filepath: Path) -> dict:
     """Load a JSON file with comments (.jsonc).
 
+    Uses the commentjson library to support // and /* */ comments.
+
     Args:
         filepath: Path to the JSONC file
 
@@ -47,55 +49,13 @@ def _load_jsonc(filepath: Path) -> dict:
 
     Raises:
         FileNotFoundError: If the configuration file doesn't exist
-        json.JSONDecodeError: If the file contains invalid JSON
+        commentjson.JSONDecodeError: If the file contains invalid JSON
     """
     if not filepath.exists():
         raise FileNotFoundError(f"Configuration file not found: {filepath}")
 
     with open(filepath, 'r', encoding='utf-8') as f:
-        content = f.read()
-
-    # Remove single-line comments
-    lines = content.split('\n')
-    cleaned_lines = []
-    for line in lines:
-        # Find comment position (but not inside strings)
-        in_string = False
-        escape_next = False
-        comment_pos = -1
-
-        for i, char in enumerate(line):
-            if escape_next:
-                escape_next = False
-                continue
-
-            if char == '\\':
-                escape_next = True
-                continue
-
-            if char == '"' and not escape_next:
-                in_string = not in_string
-
-            if not in_string and line[i:i+2] == '//':
-                comment_pos = i
-                break
-
-        if comment_pos >= 0:
-            cleaned_lines.append(line[:comment_pos].rstrip())
-        else:
-            cleaned_lines.append(line)
-
-    cleaned_content = '\n'.join(cleaned_lines)
-
-    # Remove multi-line comments
-    while '/*' in cleaned_content:
-        start = cleaned_content.find('/*')
-        end = cleaned_content.find('*/', start)
-        if end == -1:
-            break
-        cleaned_content = cleaned_content[:start] + cleaned_content[end+2:]
-
-    return json.loads(cleaned_content)
+        return commentjson.load(f)
 
 
 def load_path_config(config_file: Optional[Path] = None) -> PathConfig:
@@ -124,7 +84,7 @@ def load_path_config(config_file: Optional[Path] = None) -> PathConfig:
         print(f"❌ Error: {e}")
         print(f"   Please create a 'paths.jsonc' configuration file.")
         sys.exit(1)
-    except json.JSONDecodeError as e:
+    except (commentjson.JSONLibraryException, ValueError) as e:
         print(f"❌ Error: Invalid JSON in configuration file: {e}")
         sys.exit(1)
 
@@ -273,3 +233,78 @@ def ensure_folder_writable(folder_path: Path, folder_name: str) -> bool:
         return False
 
     return True
+
+
+class ResolvedPaths:
+    """Container for resolved and validated paths.
+
+    This class encapsulates all path resolution and provides convenience
+    methods for validation. Use load_and_resolve_paths() to create instances.
+    """
+
+    def __init__(self, config: PathConfig, config_dir: Path):
+        """Initialize ResolvedPaths with configuration.
+
+        Args:
+            config: PathConfig object with raw path strings
+            config_dir: Directory containing the configuration file
+        """
+        self.config = config
+        self.config_dir = config_dir
+
+        # Resolve all paths
+        self.input_folder = resolve_path(config.input_folder, config_dir)
+        self.output_folder = resolve_path(config.output_folder, config_dir)
+        self.audio_output_folder = resolve_path(config.audio_output_folder, config_dir)
+
+        # Resolve optional paths
+        self.soundfont_path = None
+        if config.soundfont_path:
+            self.soundfont_path = resolve_path(config.soundfont_path, config_dir)
+
+    def validate_input_folder(self) -> bool:
+        """Validate that input folder exists and is accessible.
+
+        Returns:
+            True if validation succeeds, False otherwise
+        """
+        return validate_folder_exists(self.input_folder, "Input folder")
+
+    def ensure_output_folders(self) -> bool:
+        """Ensure output folders exist and are writable.
+
+        Creates folders if they don't exist and validates write access.
+
+        Returns:
+            True if all validations succeed, False otherwise
+        """
+        return (ensure_folder_writable(self.output_folder, "Output folder") and
+                ensure_folder_writable(self.audio_output_folder, "Audio output folder"))
+
+    def __repr__(self) -> str:
+        """Return string representation of resolved paths."""
+        return (f"ResolvedPaths(input_folder={self.input_folder}, "
+                f"output_folder={self.output_folder}, "
+                f"audio_output_folder={self.audio_output_folder}, "
+                f"soundfont_path={self.soundfont_path})")
+
+
+def load_and_resolve_paths() -> ResolvedPaths:
+    """Load configuration and resolve all paths.
+
+    Convenience function for script main() functions. Loads the path
+    configuration and creates a ResolvedPaths object with all paths
+    resolved relative to the configuration directory.
+
+    Returns:
+        ResolvedPaths object with all paths resolved
+
+    Example:
+        paths = load_and_resolve_paths()
+        if not paths.validate_input_folder():
+            sys.exit(1)
+        song_folder = paths.input_folder / songtitle
+    """
+    config = load_path_config()
+    config_dir = Path(__file__).parent
+    return ResolvedPaths(config, config_dir)
