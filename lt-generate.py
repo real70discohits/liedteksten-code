@@ -348,9 +348,9 @@ def compile_structuur_file(songtitle, input_folder, output_folder, cleanup=True,
             aux_file = output_folder / f"{output_name}{ext}"
             if aux_file.exists():
                 aux_file.unlink()
-        # Remove the structuur.tex file after successful compilation
-        if structuur_tex.exists():
-            structuur_tex.unlink()
+        # DONT'T Remove the structuur.tex file after successful compilation
+        # if structuur_tex.exists():
+        #     structuur_tex.unlink()
 
     print(f"✅ Success: {output_name}.pdf")
     return True
