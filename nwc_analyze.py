@@ -321,10 +321,35 @@ def write_analysis_to_file(nwctxt_file_path):
 def main():
     """Main entry point."""
     if len(sys.argv) < 2:
-        print("Usage: python nwc-analyze.py <path-to-nwctxt-file>")
+        print("Usage: python nwc_analyze.py <song-title-or-path>")
+        print("  Examples:")
+        print("    python nwc_analyze.py \"She's so beautiful (22)\"")
+        print("    python nwc_analyze.py \"path/to/file.nwctxt\"")
         sys.exit(1)
 
-    file_path = sys.argv[1]
+    input_arg = sys.argv[1]
+
+    # Check if input is a path (contains path separators) or just a title
+    if '/' in input_arg or '\\' in input_arg or Path(input_arg).exists():
+        # It's a path, use as-is
+        file_path = Path(input_arg)
+    else:
+        # It's just a title, look in output_folder
+        paths = load_and_resolve_paths()
+
+        # Add .nwctxt extension if not present
+        if not input_arg.endswith('.nwctxt'):
+            input_arg += '.nwctxt'
+
+        # Look in output_folder
+        file_path = paths.output_folder / input_arg
+
+        if not file_path.exists():
+            print(f"❌ Error: File not found in output folder: {file_path}")
+            print(f"\nSearched in: {paths.output_folder}")
+            print(f"Looking for: {input_arg}")
+            sys.exit(1)
+
     result = write_analysis_to_file(file_path)
 
     if not result:
