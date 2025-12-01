@@ -294,16 +294,17 @@ def extract_tempo_and_timesig(filepath):
     return tempo, timesig
 
 
-def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel):
+def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, pickup_beats):
     """Write complete LaTeX file with song meta info
-    
+
     Args:
         tex_file: Path to .tex file
         songtitle: Title of the song
         tempo: Tempo value (integer) or None
         timesig: Time signature string (e.g. "4/4") or None
-        sections_with_measures: List of tuples (section_name, measure_count) in structure order
-        sections_with_chords: Dict mapping section_name to (chord_string, chord_count, is_valid)
+        measurecount_and_starttime_per_lieddeel: List of tuples (section_name, measure_count, start_time) in structure order
+        chords_per_lieddeel: Dict mapping section_name to (chord_string, chord_count, is_valid)
+        pickup_beats: Number of pickup beats at the start of the song
     """
     
     # Get unique sections in order of first appearance
@@ -361,8 +362,26 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
         # Title
         f.write(r'\section*{Lied structuur}' + '\n')
         f.write('\n')
-        
-        # Basis table with title, time signature and tempo
+
+        # Calculate total measures
+        totalmeasures = 0
+        for _, measures, _ in measurecount_and_starttime_per_lieddeel:
+            if measures is not None:
+                totalmeasures += measures
+
+        # Calculate total duration
+        total_duration_seconds = get_duration(measurecount_and_starttime_per_lieddeel, tempo, timesig, pickup_beats)
+        if total_duration_seconds is not None:
+            # Round to nearest second
+            total_duration_seconds = round(total_duration_seconds)
+            # Format as "m:ss"
+            minutes = total_duration_seconds // 60
+            seconds = total_duration_seconds % 60
+            duration_formatted = f"{minutes}:{seconds:02d}"
+        else:
+            duration_formatted = "?"
+
+        # Basis table with title, time signature, tempo, measures and duration
         f.write(r'\begin{tabular}{ll}' + '\n')
         f.write(r'\hline' + '\n')
         f.write(r'\textbf{Basis} & \\' + '\n')
@@ -370,6 +389,8 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
         f.write(f'Titel & {escape_latex(songtitle)} \\\\\n')
         f.write(f'Maatsoort & {escape_latex(timesig) if timesig else "?"} \\\\\n')
         f.write(f'Tempo & {tempo if tempo else "?"} \\\\\n')
+        f.write(f'\\#Maten & {totalmeasures} \\\\\n')
+        f.write(f'Duur & {duration_formatted} \\\\\n')
         f.write(r'\hline' + '\n')
         f.write(r'\end{tabular}' + '\n')
         f.write('\n')
@@ -438,11 +459,6 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
 
         f.write(r'\hline' + '\n')
         f.write(r'\end{tabular}' + '\n')
-        f.write('\n')
-
-        f.write(r'\vspace{0.3cm}' + '\n')
-        f.write('\n')
-        f.write(f'\\textbf{{Totaal aantal maten: {totalmeasures}}}\n')
         f.write('\n')
 
         # Document footer
@@ -812,7 +828,7 @@ def main():
     # Generate complete LaTeX structure file
     tex_file = paths.output_folder / f"{songtitle} structuur.tex"
     print(f"Generating: {tex_file}")
-    write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel)
+    write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, pickup_beats)
     print(f"✅ Success! Created: {tex_file}")
 
     # Generate label track file for Tenacity
