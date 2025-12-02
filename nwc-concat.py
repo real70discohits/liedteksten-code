@@ -305,18 +305,79 @@ def extract_tempo_and_timesig(filepath):
     return tempo, timesig
 
 
+def parse_duration(line):
+    """Parse NWC duration from Note or Rest line and convert to quarter notes.
+
+    Args:
+        line: Line containing |Dur: specification
+
+    Returns:
+        float: Duration in quarter notes, or 0.0 if not parseable
+    """
+    if '|Dur:' not in line:
+        return 0.0
+
+    try:
+        # Extract the Dur value
+        dur_start = line.find('|Dur:') + 5
+        dur_end = line.find('|', dur_start)
+        if dur_end == -1:
+            dur_value = line[dur_start:].strip()
+        else:
+            dur_value = line[dur_start:dur_end].strip()
+
+        # Base durations in quarter notes
+        duration_map = {
+            'Whole': 4.0,
+            'Half': 2.0,
+            '4th': 1.0,
+            '8th': 0.5,
+            '16th': 0.25,
+            '32nd': 0.125,
+        }
+
+        # Split on comma to separate duration from modifiers like Staccato, Tie, etc.
+        dur_base = dur_value.split(',')[0].strip()
+
+        # Check for dotted variations
+        is_dotted = ',Dotted' in line
+        is_dbl_dotted = ',DblDotted' in line
+
+        # Get base duration
+        base_duration = 0.0
+        for key, value in duration_map.items():
+            if dur_base == key:
+                base_duration = value
+                break
+
+        if base_duration == 0.0:
+            return 0.0
+
+        # Apply modifiers
+        if is_dbl_dotted:
+            return base_duration * 1.75  # 1 + 0.5 + 0.25
+        elif is_dotted:
+            return base_duration * 1.5
+
+        return base_duration
+
+    except (IndexError, ValueError):
+        return 0.0
+
+
 def extract_lbltrck_markers(filepath):
-    """Extract LBLTRCK markers with their measure positions from Bass staff.
+    """Extract LBLTRCK markers with precise beat positions from Bass staff.
 
     Scans the Bass staff for Text elements with format 'LBLTRCK: label_text'
-    and determines which measure they appear in.
+    and determines their exact position within measures.
 
     Args:
         filepath: Path to .nwctxt file
 
     Returns:
-        List of tuples: (label_text, measure_number_in_section)
-        measure_number is 0-based (0 = first measure)
+        List of tuples: (label_text, measure_number, beat_position_in_quarters)
+        - measure_number is 0-based (0 = first measure)
+        - beat_position_in_quarters is position within measure in quarter notes
         Empty list if no markers found or Bass staff not found
     """
     nwc = NwcFile(filepath)
@@ -328,6 +389,7 @@ def extract_lbltrck_markers(filepath):
     staff_lines = bass_staff.lines
     markers = []
     current_measure = 0
+    current_beat_pos = 0.0  # Position within current measure in quarter notes
     current_measure_has_dur = False
 
     for line in staff_lines:
@@ -345,7 +407,7 @@ def extract_lbltrck_markers(filepath):
                         # Extract label text (everything after "LBLTRCK:")
                         label_text = text_stripped[8:].strip()
                         if label_text:  # Only add non-empty labels
-                            markers.append((label_text, current_measure))
+                            markers.append((label_text, current_measure, current_beat_pos))
             except (IndexError, ValueError):
                 continue
 
@@ -353,11 +415,14 @@ def extract_lbltrck_markers(filepath):
         if line.startswith(NWC_PREFIX_BAR) or line == '|Bar':
             if current_measure_has_dur:
                 current_measure += 1
+                current_beat_pos = 0.0
             current_measure_has_dur = False
 
-        # Check for duration (note or rest)
+        # Track durations for precise beat position
         if '|Dur:' in line:
             current_measure_has_dur = True
+            duration = parse_duration(line)
+            current_beat_pos += duration
 
     return markers
 
@@ -851,16 +916,22 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
         # Extract LBLTRCK markers and calculate their absolute times
         lbltrck_markers = extract_lbltrck_markers(str(lieddeel_nwctxt))
         if lbltrck_markers and tempo and timesig:
-            # Calculate measure duration
+            # Calculate timing parameters
             beats_per_second = tempo / 60
             beat_duration = 1 / beats_per_second
             s_beats_per_measure, _, s_beat_base = timesig.partition('/')
             beats_per_measure = int(s_beats_per_measure)
+            beat_base = int(s_beat_base)
             measure_duration = beats_per_measure * beat_duration
 
-            # Add each marker with its absolute time
-            for label_text, measure_number in lbltrck_markers:
-                marker_time = lieddeel_starttime + (measure_number * measure_duration)
+            # Add each marker with its precise absolute time
+            for label_text, measure_number, beat_pos_in_quarters in lbltrck_markers:
+                # Convert quarter note position to beats in current time signature
+                # Example: in 4/4, quarter = 1 beat; in 6/8, quarter = 0.5 beats
+                beats_within_measure = beat_pos_in_quarters * (4.0 / beat_base)
+                time_within_measure = beats_within_measure * beat_duration
+
+                marker_time = lieddeel_starttime + (measure_number * measure_duration) + time_within_measure
                 all_labels.append((label_text, marker_time))
 
         # Extract chord info only once per unique section
