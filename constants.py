@@ -5,6 +5,7 @@ This module contains shared constants to avoid magic strings and improve maintai
 
 # NWC Staff Names
 STAFF_NAME_BASS = "Bass"
+STAFF_NAME_RITME = "Ritme"
 STAFF_NAME_ZANG = "Zang"
 
 # File Extensions

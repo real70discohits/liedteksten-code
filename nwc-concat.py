@@ -6,6 +6,14 @@ Creates:
 - Concatenated .nwctxt file with all sections
 - LaTeX structure file with song metadata, parts overview, and composition
 
+Staff Conventions:
+This script extracts specific information from named staffs:
+- Bass staff: Contains tempo, time signature, and chord annotations (akk: markers)
+- Ritme staff: Contains measure count information via repeat markers
+
+The order of staffs in .nwctxt files is flexible, but must be consistent across
+all section files for the same song.
+
 Usage:
     python nwc-concat.py "Song Title"
     python nwc-concat.py "Song Title" --keep-tempi
@@ -26,7 +34,8 @@ from nwc_utils import parse_nwctxt, NwcFile
 from constants import (NWC_PREFIX_ADDSTAFF, NWC_PREFIX_STAFF_PROPERTIES,
                        NWC_PREFIX_STAFF_INSTRUMENT, NWC_PREFIX_CLEF,
                        NWC_PREFIX_TIMESIG, NWC_PREFIX_TEMPO, NWC_PREFIX_BAR,
-                       NWC_END_MARKER, FOLDER_NWC, EXT_NWCTXT, EXT_JSONC, EXT_TEX, EXT_TXT)
+                       NWC_END_MARKER, FOLDER_NWC, EXT_NWCTXT, EXT_JSONC, EXT_TEX, EXT_TXT,
+                       STAFF_NAME_BASS, STAFF_NAME_RITME)
 
 
 def concatenate_nwctxt_files(file_list, output_file, keep_tempi=False):
@@ -95,29 +104,30 @@ def concatenate_nwctxt_files(file_list, output_file, keep_tempi=False):
 
 
 def get_measure_count(filepath):
-    """Extract measure count from second staff in .nwctxt file
-    
-    Looks for a line like |Bar|Style:LocalRepeatClose|Repeat:4 in the second staff
+    """Extract measure count from Ritme staff in .nwctxt file
+
+    Looks for a line like |Bar|Style:LocalRepeatClose|Repeat:4 in the Ritme staff
     and extracts the number after Repeat:, then adds any additional measures with
     duration after the repeat-close marker.
-    
+
     If no repeat count is found, counts all measures that contain duration.
     """
-    _, staff_sections = parse_nwctxt(filepath)
-    
-    if len(staff_sections) < 2:
+    nwc = NwcFile(filepath)
+
+    ritme_staff = nwc.get_staff_by_name(STAFF_NAME_RITME)
+    if not ritme_staff:
         return None
-    
-    # Look at second staff for the repeat marker
-    second_staff = staff_sections[1]
-    
+
+    # Get Ritme staff content for the repeat marker
+    ritme_staff_lines = ritme_staff.lines
+
     repeat_count = None
     measures_after_repeat = 0
     total_measures = 0
     after_repeat = False
     current_measure_has_dur = False
-    
-    for line in second_staff:
+
+    for line in ritme_staff_lines:
         if 'Style:LocalRepeatClose' in line and 'Repeat:' in line:
             # Extract the number after Repeat:
             try:
@@ -158,27 +168,28 @@ def get_measure_count(filepath):
 
 
 def extract_chords_from_first_staff(filepath):
-    """Extract chord progression from first staff of .nwctxt file
-    
+    """Extract chord progression from Bass staff of .nwctxt file
+
     Returns:
         tuple: (chord_string, total_measures, is_valid)
         - chord_string: formatted string like "B, F#, E(2), B(5)" or "-" if no chords
         - total_measures: total count of measures
         - is_valid: True if count matches expected
     """
-    _, staff_sections = parse_nwctxt(filepath)
-    
-    if len(staff_sections) < 1:
+    nwc = NwcFile(filepath)
+
+    bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
+    if not bass_staff:
         return "-", 0, True
-    
-    first_staff = staff_sections[0]
-    
+
+    bass_staff_lines = bass_staff.lines
+
     chords = []
     current_chord = None
     current_measures = 0
     current_measure_has_dur = False
-    
-    for line in first_staff:
+
+    for line in bass_staff_lines:
         # Check for chord indication in Text entries
         if line.startswith('|Text|') and 'Text:"' in line:
             # Extract the text content
@@ -247,7 +258,7 @@ def extract_chords_from_first_staff(filepath):
 
 
 def extract_tempo_and_timesig(filepath):
-    """Extract tempo and time signature from first staff of .nwctxt file
+    """Extract tempo and time signature from Bass staff of .nwctxt file
 
     Returns:
         tuple: (tempo, timesig)
@@ -256,11 +267,11 @@ def extract_tempo_and_timesig(filepath):
     """
     nwc = NwcFile(filepath)
 
-    if len(nwc.staffs) < 1:
+    bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
+    if not bass_staff:
         return None, None
 
-    first_staff = nwc.get_staff_by_index(0)
-    staff_lines = first_staff.lines
+    staff_lines = bass_staff.lines
 
     tempo = None
     timesig = None
