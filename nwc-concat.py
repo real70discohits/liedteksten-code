@@ -32,10 +32,10 @@ from pathconfig import load_and_resolve_paths, validate_file_exists, validate_fo
 from nwc_analyze import write_analysis_to_file
 from nwc_utils import parse_nwctxt, NwcFile
 from constants import (NWC_PREFIX_ADDSTAFF, NWC_PREFIX_STAFF_PROPERTIES,
-                       NWC_PREFIX_STAFF_INSTRUMENT, NWC_PREFIX_CLEF,
-                       NWC_PREFIX_TIMESIG, NWC_PREFIX_TEMPO, NWC_PREFIX_BAR,
-                       NWC_END_MARKER, FOLDER_NWC, EXT_NWCTXT, EXT_JSONC, EXT_TEX, EXT_TXT,
-                       STAFF_NAME_BASS, STAFF_NAME_RITME)
+                        NWC_PREFIX_STAFF_INSTRUMENT, NWC_PREFIX_CLEF,
+                        NWC_PREFIX_TIMESIG, NWC_PREFIX_TEMPO, NWC_PREFIX_BAR,
+                        NWC_PREFIX_TEXT, NWC_END_MARKER, FOLDER_NWC, EXT_NWCTXT,
+                        EXT_JSONC, STAFF_NAME_BASS, STAFF_NAME_RITME)
 
 
 def concatenate_nwctxt_files(file_list, output_file, keep_tempi=False):
@@ -305,6 +305,63 @@ def extract_tempo_and_timesig(filepath):
     return tempo, timesig
 
 
+def extract_lbltrck_markers(filepath):
+    """Extract LBLTRCK markers with their measure positions from Bass staff.
+
+    Scans the Bass staff for Text elements with format 'LBLTRCK: label_text'
+    and determines which measure they appear in.
+
+    Args:
+        filepath: Path to .nwctxt file
+
+    Returns:
+        List of tuples: (label_text, measure_number_in_section)
+        measure_number is 0-based (0 = first measure)
+        Empty list if no markers found or Bass staff not found
+    """
+    nwc = NwcFile(filepath)
+
+    bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
+    if not bass_staff:
+        return []
+
+    staff_lines = bass_staff.lines
+    markers = []
+    current_measure = 0
+    current_measure_has_dur = False
+
+    for line in staff_lines:
+        # Check for LBLTRCK marker in Text entries
+        if line.startswith(NWC_PREFIX_TEXT) and 'Text:"' in line:
+            try:
+                # Extract the text content
+                text_start = line.find('Text:"') + 6
+                text_end = line.find('"', text_start)
+                if text_end > text_start:
+                    text_content = line[text_start:text_end]
+                    # Check if it starts with "LBLTRCK:"
+                    text_stripped = text_content.strip()
+                    if text_stripped.startswith('LBLTRCK:'):
+                        # Extract label text (everything after "LBLTRCK:")
+                        label_text = text_stripped[8:].strip()
+                        if label_text:  # Only add non-empty labels
+                            markers.append((label_text, current_measure))
+            except (IndexError, ValueError):
+                continue
+
+        # Track measure boundaries
+        if line.startswith(NWC_PREFIX_BAR) or line == '|Bar':
+            if current_measure_has_dur:
+                current_measure += 1
+            current_measure_has_dur = False
+
+        # Check for duration (note or rest)
+        if '|Dur:' in line:
+            current_measure_has_dur = True
+
+    return markers
+
+
 def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, pickup_beats):
     """Write complete LaTeX file with song meta info
 
@@ -476,24 +533,26 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
         f.write(r'\end{document}' + '\n')
 
 
-def write_labeltrack_file(labeltrack_file, measurecount_and_starttime_per_lieddeel):
+def write_labeltrack_file(labeltrack_file, all_labels):
     """Write complete label track for song
-    
+
     Args:
         labeltrack_file: Path to .txt file
-        measures_per_lieddeel: List of tuples (lieddeel, measure_count, start_in_seconds) in structure order
+        all_labels: List of tuples (label_text, time_in_seconds) containing both
+                   lieddeel markers and LBLTRCK markers
     """
-    if labeltrack_file is None or measurecount_and_starttime_per_lieddeel is None:
+    if labeltrack_file is None or all_labels is None:
         print("⚠️ No labeltrack file created because of empty parameter value(s).")
         return
 
-    # Write the complete file
+    # Sort labels by time
+    sorted_labels = sorted(all_labels, key=lambda x: x[1])
+
+    # Write the complete file in Audacity label track format
     with open(labeltrack_file, 'w', encoding='utf-8') as f:
-        for triple in measurecount_and_starttime_per_lieddeel:
-            lieddeel, _, time = triple
-            formattedsixdecimals = f"{time:.6f}"     # use result = f"{x:.6f} om altijd 6 decimals te hebben als string
-            start = formattedsixdecimals
-            f.write(f'{start}\t{start}\t{lieddeel}' + '\n')
+        for label_text, time in sorted_labels:
+            formattedsixdecimals = f"{time:.6f}"
+            f.write(f'{formattedsixdecimals}\t{formattedsixdecimals}\t{label_text}\n')
 
 
 def update_liedtekst_tex_file(liedtitel, tempo, maatsoort, song_folder=None):
@@ -758,11 +817,13 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
         nwc_folder: Path to NWC folder
 
     Returns:
-        tuple: (file_list, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, tempo, timesig, pickup_beats)
+        tuple: (file_list, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, all_labels, tempo, timesig, pickup_beats)
+        all_labels is a list of tuples: (label_text, time_in_seconds)
     """
     file_list = []
     measurecount_and_starttime_per_lieddeel = []
     chords_per_lieddeel = {}
+    all_labels = []
     tempo = None
     timesig = None
     pickup_beats = 0
@@ -784,6 +845,24 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
         lieddeel_starttime = get_duration(measurecount_and_starttime_per_lieddeel, tempo, timesig, pickup_beats)
         measurecount_and_starttime_per_lieddeel.append((lieddeel, measure_count, lieddeel_starttime))
 
+        # Add lieddeel label to all_labels list
+        all_labels.append((lieddeel, lieddeel_starttime))
+
+        # Extract LBLTRCK markers and calculate their absolute times
+        lbltrck_markers = extract_lbltrck_markers(str(lieddeel_nwctxt))
+        if lbltrck_markers and tempo and timesig:
+            # Calculate measure duration
+            beats_per_second = tempo / 60
+            beat_duration = 1 / beats_per_second
+            s_beats_per_measure, _, s_beat_base = timesig.partition('/')
+            beats_per_measure = int(s_beats_per_measure)
+            measure_duration = beats_per_measure * beat_duration
+
+            # Add each marker with its absolute time
+            for label_text, measure_number in lbltrck_markers:
+                marker_time = lieddeel_starttime + (measure_number * measure_duration)
+                all_labels.append((label_text, marker_time))
+
         # Extract chord info only once per unique section
         if lieddeel not in chords_per_lieddeel:
             chord_string, chord_count, is_valid = extract_chords_from_first_staff(str(lieddeel_nwctxt))
@@ -792,7 +871,7 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
         measure_str = f" ({measure_count} measures)" if measure_count else ""
         print(f"Adding lieddeel: {lieddeel}{measure_str}")
 
-    return file_list, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, tempo, timesig, pickup_beats
+    return file_list, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, all_labels, tempo, timesig, pickup_beats
 
 
 def main():
@@ -824,7 +903,7 @@ def main():
     print(f"Tempo handling: {'Keep all tempi' if keep_tempi else 'Remove tempi from lieddelen 2+'}")
 
     # Process all lieddelen
-    (file_list, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel,
+    (file_list, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, all_labels,
      tempo, timesig, pickup_beats) = process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder)
 
     # Concatenate files
@@ -845,7 +924,7 @@ def main():
     # Generate label track file for Tenacity
     labeltrack_file = paths.audio_output_folder / f"{songtitle} labeltrack t_{tempo}.txt"
     print(f"Generating: {labeltrack_file}")
-    write_labeltrack_file(labeltrack_file, measurecount_and_starttime_per_lieddeel)
+    write_labeltrack_file(labeltrack_file, all_labels)
     print(f"✅ Success! Created: {labeltrack_file}")
 
     update_liedtekst_tex_file(songtitle, tempo, timesig, song_folder)
