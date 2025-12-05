@@ -992,8 +992,10 @@ def main():
     write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, pickup_beats)
     print(f"✅ Success! Created: {tex_file}")
 
-    # Generate label track file for Tenacity
-    labeltrack_file = paths.audio_output_folder / f"{songtitle} labeltrack t_{tempo}.txt"
+    # Generate label track file for Tenacity in song-specific subfolder
+    song_audio_folder = paths.audio_output_folder / songtitle
+    song_audio_folder.mkdir(parents=True, exist_ok=True)
+    labeltrack_file = song_audio_folder / f"{songtitle} labeltrack t_{tempo}.txt"
     print(f"Generating: {labeltrack_file}")
     write_labeltrack_file(labeltrack_file, all_labels)
     print(f"✅ Success! Created: {labeltrack_file}")

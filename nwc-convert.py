@@ -249,7 +249,19 @@ Examples:
         print(f"  {e}")
         sys.exit(1)
 
-    print(f"Output directory: {output_dir}\n")
+    # ===== CREATE SONG-SPECIFIC SUBFOLDER =====
+    # Extract song title from input filename (without extension)
+    song_title = input_path.stem
+    song_output_dir = output_dir / song_title
+    try:
+        song_output_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        print(f"❌ ERROR: Could not create song output directory:")
+        print(f"  {song_output_dir}")
+        print(f"  {e}")
+        sys.exit(1)
+
+    print(f"Output directory: {song_output_dir}\n")
 
     # ===== VALIDATE SOUNDFONT =====
     soundfont_path = Path(args.soundfont)
@@ -262,9 +274,9 @@ Examples:
     print(f"Soundfont: {soundfont_path}\n")
 
     # ===== GENERATE OUTPUT PATHS =====
-    midi_path = get_output_path(input_path, output_dir, '.mid')
-    wav_path = get_output_path(input_path, output_dir, '.wav')
-    flac_path = get_output_path(input_path, output_dir, '.flac')
+    midi_path = get_output_path(input_path, song_output_dir, '.mid')
+    wav_path = get_output_path(input_path, song_output_dir, '.wav')
+    flac_path = get_output_path(input_path, song_output_dir, '.flac')
 
     print("=" * 60)
     print("Starting conversion pipeline...")
