@@ -23,10 +23,14 @@ nwconcpy -[#green]> audio_output_folder: create labeltrack.txt
 u1 -[#green]> nwconvpy : run script
 nwconvpy -[#green]> nwconvexe : call
 nwconvexe -[#green]> audio_output_folder: convert .nwctxt to .mid
+dist -[#orange]> audio_output_folder: use merged .nwctxt
+audio_output_folder -[#orange]> audio_output_folder: use soundfont
 nwconvpy -[#green]> fluid : call
 fluid -[#green]> audio_output_folder: convert .mid to.wav
+audio_output_folder -[#orange]> audio_output_folder: call Fluidsynth
 nwconvpy -[#green]> ffmpeg : call
 ffmpeg -[#green]> audio_output_folder: convert .wav to .flac
+audio_output_folder -[#orange]> audio_output_folder: call Ffmpeg
 u1 -> repos: (manual) create liedtekst.tex
 dist -[#orange]> repos: use analysis.txt
 u1 -[#green]> ltgenerate : run script
