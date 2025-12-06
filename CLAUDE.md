@@ -1,6 +1,7 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with
+code in this repository.
 
 ## Overview
 
@@ -42,7 +43,8 @@ it's understandable how happy I am with this automation.
 The typical workflow for creating/updating a song (visualized in `project/schema.pu`):
 
 1. **Create music notation** (Manual)
-   - Use NoteWorthy Composer GUI to create individual .nwctxt files for each song section (intro, verse, chorus, etc.)
+   - Use NoteWorthy Composer GUI to create individual .nwctxt files for each
+   song section (intro, verse, chorus, etc.)
    - Store in git repository: `<input_folder>/<Song Title>/nwc/`
    - Create `volgorde.jsonc` to define section sequence
 
@@ -76,10 +78,13 @@ The typical workflow for creating/updating a song (visualized in `project/schema
 
 ### Storage Locations
 
-- **git repository** (`input_folder`): Source files (.tex, .nwctxt, volgorde.jsonc, lt-config.jsonc)
-- **build folder** (`build_folder`): Intermediate files (merged .nwctxt, analysis.txt, structuur.tex)
+- **git repository** (`input_folder`): Source files (.tex, .nwctxt,
+volgorde.jsonc, lt-config.jsonc)
+- **build folder** (`build_folder`): Intermediate files (merged .nwctxt,
+analysis.txt, structuur.tex)
 - **distribution folder** (`distributie_folder`): Final PDFs ready for distribution
-- **audio_output_folder**: Audio files (.mid, .wav, .flac) and labeltrack.txt for Tenacity
+- **audio_output_folder**: Audio files (.mid, .wav, .flac) and labeltrack.txt
+for Tenacity
 - **PDrive**: Cloud backup of generated PDFs (via lt-upload.ps1)
 
 ## Core Architecture
@@ -115,7 +120,7 @@ All scripts use `pathconfig.py` to load paths from `paths.jsonc`:
 
 ### Song Folder Structure
 
-```
+```txt
 <input_folder>/
   <Song Title>/
     <Song Title>.tex                    # LaTeX lyrics with chords/tabs
@@ -129,6 +134,7 @@ All scripts use `pathconfig.py` to load paths from `paths.jsonc`:
 ## Key Commands
 
 ### Build/Generate PDFs
+
 ```bash
 # Generate all variants for all songs
 python lt-generate.py
@@ -136,7 +142,7 @@ python lt-generate.py
 # Generate for specific songs
 python lt-generate.py "song1" "song2"
 
-# Generate only specific variant (1=basic, 2=measures, 3=chords, 4=measures+chords, 5=all)
+# Generate only specific variant (1=basic, 2=maten, 3=chords, 4=maten+chords, 5=all)
 python lt-generate.py "song" --only 3
 
 # Keep auxiliary files for debugging
@@ -147,6 +153,7 @@ python lt-generate.py "song" --tab-orientation right
 ```
 
 ### Process NWC Files
+
 ```bash
 # Concatenate song sections and generate structure
 python nwc-concat.py "Song Title"
@@ -163,6 +170,7 @@ python nwc_analyze.py "path\to\song.nwctxt"
 ```
 
 ### Environment Setup
+
 ```bash
 # Initialize virtual environment (git bash)
 python -m venv .venv
@@ -177,42 +185,54 @@ pip install -r requirements.txt
 ### LaTeX Compilation Process
 
 `lt-generate.py` compiles each .tex file **twice** to resolve references:
+
 - First pass: Build initial PDF, keep auxiliary files
 - Second pass: Final PDF with correct page numbers/references
 - Cleanup only happens after second pass (unless `--no-cleanup`)
 
-The script also generates "structuur" PDFs from auto-generated .tex files in the build folder. **Note**: structuur.tex files are NOT deleted after successful compilation (changed from previous behavior).
+The script also generates "structuur" PDFs from auto-generated .tex
+files in the build folder. **Note**: structuur.tex files are NOT
+deleted after successful compilation (changed from previous behavior).
 
 ### Transposition System
 
-Songs can specify transpositions in .tex files using `\newcommand{\transpositions}{2, 3}`. The system:
+Songs can specify transpositions in .tex files using
+`\newcommand{\transpositions}{2, 3}`. The system:
+
 - Always generates transpose=0 version
 - Plus additional transpositions specified
 - Updates output filename with key and transposition info
 - Uses German note names (Cis=C#, Des=Db, etc.)
 
-The `transpose()` function in `lt-generate.py` preserves chord extensions and handles both sharps (is) and flats (es).
+The `transpose()` function in `lt-generate.py` preserves chord
+extensions and handles both sharps (is) and flats (es).
 
 ### Configuration Matching
 
 `lt_configloader.py` provides layout override system:
-- Song-specific `lt-config.jsonc` files define conditions (song ID, display options) and actions (margin/fontsize adjustments)
+
+- Song-specific `lt-config.jsonc` files define conditions (song ID, display
+options) and actions (margin/fontsize adjustments)
 - Matching uses wildcards: `null` values in conditions match any setting
 - **First match wins**: Order matters in config arrays
 
 ### NWC File Processing
 
 NWC files have:
+
 - Header section (file metadata)
 - Multiple staffs (Bass, Zang, etc.)
 - Each staff has properties, notes, bars, tempo, etc.
 
 Key concepts:
-- **Begintel** (pickup measure): Detected when `StartingBar:0` and first Rest before first Bar
+
+- **Begintel** (pickup measure): Detected when `StartingBar:0` and first Rest
+- before first Bar
 - **Vooraf** measures: Count before "liedstart" marker (minus begintel if present)
 - **Measure counting**: Uses Bar markers and Dur: elements to determine measure boundaries
 
 `nwc_utils.py` provides:
+
 - `NwcFile` class: Parse and access staffs by name or index
 - `NwcStaff` class: Represents individual staff with name extraction
 - `parse_nwctxt()`: Legacy function for backward compatibility
@@ -220,6 +240,7 @@ Key concepts:
 ### Duration Calculation
 
 `nwc-concat.py` calculates timing for label tracks:
+
 - Reads tempo (BPM) and time signature from first section
 - Calculates measure duration based on beats per measure
 - Tracks cumulative start times for each section
@@ -229,6 +250,7 @@ Key concepts:
 ## External Dependencies
 
 The system requires these external tools (verified by `nwc-convert.py`):
+
 - **nwc-conv**: NoteWorthy Composer converter (NWCTXT → MIDI)
 - **fluidsynth**: MIDI synthesizer (MIDI → WAV with soundfont)
 - **ffmpeg**: Audio converter (WAV → FLAC)
@@ -239,13 +261,17 @@ All must be in PATH or specified explicitly.
 ## Code Organization Principles
 
 ### Shared Modules
-- `constants.py`: Centralized string constants (prefixes, file extensions, staff names)
+
+- `constants.py`: Centralized string constants (prefixes, file extensions,
+- staff names)
 - `pathconfig.py`: Path resolution and validation utilities
 - `nwc_utils.py`: NWC file parsing classes
 - `lt_configloader.py`: Configuration loading with dataclasses
 
 ### Error Handling Pattern
+
 Scripts use consistent validation:
+
 - `validate_file_exists()`: Check file presence and readability
 - `validate_folder_exists()`: Check folder access
 - `ensure_folder_writable()`: Create if needed, verify write access
@@ -253,7 +279,9 @@ Scripts use consistent validation:
 - Use `sys.exit(1)` on fatal errors
 
 ### File Naming Conventions
+
 Generated files include metadata in names:
+
 - `{title} ({id})`: Basic song
 - `{title} ({id}) in {key} transp({+/-n})`: Transposed version
 - `{title} ({id}) met akkoorden`: With chords
@@ -263,6 +291,7 @@ Generated files include metadata in names:
 ## Testing Considerations
 
 When testing changes:
+
 - Always test with `--no-cleanup` to inspect auxiliary files
 - Check both single-song and multi-song processing
 - Verify all 5 variants generate correctly (`--only 1` through `--only 5`)
