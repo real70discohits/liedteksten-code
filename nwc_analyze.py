@@ -470,9 +470,9 @@ def main():
             print(f"Looking for: {input_arg}")
             sys.exit(1)
 
-    result = write_analysis_to_file(file_path)
+    result_file, result_analysis = write_analysis_to_file(file_path)
 
-    if not result:
+    if not result_file:
         sys.exit(1)
 
 
