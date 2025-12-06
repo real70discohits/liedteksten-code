@@ -516,7 +516,7 @@ def main():
         else:
             return False
 
-    # If --only -1, show which variants have configuration
+    # If --only -1, show which variants will be generated per song
     if only == -1:
         variant_names = {
             1: "text only",
@@ -525,35 +525,60 @@ def main():
             4: "text + measures + chords",
             5: "text + measures + chords + tabs"
         }
-        configured_variants = [v for v in range(1, 6) if should_generate_variant(v)]
-        if configured_variants:
+
+        # Collect which songs have which variants configured
+        song_variants = {}
+        for song in songtitles:
+            configured = [v for v in range(1, 6)
+                         if has_config_for_variant(song, paths.input_folder, v, tab_orientation)]
+            if configured:
+                song_variants[song] = configured
+
+        if song_variants:
             print(f"\n{'='*60}")
-            print("Generating only configured variants:")
-            for v in configured_variants:
-                print(f"  Variant {v}: {variant_names[v]}")
+            print("Generating only configured variants per song:")
+            print(f"{'='*60}")
+            for song, variants in song_variants.items():
+                variant_desc = ", ".join([f"{v} ({variant_names[v]})" for v in variants])
+                print(f"  {song}: variants {variant_desc}")
             print(f"{'='*60}\n")
         else:
             print("\n⚠️  No configured variants found for selected songs.\n")
 
-    if should_generate_variant(1):
-        # generate liedtekst pdf
-        success = sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, debug=args.debug) for f in songtitles)
+    # Helper to get songs that should be processed for a given variant
+    def get_songs_for_variant(variant_num):
+        if only == -1:
+            # Only return songs that have config for this variant
+            return [song for song in songtitles
+                    if has_config_for_variant(song, paths.input_folder, variant_num, tab_orientation)]
+        else:
+            # For other values of 'only', return all songs if variant should be generated
+            return songtitles if should_generate_variant(variant_num) else []
 
-    if should_generate_variant(2):
-        # generate liedtekst pdf with measurenumbers
-        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True, debug=args.debug) for f in songtitles)
+    # Generate variant 1: text only
+    songs_v1 = get_songs_for_variant(1)
+    if songs_v1:
+        success = sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, debug=args.debug) for f in songs_v1)
 
-    if should_generate_variant(3):
-        # generate liedtekst pdf with chords
-        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=False, show_chords=True, debug=args.debug) for f in songtitles)
+    # Generate variant 2: text + measures
+    songs_v2 = get_songs_for_variant(2)
+    if songs_v2:
+        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True, debug=args.debug) for f in songs_v2)
 
-    if should_generate_variant(4):
-        # generate liedtekst pdf with measurenumbers and chords
-        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True, debug=args.debug) for f in songtitles)
+    # Generate variant 3: text + chords
+    songs_v3 = get_songs_for_variant(3)
+    if songs_v3:
+        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=False, show_chords=True, debug=args.debug) for f in songs_v3)
 
-    if should_generate_variant(5):
-        # generate liedtekst pdf with measurenumbers, chords and guitartabs
-        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True, show_tabs=True, tab_orientation=tab_orientation, debug=args.debug) for f in songtitles)
+    # Generate variant 4: text + measures + chords
+    songs_v4 = get_songs_for_variant(4)
+    if songs_v4:
+        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True, debug=args.debug) for f in songs_v4)
+
+    # Generate variant 5: text + measures + chords + tabs
+    songs_v5 = get_songs_for_variant(5)
+    if songs_v5:
+        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True, show_tabs=True, tab_orientation=tab_orientation, debug=args.debug) for f in songs_v5)
 
     # Generate structuur PDF for each liedtekst (unless --no-structuur)
     if not args.no_structuur:

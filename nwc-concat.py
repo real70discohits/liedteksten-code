@@ -911,7 +911,7 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
         if tempo is None and timesig is None:
             tempo, timesig = extract_tempo_and_timesig(str(lieddeel_nwctxt))
             pickup_beats = get_pickup_beats(lieddeel_nwctxt)
-            print(f"⚠️ NOTE: Detected {pickup_beats} beats up front.")
+            print(f"ℹ️ NOTE: Detected {pickup_beats} beats up front.")
 
         file_list.append(str(lieddeel_nwctxt))
         measure_count = get_measure_count(str(lieddeel_nwctxt))
