@@ -10,7 +10,8 @@ control     "Lt-generate\n.py" as ltgenerate
 control     "Lt-upload\n.ps"    as ltupload
 control     "Tenacity\n.exe"  as tenacity
 database    "git" as repos
-database    "audio folder" as audio_output_folder
+database    "audio folder" as audio
+database    "build folder" as build
 database    "dist folder" as dist
 database    PDrive as pdrive
 
@@ -18,27 +19,39 @@ autonumber
 u1 -> nwc : start GUI
 u1 -> repos: (manual) create multi .nwctxt's
 u1 -[#green]> nwconcpy : run script
-nwconcpy -[#green]> dist: create merged nwctxt, nwctxt analysis.txt, structuur.tex, update lied .tex
-nwconcpy -[#green]> audio_output_folder: create labeltrack.txt
+
+' concat
+nwconcpy -[#green]> repos: update lied.tex
+nwconcpy -[#green]> audio : create labeltrack.txt
+nwconcpy -[#green]> build: create merged nwctxt, analysis.txt, structuur.tex
+
+' convert
 u1 -[#green]> nwconvpy : run script
 nwconvpy -[#green]> nwconvexe : call
-nwconvexe -[#green]> audio_output_folder: convert .nwctxt to .mid
-dist -[#orange]> audio_output_folder: use merged .nwctxt
-audio_output_folder -[#orange]> audio_output_folder: use soundfont
+nwconvexe -[#green]> audio: convert .nwctxt to .mid
+build -[#orange]> audio: use merged .nwctxt
+audio -[#orange]> audio: use soundfont
 nwconvpy -[#green]> fluid : call
-fluid -[#green]> audio_output_folder: convert .mid to.wav
-audio_output_folder -[#orange]> audio_output_folder: call Fluidsynth
+fluid -[#green]> audio : convert .mid to.wav
+audio -[#orange]> audio: call Fluidsynth
 nwconvpy -[#green]> ffmpeg : call
-ffmpeg -[#green]> audio_output_folder: convert .wav to .flac
-audio_output_folder -[#orange]> audio_output_folder: call Ffmpeg
+ffmpeg -[#green]> audio : convert .wav to .flac
+audio -[#orange]> audio: call Ffmpeg
+
+' lyrics
 u1 -> repos: (manual) create liedtekst.tex
-dist -[#orange]> repos: use analysis.txt
+build -[#orange]> repos: use analysis.txt
+
 u1 -[#green]> ltgenerate : run script
 ltgenerate -[#green]> dist: render liedtekst .pdf, render structuur .pdf
+
+' upload (in the near future, upload will be after record)
 u1 -[#green]> ltupload : run script
 ltupload -[#green]> pdrive : upload pdf's to drive
+
+' record
 u1 -> tenacity : start GUI
-tenacity <[#orange]- audio_output_folder: import .flac 
-tenacity <[#orange]- audio_output_folder: import labeltrack
+tenacity <[#orange]- audio : import .flac 
+tenacity <[#orange]- audio : import labeltrack
 u1 -> tenacity : (manual) make recording
 @enduml
