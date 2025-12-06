@@ -228,7 +228,7 @@ Examples:
     print("Processing input file...")
     print("=" * 60 + "\n")
 
-    input_path = get_input_file_path(args.input, paths.output_folder)
+    input_path = get_input_file_path(args.input, paths.build_folder)
 
     if not input_path.exists():
         print("❌ ERROR: Input file not found:")

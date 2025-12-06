@@ -47,9 +47,9 @@ The typical workflow for creating/updating a song (visualized in `project/schema
    - Create `volgorde.jsonc` to define section sequence
 
 2. **Run nwc-concat.py**
-   - Creates merged .nwctxt file → **dist folder**
-   - Creates analysis.txt (lyrics mapped to measures) → **dist folder**
-   - Creates structuur.tex (song structure/statistics) → **dist folder**
+   - Creates merged .nwctxt file → **build folder**
+   - Creates analysis.txt (lyrics mapped to measures) → **build folder**
+   - Creates structuur.tex (song structure/statistics) → **build folder**
    - Updates tempo and time signature in liedtekst .tex → **git repository**
    - Creates labeltrack.txt (for Tenacity/Audacity) → **audio_output_folder**
 
@@ -60,11 +60,11 @@ The typical workflow for creating/updating a song (visualized in `project/schema
 
 4. **Create/update lyrics** (Manual)
    - Create or update liedtekst .tex file in git repository
-   - Use analysis.txt (from dist folder) as reference for measure numbers and structure
+   - Use analysis.txt (from build folder) as reference for measure numbers and structure
 
 5. **Run lt-generate.py**
-   - Renders liedtekst PDFs (all variants) → **dist folder**
-   - Renders structuur.pdf → **dist folder**
+   - Renders liedtekst PDFs (all variants) → **distribution folder**
+   - Renders structuur.pdf → **distribution folder**
 
 6. **Run lt-upload.ps1** (optional)
    - Uploads generated PDFs from dist folder to PDrive (cloud storage)
@@ -77,7 +77,8 @@ The typical workflow for creating/updating a song (visualized in `project/schema
 ### Storage Locations
 
 - **git repository** (`input_folder`): Source files (.tex, .nwctxt, volgorde.jsonc, lt-config.jsonc)
-- **dist folder** (`output_folder`): All generated PDFs, merged .nwctxt, analysis.txt, structuur.tex
+- **build folder** (`build_folder`): Intermediate files (merged .nwctxt, analysis.txt, structuur.tex)
+- **distribution folder** (`distributie_folder`): Final PDFs ready for distribution
 - **audio_output_folder**: Audio files (.mid, .wav, .flac) and labeltrack.txt for Tenacity
 - **PDrive**: Cloud backup of generated PDFs (via lt-upload.ps1)
 
@@ -105,7 +106,8 @@ The workflow follows three main paths:
 All scripts use `pathconfig.py` to load paths from `paths.jsonc`:
 
 - Input folder: Contains song folders with .tex and nwc/ subdirectories
-- Output folder: Generated concatenated files, structure PDFs
+- Build folder: Intermediate files (merged .nwctxt, analysis.txt, structuur.tex)
+- Distribution folder: Final PDFs ready for distribution
 - Audio output folder: MIDI/WAV/FLAC files
 
 **Important**: Paths can be relative (to paths.jsonc) or absolute. Use
@@ -179,7 +181,7 @@ pip install -r requirements.txt
 - Second pass: Final PDF with correct page numbers/references
 - Cleanup only happens after second pass (unless `--no-cleanup`)
 
-The script also generates "structuur" PDFs from auto-generated .tex files in the output folder. **Note**: structuur.tex files are NOT deleted after successful compilation (changed from previous behavior).
+The script also generates "structuur" PDFs from auto-generated .tex files in the build folder. **Note**: structuur.tex files are NOT deleted after successful compilation (changed from previous behavior).
 
 ### Transposition System
 

@@ -14,10 +14,15 @@
     // Default: ".." (parent directory)
     "input_folder": "..",
 
-    // Output folder where generated files will be saved
-    // Generated files: concatenated .nwctxt, structure .tex, etc.
-    // Default: ".." (parent directory)
-    "output_folder": "../_dist",
+    // Build folder for intermediate files (merged .nwctxt, analysis.txt, structuur.tex)
+    // These files are used as input for subsequent processing steps
+    // Default: "../_build"
+    "build_folder": "../_build",
+
+    // Distribution folder for final output files (PDFs)
+    // These are the files ready for distribution/upload
+    // Default: "../_dist"
+    "distributie_folder": "../_dist",
 
     // Destination folder for label track, .mid, .wav and .flac files
     // Default: "c:/temp" on Windows, "/tmp" on Linux/Mac

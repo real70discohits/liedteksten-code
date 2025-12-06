@@ -978,7 +978,7 @@ def main():
      tempo, timesig, pickup_beats) = process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder)
 
     # Concatenate files
-    output_nwctxt = paths.output_folder / f"{songtitle}.nwctxt"
+    output_nwctxt = paths.build_folder / f"{songtitle}.nwctxt"
     print(f"\nConcatenating {len(file_list)} lieddelen...")
     concatenate_nwctxt_files(file_list, str(output_nwctxt), keep_tempi=keep_tempi)
     print(f"✅ Success! Concatenated .nwctxt files to {output_nwctxt}")
@@ -987,7 +987,7 @@ def main():
     write_analysis_to_file(output_nwctxt)
 
     # Generate complete LaTeX structure file
-    tex_file = paths.output_folder / f"{songtitle} structuur.tex"
+    tex_file = paths.build_folder / f"{songtitle} structuur.tex"
     print(f"Generating: {tex_file}")
     write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, pickup_beats)
     print(f"✅ Success! Created: {tex_file}")

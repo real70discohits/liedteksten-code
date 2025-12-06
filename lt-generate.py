@@ -266,14 +266,15 @@ def transpose(note, semitones):
     return transposed_base + extension
 
 
-def compile_structuur_file(songtitle, input_folder, output_folder, cleanup=True, engine='pdflatex'):
+def compile_structuur_file(songtitle, input_folder, build_folder, output_folder, cleanup=True, engine='pdflatex'):
     """
     Compile the structuur.tex file for a song if it exists.
 
     Args:
         songtitle: Song title
         input_folder: Folder containing song folders with .tex files
-        output_folder: Folder containing generated structuur.tex files
+        build_folder: Folder containing generated structuur.tex files
+        output_folder: Folder where PDFs will be written
         cleanup: Whether to remove auxiliary files after compilation
         engine: TeX engine to use (default: pdflatex)
 
@@ -302,9 +303,9 @@ def compile_structuur_file(songtitle, input_folder, output_folder, cleanup=True,
         print(f"ℹ️  No metadata found in {tex_file}, skipping structuur generation")
         return False
 
-    # Construct path to structuur.tex file (in output folder)
+    # Construct path to structuur.tex file (in build folder)
     bare_filename = songtitle
-    structuur_tex = output_folder / f"{bare_filename} structuur.tex"
+    structuur_tex = build_folder / f"{bare_filename} structuur.tex"
 
     if not structuur_tex.exists():
         print(f"ℹ️  No structuur file found: {structuur_tex}")
@@ -318,8 +319,8 @@ def compile_structuur_file(songtitle, input_folder, output_folder, cleanup=True,
     # Convert path to forward slashes for pdflatex (works cross-platform)
     tex_path_for_latex = str(structuur_tex).replace('\\', '/')
 
-    # input_folder contains the song folders with .tex files
-    tex_input_dir = os.path.abspath(output_folder)
+    # build_folder contains the structuur.tex files
+    tex_input_dir = os.path.abspath(build_folder)
     env = os.environ.copy()
     env['TEXINPUTS'] = f'{tex_input_dir}//;' + env.get('TEXINPUTS', '')
 
@@ -440,30 +441,30 @@ def main():
 
     if only < 2:
         # generate liedtekst pdf
-        success = sum(compile_tex_file(f, paths.input_folder, paths.output_folder, not args.no_cleanup, args.engine) for f in songtitles)
+        success = sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine) for f in songtitles)
 
     if only == 2 or only == 0:
         # generate liedtekst pdf with measurenumbers
-        success = success + sum(compile_tex_file(f, paths.input_folder, paths.output_folder, not args.no_cleanup, args.engine, show_measures=True) for f in songtitles)
+        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True) for f in songtitles)
 
     if only == 3 or only == 0:
         # generate liedtekst pdf with chords
-        success = success + sum(compile_tex_file(f, paths.input_folder, paths.output_folder, not args.no_cleanup, args.engine, show_measures=False, show_chords=True) for f in songtitles)
+        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=False, show_chords=True) for f in songtitles)
 
     if only == 4 or only == 0:
         # generate liedtekst pdf with measurenumbers and chords
-        success = success + sum(compile_tex_file(f, paths.input_folder, paths.output_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True) for f in songtitles)
+        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True) for f in songtitles)
 
     if only == 5 or only == 0:
         # generate liedtekst pdf with measurenumbers, chords and guitartabs
-        success = success + sum(compile_tex_file(f, paths.input_folder, paths.output_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True, show_tabs=True, tab_orientation=tab_orientation) for f in songtitles)
+        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True, show_tabs=True, tab_orientation=tab_orientation) for f in songtitles)
 
     # Generate structuur PDF for each liedtekst
     print("\n" + "="*60)
     print("Generating structuur PDFs...")
     print("="*60)
     for f in songtitles:
-        if compile_structuur_file(str(f), paths.input_folder, paths.output_folder, not args.no_cleanup, args.engine):
+        if compile_structuur_file(str(f), paths.input_folder, paths.build_folder, paths.distributie_folder, not args.no_cleanup, args.engine):
             structuur_success += 1
 
     print(f"\n{'='*60}")

@@ -288,7 +288,7 @@ def write_analysis_to_file(nwctxt_file_path):
 
     # Load and resolve path configuration
     paths = load_and_resolve_paths()
-    output_folder = paths.output_folder
+    build_folder = paths.build_folder
 
     # Analyze the file
     analysis = analyze_nwctxt(file_path)
@@ -306,7 +306,7 @@ def write_analysis_to_file(nwctxt_file_path):
     output_filename = f"{file_path.stem} analysis.txt"
 
     # Write to file
-    output_file = output_folder / output_filename
+    output_file = build_folder / output_filename
 
     try:
         with open(output_file, 'w', encoding='utf-8') as f:
@@ -334,19 +334,19 @@ def main():
         # It's a path, use as-is
         file_path = Path(input_arg)
     else:
-        # It's just a title, look in output_folder
+        # It's just a title, look in build_folder
         paths = load_and_resolve_paths()
 
         # Add .nwctxt extension if not present
         if not input_arg.endswith('.nwctxt'):
             input_arg += '.nwctxt'
 
-        # Look in output_folder
-        file_path = paths.output_folder / input_arg
+        # Look in build_folder
+        file_path = paths.build_folder / input_arg
 
         if not file_path.exists():
-            print(f"❌ Error: File not found in output folder: {file_path}")
-            print(f"\nSearched in: {paths.output_folder}")
+            print(f"❌ Error: File not found in build folder: {file_path}")
+            print(f"\nSearched in: {paths.build_folder}")
             print(f"Looking for: {input_arg}")
             sys.exit(1)
 
