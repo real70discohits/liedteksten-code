@@ -179,7 +179,11 @@ def map_lyrics_to_measures(staff_content, syllables):
 
 
 def analyze_nwctxt(file_path):
-    """Analyze a .nwctxt file and return lyrics mapping."""
+    """Analyze a .nwctxt file and return lyrics mapping.
+
+    Note: This is a legacy function that returns raw data without corrections.
+    For complete song analysis with corrected totals, use analyze_complete_song().
+    """
     # Parse the NWC file
     nwc = NwcFile(file_path)
 
@@ -233,6 +237,115 @@ def analyze_nwctxt(file_path):
     }
 
 
+def analyze_complete_song(file_path, tempo=None, timesig=None):
+    """Complete analysis of a merged .nwctxt file with corrected totals.
+
+    This function provides a single source of truth for all song metadata,
+    with proper handling of 'maten vooraf' (count-in measures) and 'begintel' (pickup).
+
+    Args:
+        file_path: Path to the .nwctxt file (string or Path object)
+        tempo: Optional tempo (BPM) - if None, will be extracted from file
+        timesig: Optional time signature (e.g. "4/4") - if None, will be extracted from file
+
+    Returns:
+        dict with all song metadata:
+        - title: Song title
+        - file: Filename
+        - folder: Parent folder path
+        - tempo: Tempo in BPM (int or None)
+        - timesig: Time signature string (e.g. "4/4" or None)
+        - total_bars: Raw bar count from file
+        - has_begintel: Boolean - true if pickup measure exists
+        - vooraf: Number of count-in measures before "liedstart"
+        - total_measures: Corrected total (excluding begintel and vooraf)
+        - total_duration: Duration in seconds (excluding vooraf, or None if tempo/timesig missing)
+        - measure_map: Dict mapping measure numbers to lyrics (renumbered: maat 1 = liedstart)
+
+        Returns None if analysis fails.
+    """
+    from nwc_utils import NwcFile
+    from constants import STAFF_NAME_BASS
+
+    file_path = Path(file_path)
+
+    # Get basic analysis
+    basic_analysis = analyze_nwctxt(file_path)
+    if not basic_analysis:
+        return None
+
+    # Extract tempo and timesig if not provided
+    if tempo is None or timesig is None:
+        nwc = NwcFile(file_path)
+        bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
+        if bass_staff:
+            bass_lines = bass_staff.lines
+
+            if tempo is None:
+                for line in bass_lines:
+                    if line.startswith('|Tempo|') and 'Tempo:' in line:
+                        try:
+                            tempo_part = line.split('Tempo:')[1]
+                            tempo_str = tempo_part.split('|')[0]
+                            tempo = int(tempo_str)
+                            break
+                        except (IndexError, ValueError):
+                            pass
+
+            if timesig is None:
+                for line in bass_lines:
+                    if line.startswith('|TimeSig|Signature:'):
+                        try:
+                            sig_part = line.split('|TimeSig|Signature:')[1]
+                            timesig = sig_part.split('|')[0]
+                            break
+                        except (IndexError, ValueError):
+                            pass
+
+    # Calculate corrected total measures (excluding begintel and vooraf)
+    total_measures_corrected = basic_analysis['total_measures'] - basic_analysis['vooraf']
+
+    # Calculate total duration (excluding vooraf measures)
+    total_duration = None
+    if tempo and timesig:
+        try:
+            beats_per_second = tempo / 60
+            beat_duration = 1 / beats_per_second
+            s_beats_per_measure, _, s_beat_base = timesig.partition('/')
+            beats_per_measure = int(s_beats_per_measure)
+            measure_duration = beats_per_measure * beat_duration
+
+            # Duration = only the 'real' measures (excluding vooraf)
+            total_duration = total_measures_corrected * measure_duration
+        except (ValueError, ZeroDivisionError):
+            total_duration = None
+
+    # Renumber measure_map so that the measure containing "liedstart" becomes maat 1
+    # Subtract vooraf from all measure numbers
+    measure_map_renumbered = {}
+    vooraf = basic_analysis['vooraf']
+    for original_maat_num, syllables in basic_analysis['measure_map'].items():
+        # New measure number = original - vooraf
+        # This makes the measure containing "liedstart" become maat 1
+        new_maat_num = original_maat_num - vooraf
+        measure_map_renumbered[new_maat_num] = syllables
+
+    # Build complete analysis result
+    return {
+        'title': basic_analysis['title'],
+        'file': basic_analysis['file'],
+        'folder': basic_analysis['folder'],
+        'tempo': tempo,
+        'timesig': timesig,
+        'total_bars': count_bars_in_staff(NwcFile(file_path).get_staff_by_name(STAFF_NAME_BASS).get_content()),
+        'has_begintel': basic_analysis['has_begintel'],
+        'vooraf': vooraf,
+        'total_measures': total_measures_corrected,
+        'total_duration': total_duration,
+        'measure_map': measure_map_renumbered,
+    }
+
+
 def format_output(analysis, song_number=None):
     """Format analysis results as text output."""
     if not analysis:
@@ -271,30 +384,37 @@ def format_output(analysis, song_number=None):
     return "\n".join(lines)
 
 
-def write_analysis_to_file(nwctxt_file_path):
+def write_analysis_to_file(nwctxt_file_path, tempo=None, timesig=None, use_complete_analysis=True):
     """Analyze a .nwctxt file and write results to output folder.
 
     Args:
         nwctxt_file_path: Path to the .nwctxt file (string or Path object)
+        tempo: Optional tempo (BPM) for complete analysis
+        timesig: Optional time signature (e.g. "4/4") for complete analysis
+        use_complete_analysis: If True (default), use analyze_complete_song() with corrected totals.
+                              If False, use legacy analyze_nwctxt() with raw data.
 
     Returns:
-        Path to the created analysis file, or None if failed
+        tuple: (Path to created analysis file or None, analysis dict or None)
     """
     file_path = Path(nwctxt_file_path)
 
     if not file_path.exists():
         print(f"❌ Error: File not found: {file_path}")
-        return None
+        return None, None
 
     # Load and resolve path configuration
     paths = load_and_resolve_paths()
     build_folder = paths.build_folder
 
     # Analyze the file
-    analysis = analyze_nwctxt(file_path)
+    if use_complete_analysis:
+        analysis = analyze_complete_song(file_path, tempo=tempo, timesig=timesig)
+    else:
+        analysis = analyze_nwctxt(file_path)
 
     if not analysis:
-        return None
+        return None, None
 
     # Try to find song number
     song_number = find_song_number(file_path)
@@ -312,10 +432,10 @@ def write_analysis_to_file(nwctxt_file_path):
         with open(output_file, 'w', encoding='utf-8') as f:
             f.write(output)
         print(f"✅ Analysis written to: {output_file}")
-        return output_file
+        return output_file, analysis
     except Exception as e:
         print(f"❌ Error writing output file: {e}")
-        return None
+        return None, None
 
 
 def main():

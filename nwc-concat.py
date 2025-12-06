@@ -427,7 +427,7 @@ def extract_lbltrck_markers(filepath):
     return markers
 
 
-def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, pickup_beats):
+def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, pickup_beats, complete_analysis=None):
     """Write complete LaTeX file with song meta info
 
     Args:
@@ -438,6 +438,9 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
         measurecount_and_starttime_per_lieddeel: List of tuples (section_name, measure_count, start_time) in structure order
         chords_per_lieddeel: Dict mapping section_name to (chord_string, chord_count, is_valid)
         pickup_beats: Number of pickup beats at the start of the song
+        complete_analysis: Optional dict from analyze_complete_song() with corrected totals.
+                          If provided, uses total_measures and total_duration from this.
+                          If None, falls back to legacy calculation.
     """
     
     # Get unique sections in order of first appearance
@@ -496,14 +499,19 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
         f.write(r'\section*{Lied structuur}' + '\n')
         f.write('\n')
 
-        # Calculate total measures
-        totalmeasures = 0
-        for _, measures, _ in measurecount_and_starttime_per_lieddeel:
-            if measures is not None:
-                totalmeasures += measures
+        # Use complete_analysis if provided, otherwise fall back to legacy calculation
+        if complete_analysis:
+            totalmeasures = complete_analysis['total_measures']
+            total_duration_seconds = complete_analysis['total_duration']
+        else:
+            # Legacy calculation (for backwards compatibility)
+            totalmeasures = 0
+            for _, measures, _ in measurecount_and_starttime_per_lieddeel:
+                if measures is not None:
+                    totalmeasures += measures
+            total_duration_seconds = get_duration(measurecount_and_starttime_per_lieddeel, tempo, timesig, pickup_beats)
 
-        # Calculate total duration
-        total_duration_seconds = get_duration(measurecount_and_starttime_per_lieddeel, tempo, timesig, pickup_beats)
+        # Format duration
         if total_duration_seconds is not None:
             # Round to nearest second
             total_duration_seconds = round(total_duration_seconds)
@@ -983,13 +991,22 @@ def main():
     concatenate_nwctxt_files(file_list, str(output_nwctxt), keep_tempi=keep_tempi)
     print(f"✅ Success! Concatenated .nwctxt files to {output_nwctxt}")
 
-    # Write analysis of concatenated .nwctxt file
-    write_analysis_to_file(output_nwctxt)
+    # Analyze concatenated .nwctxt file (get complete song metadata)
+    analysis_file, complete_analysis = write_analysis_to_file(output_nwctxt, tempo=tempo, timesig=timesig)
 
-    # Generate complete LaTeX structure file
+    if not complete_analysis:
+        print("⚠️ Warning: Analysis failed, continuing with limited data")
+        complete_analysis = {
+            'total_measures': 0,
+            'total_duration': None,
+            'vooraf': 0,
+        }
+
+    # Generate complete LaTeX structure file using analysis data
     tex_file = paths.build_folder / f"{songtitle} structuur.tex"
     print(f"Generating: {tex_file}")
-    write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, pickup_beats)
+    write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_starttime_per_lieddeel,
+                    chords_per_lieddeel, pickup_beats, complete_analysis)
     print(f"✅ Success! Created: {tex_file}")
 
     # Generate label track file for Tenacity in song-specific subfolder
