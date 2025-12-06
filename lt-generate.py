@@ -393,6 +393,60 @@ def strip_extension(filename: str) -> str:
     return filename[:dot_index]
 
 
+def has_config_for_variant(songtitle, input_folder, variant_number, tab_orientation='left'):
+    """Check if a song has a configuration for a specific variant.
+
+    Args:
+        songtitle: Name of the song
+        input_folder: Path to input folder containing song folders
+        variant_number: Variant number (1-5)
+        tab_orientation: Tab orientation setting
+
+    Returns:
+        bool: True if configuration exists for this variant
+    """
+    # Map variant numbers to their parameters
+    variant_params = {
+        1: (False, False, False),  # text only
+        2: (True, False, False),   # text + measures
+        3: (False, True, False),   # text + chords
+        4: (True, True, False),    # text + measures + chords
+        5: (True, True, True),     # text + measures + chords + tabs
+    }
+
+    if variant_number not in variant_params:
+        return False
+
+    show_measures, show_chords, show_tabs = variant_params[variant_number]
+
+    # Load song configuration
+    song_folder = input_folder / songtitle
+    lt_config_file = song_folder / "lt-config.jsonc"
+    configurations = ConfigLoader.load_from_file_optional(lt_config_file)
+
+    if not configurations:
+        return False
+
+    # Read tex file to get song_id
+    tex_file = song_folder / f"{songtitle}.tex"
+    if not tex_file.exists():
+        return False
+
+    with open(tex_file, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    id_match = re.search(r'\\newcommand{\\liedId}{(.*?)}', content)
+    if not id_match:
+        return False
+
+    song_id = int(id_match.group(1))
+
+    # Check if config exists for this variant
+    lied_config = get_config(configurations, song_id, show_measures, show_chords, show_tabs, tab_orientation)
+
+    return lied_config is not None
+
+
 def main():
     """Main entry point for lt-generate script.
 
@@ -410,7 +464,7 @@ def main():
                         default='left',
                         help='Tab orientation (default: left)')
     parser.add_argument('-n', '--only', type=int, default=0,
-                        help='Generate only this variant (default: 0 = all)')
+                        help='Generate only this variant (0 = all, -1 = only configured, 1-5 = specific variant)')
 
     args = parser.parse_args()
 
@@ -434,28 +488,68 @@ def main():
     # file instead of always all 5 or more variants. The number is not
     # hard connected to a variant but just refers to the (1-based) n-th call
     # in the list of lines that start with "success = ..." below.
+    # Special value -1 means: generate only variants that have a configuration.
     only = args.only
+
+    # Determine which variants to generate
+    # If only == -1, check for each song which variants have configuration
+    # Otherwise use the existing logic (0 = all, 1-5 = specific variant)
 
     success = 0
     structuur_success = 0
 
-    if only < 2:
+    # Helper to decide if a variant should be generated
+    def should_generate_variant(variant_num):
+        if only == 0:
+            return True  # Generate all variants
+        elif only == -1:
+            # Only generate if at least one song has config for this variant
+            return any(has_config_for_variant(song, paths.input_folder, variant_num, tab_orientation)
+                      for song in songtitles)
+        elif only == variant_num:
+            return True  # Generate only this specific variant
+        elif only == 1 and variant_num == 1:
+            # Special case: only < 2 includes variant 1
+            return True
+        else:
+            return False
+
+    # If --only -1, show which variants have configuration
+    if only == -1:
+        variant_names = {
+            1: "text only",
+            2: "text + measures",
+            3: "text + chords",
+            4: "text + measures + chords",
+            5: "text + measures + chords + tabs"
+        }
+        configured_variants = [v for v in range(1, 6) if should_generate_variant(v)]
+        if configured_variants:
+            print(f"\n{'='*60}")
+            print("Generating only configured variants:")
+            for v in configured_variants:
+                print(f"  Variant {v}: {variant_names[v]}")
+            print(f"{'='*60}\n")
+        else:
+            print("\n⚠️  No configured variants found for selected songs.\n")
+
+    if should_generate_variant(1):
         # generate liedtekst pdf
         success = sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine) for f in songtitles)
 
-    if only == 2 or only == 0:
+    if should_generate_variant(2):
         # generate liedtekst pdf with measurenumbers
         success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True) for f in songtitles)
 
-    if only == 3 or only == 0:
+    if should_generate_variant(3):
         # generate liedtekst pdf with chords
         success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=False, show_chords=True) for f in songtitles)
 
-    if only == 4 or only == 0:
+    if should_generate_variant(4):
         # generate liedtekst pdf with measurenumbers and chords
         success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True) for f in songtitles)
 
-    if only == 5 or only == 0:
+    if should_generate_variant(5):
         # generate liedtekst pdf with measurenumbers, chords and guitartabs
         success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True, show_tabs=True, tab_orientation=tab_orientation) for f in songtitles)
 
