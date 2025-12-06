@@ -35,7 +35,7 @@ from pathconfig import load_and_resolve_paths, validate_file_exists
 # a single call to this method only happens if a song has multiple transpositions.
 def compile_tex_file(
     songtitle, input_folder, output_folder, cleanup=True, engine='pdflatex',
-    show_measures=False, show_chords=False, show_tabs=False, tab_orientation='left'):
+    show_measures=False, show_chords=False, show_tabs=False, tab_orientation='left', debug=False):
 
     # ***  Verify .tex file exists ***
     tex_file = input_folder / songtitle / f"{songtitle}.tex"
@@ -148,7 +148,7 @@ def compile_tex_file(
                     f'-jobname={output_name}'
                     , pdflatex_args
                 ],
-                capture_output=True,
+                capture_output=not debug,
                 text=True,
                 check=False,
                 env=env
@@ -266,7 +266,7 @@ def transpose(note, semitones):
     return transposed_base + extension
 
 
-def compile_structuur_file(songtitle, input_folder, build_folder, output_folder, cleanup=True, engine='pdflatex'):
+def compile_structuur_file(songtitle, input_folder, build_folder, output_folder, cleanup=True, engine='pdflatex', debug=False):
     """
     Compile the structuur.tex file for a song if it exists.
 
@@ -332,7 +332,7 @@ def compile_structuur_file(songtitle, input_folder, build_folder, output_folder,
                 f'-jobname={output_name}'
                 , tex_path_for_latex
             ],
-            capture_output=True,
+            capture_output=not debug,
             text=True,
             check=False,
             env=env
@@ -459,6 +459,7 @@ def main():
     parser.add_argument('songtitles', nargs='*', help='Specific songtitles (.tex filenames but without extension) to compile (default: all)')
     parser.add_argument('--no-cleanup', action='store_true', help='Keep auxiliary files')
     parser.add_argument('--no-structuur', action='store_true', help='Skip generating structuur PDFs')
+    parser.add_argument('--debug', action='store_true', help='Show pdflatex output (sets capture_output=False)')
     parser.add_argument('--engine', default='pdflatex', help='TeX engine (default: pdflatex)')
     parser.add_argument('--tab-orientation',
                         choices=['left', 'right', 'traditional'],
@@ -536,23 +537,23 @@ def main():
 
     if should_generate_variant(1):
         # generate liedtekst pdf
-        success = sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine) for f in songtitles)
+        success = sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, debug=args.debug) for f in songtitles)
 
     if should_generate_variant(2):
         # generate liedtekst pdf with measurenumbers
-        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True) for f in songtitles)
+        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True, debug=args.debug) for f in songtitles)
 
     if should_generate_variant(3):
         # generate liedtekst pdf with chords
-        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=False, show_chords=True) for f in songtitles)
+        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=False, show_chords=True, debug=args.debug) for f in songtitles)
 
     if should_generate_variant(4):
         # generate liedtekst pdf with measurenumbers and chords
-        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True) for f in songtitles)
+        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True, debug=args.debug) for f in songtitles)
 
     if should_generate_variant(5):
         # generate liedtekst pdf with measurenumbers, chords and guitartabs
-        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True, show_tabs=True, tab_orientation=tab_orientation) for f in songtitles)
+        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True, show_tabs=True, tab_orientation=tab_orientation, debug=args.debug) for f in songtitles)
 
     # Generate structuur PDF for each liedtekst (unless --no-structuur)
     if not args.no_structuur:
@@ -560,7 +561,7 @@ def main():
         print("Generating structuur PDFs...")
         print("="*60)
         for f in songtitles:
-            if compile_structuur_file(str(f), paths.input_folder, paths.build_folder, paths.distributie_folder, not args.no_cleanup, args.engine):
+            if compile_structuur_file(str(f), paths.input_folder, paths.build_folder, paths.distributie_folder, not args.no_cleanup, args.engine, debug=args.debug):
                 structuur_success += 1
 
     print(f"\n{'='*60}")
