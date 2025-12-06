@@ -10,8 +10,8 @@
     "**/*.fdb_latexmk": true,
     "**/*.fls": true,
     "**/*.log": true,
-    "**/*.synctex.gz": true,
     "**/*.pdf": true,
+    "**/*.synctex.gz": true,
     "**/*.nwctxt.bak": true,
     "/*.nwctxt": true
   }

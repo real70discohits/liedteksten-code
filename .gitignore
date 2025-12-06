@@ -208,3 +208,27 @@ __marimo__/
 
 # ignore claude
 .claude/*
+
+# LaTeX
+*.aux
+*.fdb_latexmk
+*.fls
+*.glo
+*.log
+*.out
+*.gz
+*.toc
+*.acn
+*.acr
+*.alg
+*.glg
+*.gls
+*.run.xml
+*.ori
+*.bbl
+*.bcf
+*.blg
+*.ist
+*.*-SAVE-ERROR
+*.dvi
+*.pdf
