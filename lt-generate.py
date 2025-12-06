@@ -458,6 +458,7 @@ def main():
     parser = argparse.ArgumentParser(description='Compile .tex files with custom output names')
     parser.add_argument('songtitles', nargs='*', help='Specific songtitles (.tex filenames but without extension) to compile (default: all)')
     parser.add_argument('--no-cleanup', action='store_true', help='Keep auxiliary files')
+    parser.add_argument('--no-structuur', action='store_true', help='Skip generating structuur PDFs')
     parser.add_argument('--engine', default='pdflatex', help='TeX engine (default: pdflatex)')
     parser.add_argument('--tab-orientation',
                         choices=['left', 'right', 'traditional'],
@@ -553,17 +554,21 @@ def main():
         # generate liedtekst pdf with measurenumbers, chords and guitartabs
         success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True, show_tabs=True, tab_orientation=tab_orientation) for f in songtitles)
 
-    # Generate structuur PDF for each liedtekst
-    print("\n" + "="*60)
-    print("Generating structuur PDFs...")
-    print("="*60)
-    for f in songtitles:
-        if compile_structuur_file(str(f), paths.input_folder, paths.build_folder, paths.distributie_folder, not args.no_cleanup, args.engine):
-            structuur_success += 1
+    # Generate structuur PDF for each liedtekst (unless --no-structuur)
+    if not args.no_structuur:
+        print("\n" + "="*60)
+        print("Generating structuur PDFs...")
+        print("="*60)
+        for f in songtitles:
+            if compile_structuur_file(str(f), paths.input_folder, paths.build_folder, paths.distributie_folder, not args.no_cleanup, args.engine):
+                structuur_success += 1
 
     print(f"\n{'='*60}")
     print(f"Compiled {success} liedtekst files successfully")
-    print(f"Compiled {structuur_success} structuur files successfully")
+    if not args.no_structuur:
+        print(f"Compiled {structuur_success} structuur files successfully")
+    else:
+        print("Skipped structuur file generation (--no-structuur)")
     print(f"{'='*60}")
 
 if __name__ == "__main__":
