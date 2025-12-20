@@ -172,6 +172,9 @@ python nwc-convert.py "song.nwctxt"
 # Convert only specific staffs
 python nwc-convert.py "song.nwctxt" --staff-names Bass Ritme
 
+# Keep intermediate files for debugging
+python nwc-convert.py "song.nwctxt" --no-cleanup
+
 # Custom output and soundfont
 python nwc-convert.py "song" --out "C:\output" --soundfont "path\to\font.sf2"
 
@@ -277,6 +280,7 @@ Key concepts:
 **Usage:**
 - `--staff-names Bass Ritme`: Convert only specified staffs
 - No `--staff-names`: Convert all staffs in the file
+- `--no-cleanup`: Keep intermediate files (.mid, .wav, temp .nwctxt) for debugging
 - Warns if requested staff names don't exist, but continues with valid ones
 
 **Output:** Creates `{song_title} {staff_name}.flac` files in song-specific subfolder

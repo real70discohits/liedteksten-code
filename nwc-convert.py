@@ -218,6 +218,11 @@ Examples:
         default=None,
         help='Staff names to convert separately (default: all staffs). Example: --staff-names Bass Ritme'
     )
+    parser.add_argument(
+        '--no-cleanup',
+        action='store_true',
+        help='Keep intermediate files (.mid, .wav, temp .nwctxt) for debugging'
+    )
 
     args = parser.parse_args()
 
@@ -350,7 +355,8 @@ Examples:
             cmd1,
             midi_path
         ):
-            temp_path.unlink(missing_ok=True)
+            if not args.no_cleanup:
+                temp_path.unlink(missing_ok=True)
             sys.exit(1)
 
         # STEP 2: MIDI → WAV
@@ -361,7 +367,8 @@ Examples:
             cmd2,
             wav_path
         ):
-            temp_path.unlink(missing_ok=True)
+            if not args.no_cleanup:
+                temp_path.unlink(missing_ok=True)
             sys.exit(1)
 
         # STEP 3: WAV → FLAC
@@ -372,33 +379,46 @@ Examples:
             cmd3,
             flac_path
         ):
-            temp_path.unlink(missing_ok=True)
+            if not args.no_cleanup:
+                temp_path.unlink(missing_ok=True)
             sys.exit(1)
 
-        # 5. Remove temporary NWC file
-        temp_path.unlink(missing_ok=True)
-        print(f"Removed temporary file: {temp_path.name}\n")
+        # 5. Remove temporary NWC file (unless --no-cleanup)
+        if not args.no_cleanup:
+            temp_path.unlink(missing_ok=True)
+            print(f"Removed temporary file: {temp_path.name}\n")
+        else:
+            print(f"Kept temporary file: {temp_path} (--no-cleanup)\n")
 
         flac_outputs.append(flac_path)
 
     # ===== CLEANUP: REMOVE INTERMEDIATE FILES =====
-    print("=" * 60)
-    print("Cleaning up intermediate files...")
-    print("=" * 60 + "\n")
+    if not args.no_cleanup:
+        print("=" * 60)
+        print("Cleaning up intermediate files...")
+        print("=" * 60 + "\n")
 
-    removed_count = 0
-    for mid_file in song_output_dir.glob("*.mid"):
-        mid_file.unlink()
-        print(f"  Removed: {mid_file.name}")
-        removed_count += 1
+        removed_count = 0
+        for mid_file in song_output_dir.glob("*.mid"):
+            mid_file.unlink()
+            print(f"  Removed: {mid_file.name}")
+            removed_count += 1
 
-    for wav_file in song_output_dir.glob("*.wav"):
-        wav_file.unlink()
-        print(f"  Removed: {wav_file.name}")
-        removed_count += 1
+        for wav_file in song_output_dir.glob("*.wav"):
+            wav_file.unlink()
+            print(f"  Removed: {wav_file.name}")
+            removed_count += 1
 
-    if removed_count > 0:
-        print(f"\nRemoved {removed_count} intermediate file(s)\n")
+        if removed_count > 0:
+            print(f"\nRemoved {removed_count} intermediate file(s)\n")
+    else:
+        print("=" * 60)
+        print("Skipping cleanup (--no-cleanup specified)")
+        print("=" * 60 + "\n")
+        print("Intermediate files kept:")
+        print(f"  - Temporary .nwctxt files: {song_output_dir}/*_temp.nwctxt")
+        print(f"  - MIDI files: {song_output_dir}/*.mid")
+        print(f"  - WAV files: {song_output_dir}/*.wav\n")
 
     # ===== SUCCESS =====
     print("=" * 60)

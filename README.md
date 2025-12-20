@@ -2,6 +2,63 @@
 
 Dit is een Python-gebaseerde toolkit voor het beheren en genereren van bestanden gerelateerd aan popliedjes zoals liedteksten, liedteksten met gitaartabs en akkoorden, maar ook hulpbestanden die teksten koppelen aan maten en structuurbestanden die lied-statistieken en -compositie tonen.
 
+## Inhoudsopgave
+
+- [Liedteksten Toolkit](#liedteksten-toolkit)
+  - [Inhoudsopgave](#inhoudsopgave)
+  - [Overzicht Scripts](#overzicht-scripts)
+  - [Workflow](#workflow)
+  - [Opslaglocaties](#opslaglocaties)
+  - [Gedetailleerde Commando Referentie](#gedetailleerde-commando-referentie)
+    - [nwc-concat.py](#nwc-concatpy)
+      - [Syntax](#syntax)
+      - [Positionele Parameters](#positionele-parameters)
+      - [Optionele Parameters](#optionele-parameters)
+      - [Voorbeelden](#voorbeelden)
+      - [Gegenereerde Bestanden](#gegenereerde-bestanden)
+      - [Vereisten](#vereisten)
+    - [lt-generate.py](#lt-generatepy)
+      - [Syntax](#syntax-1)
+      - [Positionele Parameters](#positionele-parameters-1)
+      - [Optionele Parameters](#optionele-parameters-1)
+      - [Varianten](#varianten)
+      - [Voorbeelden](#voorbeelden-1)
+      - [Transpositie](#transpositie)
+      - [Gegenereerde Bestanden](#gegenereerde-bestanden-1)
+      - [Configuratie Systeem](#configuratie-systeem)
+      - [Vereisten](#vereisten-1)
+    - [nwc-convert.py](#nwc-convertpy)
+      - [Syntax](#syntax-2)
+      - [Positionele Parameters](#positionele-parameters-2)
+      - [Optionele Parameters](#optionele-parameters-2)
+      - [Voorbeelden](#voorbeelden-2)
+      - [Conversie Pipeline](#conversie-pipeline)
+      - [Gegenereerde Bestanden](#gegenereerde-bestanden-2)
+      - [Vereisten](#vereisten-2)
+      - [Soundfonts](#soundfonts)
+    - [nwc\_analyze.py](#nwc_analyzepy)
+      - [Syntax](#syntax-3)
+      - [Positionele Parameters](#positionele-parameters-3)
+      - [Voorbeelden](#voorbeelden-3)
+      - [Gegenereerd Bestand](#gegenereerd-bestand)
+      - [Maatsoort en Tempo](#maatsoort-en-tempo)
+      - [Speciale Concepten](#speciale-concepten)
+  - [Veelvoorkomende Workflows](#veelvoorkomende-workflows)
+    - [Nieuw Lied Toevoegen](#nieuw-lied-toevoegen)
+    - [Tempo Aanpassen](#tempo-aanpassen)
+    - [Liedtekst Wijzigen](#liedtekst-wijzigen)
+    - [Alleen Geconfigureerde Varianten Genereren](#alleen-geconfigureerde-varianten-genereren)
+    - [Debug LaTeX Compilatie Problemen](#debug-latex-compilatie-problemen)
+    - [Alleen Structuur PDF Genereren](#alleen-structuur-pdf-genereren)
+    - [Transpositie Toevoegen](#transpositie-toevoegen)
+  - [Configuratie](#configuratie)
+  - [Afhankelijkheden](#afhankelijkheden)
+    - [Python Modules](#python-modules)
+    - [Externe Tools](#externe-tools)
+  - [Projectstructuur](#projectstructuur)
+
+
+
 ## Overzicht Scripts
 
 | Script | Doel |
