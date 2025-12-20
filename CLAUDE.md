@@ -56,9 +56,13 @@ The typical workflow for creating/updating a song (visualized in `project/schema
    - Creates labeltrack.txt (for Tenacity/Audacity) → **audio_output_folder**
 
 3. **Run nwc-convert.py** (optional, for audio demos)
-   - Calls nwc-conv.exe: .nwctxt → .mid → **audio_output_folder**
-   - Calls fluidsynth.exe: .mid → .wav → **audio_output_folder**
+   - Converts each staff separately to individual .flac files
+   - For each staff: creates temp .nwctxt with only that staff unmuted
+   - Calls nwc-conv.exe: .nwctxt → .mid
+   - Calls fluidsynth.exe: .mid → .wav
    - Calls ffmpeg.exe: .wav → .flac → **audio_output_folder**
+   - Cleans up intermediate files (.mid, .wav), keeps only .flac
+   - Output: `{song_title} {staff_name}.flac` for each staff
 
 4. **Create/update lyrics** (Manual)
    - Create or update liedtekst .tex file in git repository
@@ -72,7 +76,7 @@ The typical workflow for creating/updating a song (visualized in `project/schema
    - Uploads generated PDFs from dist folder to PDrive (cloud storage)
 
 7. **Create audio recording** (Manual)
-   - Import .flac file into Tenacity (from audio_output_folder)
+   - Import individual staff .flac files as separate tracks into Tenacity (from audio_output_folder)
    - Import labeltrack.txt into Tenacity (from audio_output_folder)
    - Make recording with properly labeled sections
 
@@ -83,8 +87,9 @@ volgorde.jsonc, lt-config.jsonc)
 - **build folder** (`build_folder`): Intermediate files (merged .nwctxt,
 analysis.txt, structuur.tex)
 - **distribution folder** (`distributie_folder`): Final PDFs ready for distribution
-- **audio_output_folder**: Audio files (.mid, .wav, .flac) and labeltrack.txt
-for Tenacity
+- **audio_output_folder**: Audio files (one .flac per staff: `{song} {staff}.flac`)
+and labeltrack.txt for Tenacity. Intermediate .mid and .wav files are automatically
+cleaned up after conversion.
 - **PDrive**: Cloud backup of generated PDFs (via lt-upload.ps1)
 
 ## Core Architecture
@@ -161,8 +166,13 @@ python nwc-concat.py "Song Title"
 # Keep tempo markings in all sections (default: only first)
 python nwc-concat.py "Song Title" --keep-tempi
 
-# Convert to audio formats
+# Convert to audio formats (all staffs separately)
 python nwc-convert.py "song.nwctxt"
+
+# Convert only specific staffs
+python nwc-convert.py "song.nwctxt" --staff-names Bass Ritme
+
+# Custom output and soundfont
 python nwc-convert.py "song" --out "C:\output" --soundfont "path\to\font.sf2"
 
 # Analyze lyrics mapping
@@ -234,8 +244,42 @@ Key concepts:
 `nwc_utils.py` provides:
 
 - `NwcFile` class: Parse and access staffs by name or index
+  - `get_staff_by_name(name)`: Get staff by name
+  - `get_staff_by_index(index)`: Get staff by zero-based index
+  - `write_to_file(filepath)`: Write modified NwcFile to disk
+  - `set_all_staffs_muted(muted, volume)`: Mute/unmute all staffs with specified volume
+  - `set_staff_muted_by_name(name, muted, volume)`: Mute/unmute specific staff
 - `NwcStaff` class: Represents individual staff with name extraction
+  - `set_muted_and_volume(muted, volume)`: Modify Muted and Volume properties in
+    the second StaffProperties line (after AddStaff)
 - `parse_nwctxt()`: Legacy function for backward compatibility
+
+**Staff Structure**: Each staff has three property lines:
+1. `|AddStaff|Name:"..."|...`
+2. `|StaffProperties|EndingBar:...|Visible:...|...`
+3. `|StaffProperties|Muted:Y/N|Volume:0-127|...` ← Target for mute/volume operations
+
+### Multi-Staff Audio Conversion
+
+`nwc-convert.py` converts each staff to a separate .flac file for multi-track recording:
+
+**Process:**
+1. Parse .nwctxt file and identify all staffs (or use `--staff-names` to filter)
+2. For each staff:
+   - Create temporary .nwctxt copy
+   - Mute all staffs (set Muted:Y, Volume:127)
+   - Unmute only the current staff (set Muted:N, Volume:127)
+   - Convert: temp.nwctxt → .mid → .wav → .flac
+   - Delete temporary .nwctxt file
+3. Clean up all intermediate .mid and .wav files
+4. Keep only final .flac files (one per staff)
+
+**Usage:**
+- `--staff-names Bass Ritme`: Convert only specified staffs
+- No `--staff-names`: Convert all staffs in the file
+- Warns if requested staff names don't exist, but continues with valid ones
+
+**Output:** Creates `{song_title} {staff_name}.flac` files in song-specific subfolder
 
 ### Duration Calculation
 
@@ -282,11 +326,16 @@ Scripts use consistent validation:
 
 Generated files include metadata in names:
 
+**PDF outputs:**
 - `{title} ({id})`: Basic song
 - `{title} ({id}) in {key} transp({+/-n})`: Transposed version
 - `{title} ({id}) met akkoorden`: With chords
 - `{title} ({id}) met maatnummers, akkoorden en gitaargrepen`: Full version
 - `{title} structuur.tex/.pdf`: Song structure analysis
+
+**Audio outputs:**
+- `{title} {staff_name}.flac`: One file per staff (e.g., "Example Song Bass.flac")
+- Intermediate .mid and .wav files are automatically cleaned up
 
 ## Testing Considerations
 

@@ -28,6 +28,7 @@ import subprocess
 from pathlib import Path
 import argparse
 from pathconfig import load_and_resolve_paths
+from nwc_utils import NwcFile
 
 
 def verify_tools():
@@ -211,6 +212,12 @@ Examples:
         default=default_soundfont,
         help=f'Path to FluidSynth soundfont file (default: {default_soundfont})'
     )
+    parser.add_argument(
+        '--staff-names',
+        nargs='*',
+        default=None,
+        help='Staff names to convert separately (default: all staffs). Example: --staff-names Bass Ritme'
+    )
 
     args = parser.parse_args()
 
@@ -273,50 +280,134 @@ Examples:
 
     print(f"Soundfont: {soundfont_path}\n")
 
-    # ===== GENERATE OUTPUT PATHS =====
-    midi_path = get_output_path(input_path, song_output_dir, '.mid')
-    wav_path = get_output_path(input_path, song_output_dir, '.wav')
-    flac_path = get_output_path(input_path, song_output_dir, '.flac')
-
+    # ===== PARSE NWCTXT FILE AND DETERMINE STAFFS TO CONVERT =====
     print("=" * 60)
-    print("Starting conversion pipeline...")
+    print("Parsing NWC file and determining staffs...")
     print("=" * 60 + "\n")
 
-    # ===== STEP 1: NWC → MIDI =====
-    cmd1 = f'nwc-conv "{input_path}" "{midi_path}" -1'
-    if not run_conversion_step(
-        1,
-        f"Converting {input_path.name} to MIDI",
-        cmd1,
-        midi_path
-    ):
-        sys.exit(1)
+    nwc_file = NwcFile(input_path)
+    print(f"Found {len(nwc_file.staffs)} staff(s) in file:")
+    for i, staff in enumerate(nwc_file.staffs, 1):
+        print(f"  {i}. {staff.name if staff.name else '(unnamed)'}")
+    print()
 
-    # ===== STEP 2: MIDI → WAV =====
-    cmd2 = f'fluidsynth -n -F "{wav_path}" "{soundfont_path}" "{midi_path}"'
-    if not run_conversion_step(
-        2,
-        f"Converting {midi_path.name} to WAV (synthesizing audio)",
-        cmd2,
-        wav_path
-    ):
-        sys.exit(1)
+    # Determine which staffs to convert
+    if args.staff_names:
+        # User specified staff names
+        requested = set(args.staff_names)
+        available = {s.name for s in nwc_file.staffs if s.name}
+        missing = requested - available
 
-    # ===== STEP 3: WAV → FLAC =====
-    cmd3 = f'ffmpeg -y -i "{wav_path}" "{flac_path}"'
-    if not run_conversion_step(
-        3,
-        f"Converting {wav_path.name} to FLAC (lossless compression)",
-        cmd3,
-        flac_path
-    ):
-        sys.exit(1)
+        if missing:
+            print(f"⚠️  WARNING: Staff name(s) not found: {', '.join(missing)}")
+            print(f"Available staffs: {', '.join(sorted(available))}\n")
+
+        staffs_to_convert = [s for s in nwc_file.staffs if s.name in args.staff_names]
+
+        if not staffs_to_convert:
+            print("❌ ERROR: None of the requested staffs exist")
+            sys.exit(1)
+    else:
+        # Convert all staffs
+        staffs_to_convert = nwc_file.staffs
+
+    print(f"Converting {len(staffs_to_convert)} staff(s)...\n")
+
+    # ===== CONVERT EACH STAFF SEPARATELY =====
+    print("=" * 60)
+    print("Starting multi-staff conversion pipeline...")
+    print("=" * 60 + "\n")
+
+    flac_outputs = []
+
+    for staff_index, staff in enumerate(staffs_to_convert, 1):
+        print(f"{'=' * 60}")
+        print(f"Processing staff {staff_index}/{len(staffs_to_convert)}: {staff.name}")
+        print(f"{'=' * 60}\n")
+
+        # 1. Create temporary copy of NWC file
+        temp_path = song_output_dir / f"{song_title}_temp.nwctxt"
+
+        # 2. Parse fresh copy, mute all, unmute only this staff
+        temp_nwc = NwcFile(input_path)
+        temp_nwc.set_all_staffs_muted(True, volume=127)
+        temp_nwc.set_staff_muted_by_name(staff.name, False, volume=127)
+        temp_nwc.write_to_file(temp_path)
+
+        print(f"Created temporary file with only '{staff.name}' unmuted\n")
+
+        # 3. Generate output paths with staff name
+        midi_path = song_output_dir / f"{song_title} {staff.name}.mid"
+        wav_path = song_output_dir / f"{song_title} {staff.name}.wav"
+        flac_path = song_output_dir / f"{song_title} {staff.name}.flac"
+
+        # 4. Run conversion pipeline (3 steps)
+        # STEP 1: NWC → MIDI
+        cmd1 = f'nwc-conv "{temp_path}" "{midi_path}" -1'
+        if not run_conversion_step(
+            1,
+            f"Converting {staff.name} to MIDI",
+            cmd1,
+            midi_path
+        ):
+            temp_path.unlink(missing_ok=True)
+            sys.exit(1)
+
+        # STEP 2: MIDI → WAV
+        cmd2 = f'fluidsynth -n -F "{wav_path}" "{soundfont_path}" "{midi_path}"'
+        if not run_conversion_step(
+            2,
+            f"Converting {staff.name} MIDI to WAV",
+            cmd2,
+            wav_path
+        ):
+            temp_path.unlink(missing_ok=True)
+            sys.exit(1)
+
+        # STEP 3: WAV → FLAC
+        cmd3 = f'ffmpeg -y -i "{wav_path}" "{flac_path}"'
+        if not run_conversion_step(
+            3,
+            f"Converting {staff.name} WAV to FLAC",
+            cmd3,
+            flac_path
+        ):
+            temp_path.unlink(missing_ok=True)
+            sys.exit(1)
+
+        # 5. Remove temporary NWC file
+        temp_path.unlink(missing_ok=True)
+        print(f"Removed temporary file: {temp_path.name}\n")
+
+        flac_outputs.append(flac_path)
+
+    # ===== CLEANUP: REMOVE INTERMEDIATE FILES =====
+    print("=" * 60)
+    print("Cleaning up intermediate files...")
+    print("=" * 60 + "\n")
+
+    removed_count = 0
+    for mid_file in song_output_dir.glob("*.mid"):
+        mid_file.unlink()
+        print(f"  Removed: {mid_file.name}")
+        removed_count += 1
+
+    for wav_file in song_output_dir.glob("*.wav"):
+        wav_file.unlink()
+        print(f"  Removed: {wav_file.name}")
+        removed_count += 1
+
+    if removed_count > 0:
+        print(f"\nRemoved {removed_count} intermediate file(s)\n")
 
     # ===== SUCCESS =====
     print("=" * 60)
     print("✅ SUCCESS: All conversions completed!")
     print("=" * 60)
-    print(f"\nFinal output:\n  {flac_path}\n")
+    print(f"\nFinal output ({len(flac_outputs)} file(s)):")
+    for flac_file in flac_outputs:
+        print(f"  {flac_file}")
+    print()
 
 
 if __name__ == '__main__':

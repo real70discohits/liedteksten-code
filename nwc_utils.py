@@ -4,6 +4,7 @@ This module provides classes and functions for working with .nwctxt files,
 including parsing, staff management, and common operations.
 """
 
+import re
 from pathlib import Path
 from typing import List, Optional, Tuple
 from constants import NWC_PREFIX_ADDSTAFF, NWC_END_MARKER
@@ -44,6 +45,44 @@ class NwcStaff:
             All staff lines joined with newlines
         """
         return '\n'.join(self.lines)
+
+    def set_muted_and_volume(self, muted: bool, volume: int = 127):
+        """Set Muted property and Volume in the second StaffProperties line.
+
+        Args:
+            muted: True to mute the staff, False to unmute
+            volume: Volume level (0-127, default: 127)
+
+        The second StaffProperties line (after AddStaff) contains Muted and Volume.
+        Example: |StaffProperties|Muted:Y|Volume:127|StereoPan:64|...
+        """
+        muted_value = 'Y' if muted else 'N'
+
+        # Find the second StaffProperties line (index-wise)
+        staff_props_count = 0
+        target_index = None
+
+        for i, line in enumerate(self.lines):
+            if line.startswith('|StaffProperties|'):
+                staff_props_count += 1
+                if staff_props_count == 2:
+                    target_index = i
+                    break
+
+        if target_index is None:
+            # No second StaffProperties line found, cannot modify
+            return
+
+        # Update Muted and Volume properties using regex
+        line = self.lines[target_index]
+
+        # Update Muted property
+        line = re.sub(r'Muted:[YN]', f'Muted:{muted_value}', line)
+
+        # Update Volume property
+        line = re.sub(r'Volume:\d+', f'Volume:{volume}', line)
+
+        self.lines[target_index] = line
 
     def __repr__(self):
         return f"NwcStaff(name='{self.name}', lines={len(self.lines)})"
@@ -116,6 +155,55 @@ class NwcFile:
         if 0 <= index < len(self.staffs):
             return self.staffs[index]
         return None
+
+    def write_to_file(self, filepath: str | Path):
+        """Write the current NwcFile (with any modifications) to a file.
+
+        Args:
+            filepath: Path to the output file
+
+        This writes the header, all staffs, and the end marker.
+        """
+        filepath = Path(filepath)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            # Write header
+            for line in self.header_lines:
+                f.write(line + '\n')
+
+            # Write all staffs
+            for staff in self.staffs:
+                for line in staff.lines:
+                    f.write(line + '\n')
+
+            # Write end marker
+            f.write(NWC_END_MARKER + '\n')
+
+    def set_all_staffs_muted(self, muted: bool, volume: int = 127):
+        """Set all staffs to muted/unmuted with specified volume.
+
+        Args:
+            muted: True to mute all staffs, False to unmute
+            volume: Volume level (0-127, default: 127)
+        """
+        for staff in self.staffs:
+            staff.set_muted_and_volume(muted, volume)
+
+    def set_staff_muted_by_name(self, staff_name: str, muted: bool, volume: int = 127):
+        """Set a specific staff to muted/unmuted by name.
+
+        Args:
+            staff_name: Name of the staff to modify
+            muted: True to mute the staff, False to unmute
+            volume: Volume level (0-127, default: 127)
+
+        Returns:
+            True if staff was found and modified, False otherwise
+        """
+        staff = self.get_staff_by_name(staff_name)
+        if staff:
+            staff.set_muted_and_volume(muted, volume)
+            return True
+        return False
 
     def __repr__(self):
         return f"NwcFile(path='{self.filepath}', staffs={len(self.staffs)})"
