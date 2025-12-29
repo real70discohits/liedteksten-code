@@ -27,6 +27,7 @@ nwconcpy -[#green]> build: create merged nwctxt, analysis.txt, structuur.tex
 
 ' convert
 u1 -[#green]> nwconvpy : run script
+nwconvpy -[#green]> nwconvpy: For each Staff:
 nwconvpy -[#green]> nwconvexe : call
 nwconvexe -[#green]> audio: convert .nwctxt to .mid
 build -[#orange]> audio: use merged .nwctxt
@@ -51,7 +52,7 @@ ltupload -[#green]> pdrive : upload pdf's to drive
 
 ' record
 u1 -> tenacity : start GUI
-tenacity <[#orange]- audio : import .flac 
+tenacity <[#orange]- audio : import .flacs 
 tenacity <[#orange]- audio : import labeltrack
 u1 -> tenacity : (manual) make recording
 @enduml
