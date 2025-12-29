@@ -215,16 +215,17 @@ def analyze_nwctxt(file_path):
     zang_staff = nwc.get_staff_by_name(STAFF_NAME_ZANG)
 
     if not zang_staff:
-        print(f"⚠️  Warning: No '{STAFF_NAME_ZANG}' staff found in {file_path}")
-        return None
+        print(f"⚠️  Warning: No '{STAFF_NAME_ZANG}' staff found in {file_path}:"
+                " measure-lyrics mapping not possible.")
+        measure_map = None
+    else:
+        zang_content = zang_staff.get_content()
 
-    zang_content = zang_staff.get_content()
+        # Extract lyrics
+        syllables = parse_lyric_text(zang_content)
 
-    # Extract lyrics
-    syllables = parse_lyric_text(zang_content)
-
-    # Map lyrics to measures
-    measure_map = map_lyrics_to_measures(zang_content, syllables)
+        # Map lyrics to measures
+        measure_map = map_lyrics_to_measures(zang_content, syllables)
 
     return {
         'title': title,
@@ -324,11 +325,12 @@ def analyze_complete_song(file_path, tempo=None, timesig=None):
     # Subtract vooraf from all measure numbers
     measure_map_renumbered = {}
     vooraf = basic_analysis['vooraf']
-    for original_maat_num, syllables in basic_analysis['measure_map'].items():
-        # New measure number = original - vooraf
-        # This makes the measure containing "liedstart" become maat 1
-        new_maat_num = original_maat_num - vooraf
-        measure_map_renumbered[new_maat_num] = syllables
+    if basic_analysis['measure_map']:
+        for original_maat_num, syllables in basic_analysis['measure_map'].items():
+            # New measure number = original - vooraf
+            # This makes the measure containing "liedstart" become maat 1
+            new_maat_num = original_maat_num - vooraf
+            measure_map_renumbered[new_maat_num] = syllables
 
     # Build complete analysis result
     return {
