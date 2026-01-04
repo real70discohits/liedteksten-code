@@ -1,0 +1,464 @@
+% liedbasis: simpele 'package' om preambule niet te hoeven copy/pasten.
+% auteur: stefan
+
+\ProvidesPackage{liedbasis}
+
+% ***** Fontsize ******
+% Can be set in lt-config.jsonc, per song per configuration.
+% Default recommendation in a regular document: \documentclass[11pt]{article}
+% Example: \fontsize{14pt}{16.8pt}\selectfont   // param 16.8 is lineheight
+% Rule of thumb: lineheight = fontsize * 1.2
+% ***** Fontsize (end) ******
+
+
+\RequirePackage{ifthen}       % for conditional processing
+\RequirePackage{graphicx}     % for rotatebox etc.
+\RequirePackage{tikz}         % Voor positionering van maatnummers boven de tekst
+\RequirePackage{xparse}       % Voor geavanceerde macrodefinitie (NewDocumentCommand), zie maatnummers functie
+\usetikzlibrary{positioning}  % required for pgfmathtruncatemacro, positioning measures
+
+% Header, Footer
+\RequirePackage{currfile}
+\RequirePackage{fancyhdr}  % for footer, header
+\RequirePackage{lastpage}
+% ***BABEL DISABLED BECAUSE TRIGGERS TRANSLATION FOR LEADSHEETS !! (Refrein wordt weer couplet etc.)***
+% \RequirePackage[dutch]{babel}  % om datum in NL format te tonen 
+\pagestyle{fancy}
+\fancyhf{} % clear all header and footer fields
+\renewcommand{\headrulewidth}{0pt}  % clear hrule in header
+\lfoot{\fontsize{6pt}{7.2pt}\selectfont \currfilebase{}.pdf \hspace{0.5cm} \today \hspace{0.5cm} pag. \thepage/\pageref{LastPage}}
+
+\newcommand{\ul}{\underline}
+
+% SET MARGINS
+% If you want your page to have less whitespace at the top/bottom and left/right.
+% Check if command-line arg 'setMargins' exists
+%   Cmdline example: \def\setMargins{top=2.0cm,bottom=2.0cm,left=4.5cm,right=3.0cm}
+% Example of what it should lead to:
+%   \usepackage[a4paper,top=2.0cm,bottom=2.0cm,left=4.5cm,right=3.0cm]{geometry}
+% Note: if not set, then we simply don't change margins.
+\ifdefined\setMargins
+    \usepackage[a4paper, \setMargins]{geometry}
+\fi%
+
+% SET FONTSIZE 
+% about the same mechanism as set margins, but a bit different
+\newcommand{\setfontdynamically}[1]{%
+    \fontsize{#1pt}{\dimexpr#1pt*12/10\relax}\selectfont
+}%
+\ifdefined\setFontsize
+    % \typeout{Applying lettergrootte \setFontsize}
+    \AtBeginDocument{\setfontdynamically{\setFontsize}}
+\fi%
+
+
+
+% ********* DEFAULTS FOR CMDLINE SETTINGS *********
+
+% These are only the _default_ settings, if not provided via the commandline!
+
+% run pdflatex as:
+%   pdflatex "\def\showTabs{true}\def\guitarTabOrientation{left}\def\transpose{0}\input{Girls Cant Get Enough (49).tex}"
+
+% DISPLAY GUITAR TABS TRUE/FALSE
+% Check if command-line override 'showTabs' exists
+\newboolean{showGuitarTabs}  % do not change
+\ifdefined\showTabs
+    \setboolean{showGuitarTabs}{\showTabs}  % read from commandline
+\else
+    \setboolean{showGuitarTabs}{false}  % default (if not set on commandline)
+\fi
+
+% ORIENTATION OF GUITAR TABS 
+% allowed values: traditional, right, left.
+% Traditional=topkam bovenaan (nut at the top); right=rotated 90°; left = rotated -90°.
+% B.t.w. right means the pattern you see someone righthanded playing it;
+% Left means the pattern you see of your own hand when playing guitar! I prefer left :-)
+\providecommand{\guitarTabOrientation}{traditional}  % fallback if not set commandline
+
+% TRANSPOSITIE
+% allowed values (per halve toon): -12 to 12 (?) not sure.
+\newcommand{\transpositie}{0} % default (if not set on commandline)
+\ifdefined\transpose
+    \renewcommand{\transpositie}{\transpose}
+\fi%
+
+%********* Settings (end) *********
+
+
+% Als getransponeerd dan dat aangeven op de PDF.
+\newcommand{\prefixToonsoort}{}
+\ifthenelse{\NOT{\equal{\transpositie}{0}}}{
+    \renewcommand{\prefixToonsoort}{Getransponeerd vanuit }
+}
+
+% Note: nameclash \chord for gchords and leadsheets
+\RequirePackage{savesym}    % pkg to solve nameclash
+\RequirePackage{gchords}
+\savesymbol{chord}  % Saves \chord from gchords as \origchord, to avoid nameclash
+\newcommand{\guitartab}{\origchord}  % use \guitartab for \origchord
+
+% *** support rotation ***
+\newcommand{\guitartabrot}[3]{%
+    \ifthenelse{\equal{\guitarTabOrientation}{traditional}}{%
+        \guitartab{#1}{#2}{#3}
+    }{%
+        \ifthenelse{\equal{\guitarTabOrientation}{right}}{
+            \rotatebox[origin=c]{-90}{\raisebox{-0.25cm}{\guitartab{#1}{#2}{#3}}}
+        }{%
+            \rotatebox[origin=c]{90}{\raisebox{-0.5cm}{\guitartab{#1}{#2}{#3}}}
+        }%
+    }%
+}
+
+
+% *** support inline and upline positioning of guitartab ***
+% \upchord is a macro within gchords, by Yotam Medini, to place chords above lyrics.
+
+% grpt = Guitar Rotated Positioned Tab
+\newcommand{\grpt}[4][up]{%
+    \ifthenelse{\boolean{showGuitarTabs}}{%
+        \ifthenelse{\equal{#1}{up}}{%
+            \upchord{\guitartabrot{#2}{#3}{#4}}  % upline
+        }{%
+            \guitartabrot{#2}{#3}{#4}  % inline
+        }
+    }{%
+        % Do nothing
+    }
+}
+
+
+
+% ****** Define guitartabs/chords ****** 
+%  Note 1: all are 'upline' (above lyrics) by default: 
+%    To have a tab inline, add [] to the tab in the songtext.
+%    Example: \AsevenMaj[] (note that anythong within the [] would have
+%    the same effect: I intended [inline], but for now that is redundant)
+% 
+%  Note 2: Digits are not allowed in the commandname.
+%
+% Volgorde akkoorden zoals in 
+%    "de ongelooflijke akkoordenvinder voor de gitarist" (RMH, 1996)
+% Van C naar B: 
+% 6, 7, 8, 9, 11, 11+, 13, maj7, maj9, maj11, 
+% 7-5, 7-9, 7-10, 7+5, 7+9, 9+5, 7+5-9, 6*9, dim, +5*, sus4, 7sus4, m,
+% m6, m7, m9, m7-5, m7-9*, m+7, m9+7, m+5 m6*9
+
+%   ** --- TELLING FRET POSITIE: gewoon vakjes tellen --- **
+%   
+% Dit is, met gchords, de definitie van G: {3}{p1,p3,p1,p2,p1,p1}{G}
+% De 3 parameters betekenen: 3e vakje, vingerzetting1-6, naam.
+% Dus vakje 3, dan vingers op 1e, 3e, 1e, 2e etc. vakje, en het heet 'G'.
+% Dus: bij F is het 1, bij E is het 0 maar gebruik 't' voor 'thick bar'.
+% p=positie (base=1), x=dempen; o=open; eventueel b=base (bold) note.
+% Niet gebruiken: n=no-note, dus impliciete 'o' (open).
+% ------------------------------------------------------------
+
+
+\newcommand{\defpos}{up} % defaultposition (up=upline; anything else=inline)
+
+% C
+\newcommand{\C}[1][\defpos]{\grpt[#1]{t}{p3,p3,p2,o,p1,o}{C}}
+\newcommand{\Cseven}[1][\defpos]{\grpt[#1]{t}{p3,p3,p2,o,o,o}{C7}}
+\newcommand{\CsevenAddThirteen}[1][\defpos]{\grpt[#1]{t}{p3,p3,p2,p2,o,o}{C7add13}}
+\newcommand{\Cnine}[1][\defpos]{\grpt[#1]{t}{p3,p3,p2,p3,p3,p3}{C9}}
+
+% Cm
+\newcommand{\CminorSevenRootEight}[1][\defpos]{\grpt[#1]{8}{p1,p3,p1,p1,p1,p1}{Cm7R8}}
+
+% Des (Cis)
+\newcommand{\CsharpNine}[1][\defpos]{\grpt[#1]{3}{p2,p2,p1,p2,p2,p2}{Cis9}}
+\newcommand{\CisFork}[1][\defpos]{\grpt[#1]{8}{p2,p1,p2,o,o,o}{Cis}}
+\newcommand{\CisForkPlus}[1][\defpos]{\grpt[#1]{8}{p2,p1,p2,p3,p3,p3}{Cis}}
+
+% D
+\newcommand{\DrootTwo}[1][\defpos]{\grpt[#1]{t}{p2,o,o,p2,p3,p2}{Dr2}}
+
+\newcommand{\DsevenRootFive}[1][\defpos]{\grpt[#1]{5}{p1,p1,p3,p1,p3,p1}{DR5O}}
+\newcommand{\Dnine}[1][\defpos]{\grpt[#1]{4}{p2,p2,p1,p2,p2,p2}{D9}}
+\newcommand{\DnineVtwo}[1][\defpos]{\grpt[#1]{3}{x,p3,p2,p3,p1,o}{D9}}
+\newcommand{\DmNine}[1][\defpos]{\grpt[#1]{3}{p3,p3,p1,p3,p3,p3}{Dm9}}
+
+% Dm
+\newcommand{\DmRootFiveOpen}[1][\defpos]{\grpt[#1]{5}{p1,p1,p3,p1,p2,p1}{DmR5O}}
+\newcommand{\DmSevenRootTen}[1][\defpos]{\grpt[#1]{0}{p1,p3,p1,p1,p1,p1}{Dm7R10}}
+
+% Es (Dis)
+
+% E
+\newcommand{\E}[1][\defpos]{\grpt[#1]{t}{o,p2,p2,p1,o,o}{E}}
+\newcommand{\Eseven}[1][\defpos]{\grpt[#1]{t}{o,p2,p2,p1,p3,o}{E7}}
+\newcommand{\EsevenSusFour}[1][\defpos]{\grpt[#1]{t}{o,p2,o,p2,o,o}{E7sus4}}
+\newcommand{\Enine}[1][\defpos]{\grpt[#1]{6}{o,p2,p1,p2,o,o}{E9}}
+
+% Em
+\newcommand{\Em}[1][\defpos]{\grpt[#1]{t}{o,p2,p2,o,o,o}{Em}}
+\newcommand{\EmSix}[1][\defpos]{\grpt[#1]{t}{o,p4,p2,o,o,o}{Em6}}
+\newcommand{\EmSevenVi}[1][\defpos]{\grpt[#1]{t}{o,p2,p2,o,p3,o}{Em7}}
+\newcommand{\EmSevenVii}[1][\defpos]{\grpt[#1]{t}{o,p2,p2,o,p3,o}{Em7}}
+
+
+% F
+\newcommand{\F}[1][\defpos]{\grpt[#1]{t}{p1,p3,p3,p2,p1,p1}{F}}
+\newcommand{\Fseven}[1][\defpos]{\grpt[#1]{t}{p1,p3,p1,p2,p1,p1}{F7}}
+
+% Fm
+
+% Ges (Fis)
+\newcommand{\Fis}[1][\defpos]{\grpt[#1]{t}{p2,p4,p4,p3,p2,p2}{Fis}}
+\newcommand{\FisOpen}[1][\defpos]{\grpt[#1]{t}{o,p4,o,p3,o,o}{Fis (open)}}
+\newcommand{\FisSeven}[1][\defpos]{\grpt[#1]{t}{p2,p4,p2,p3,p2,p2}{Fis7}}
+
+% Ges (Fis) minor
+
+% G
+\newcommand{\G}[1][\defpos]{\grpt[#1]{3}{p1,p3,p1,p2,p1,p1}{G}}
+\newcommand{\Gsix}[1][\defpos]{\grpt[#1]{3}{p1,p3,p1,p2,p3,p1}{G6}}
+\newcommand{\Gseven}[1][\defpos]{\grpt[#1]{3}{p1,p3,p1,p2,p1,p1}{G7}}
+\newcommand{\GaddNine}[1][\defpos]{\grpt[#1]{3}{p1,p3,p1,p2,p4,p1}{Gadd9}}
+
+% Gm
+\newcommand{\GmSevenVi}[1][\defpos]{\grpt[#1]{3}{p1,p3,p3,p1,p1,p4}{Gm7}}
+\newcommand{\GmSevenVii}[1][\defpos]{\grpt[#1]{3}{p1,p3,p1,p1,p1,p1}{Gm7}}          
+
+% As (Gis)
+\newcommand{\Gis}[1][\defpos]{\grpt[#1]{4}{p1,p3,p1,p2,p1,p1}{G\#}}
+\newcommand{\GisSeven}[1][\defpos]{\grpt[#1]{4}{p1,p3,p1,p2,p1,p1}{G\#7}}
+\newcommand{\GisFork}[1][\defpos]{\grpt[#1]{3}{p2,p1,p2,x,x,x}{Gis}}
+
+% As (Gis) minor
+
+% A
+\newcommand{\Aopen}[1][\defpos]{\grpt[#1]{t}{o,o,p2,o,p2,o}{Aopen}}
+\newcommand{\ArootFive}[1][\defpos]{\grpt[#1]{5}{p1,p3,p1,p2,p1,p1}{AR5}}
+\newcommand{\AsixRootFive}[1][\defpos]{\grpt[#1]{5}{p1,p3,p1,p2,p3,p1}{A6R5}}
+\newcommand{\Aseven}[1][\defpos]{\grpt[#1]{t}{x,n,p2,p1,p2,n}{A7}}
+\newcommand{\AsevenRootFive}[1][\defpos]{\grpt[#1]{5}{p1,p3,p1,p2,p4,p1}{A7R5}}
+\newcommand{\AfivePlus}[1][\defpos]{\grpt[#1]{t}{o,o,p2,p2,p2,p2}{AR+}}
+
+% Am
+\newcommand{\AminorSeven}[1][\defpos]{\grpt[#1]{t}{o,o,p2,po,p1,o}{Am7}}
+\newcommand{\AminorSevenShiftPlusTwo}[1][\defpos]{\grpt[#1]{t}{o,o,p4,po,p3,o}{Am7sh2}}
+\newcommand{\AminorRootFive}[1][\defpos]{\grpt[#1]{5}{p1,p3,p3,p1,p1,p1}{AmR5}}
+\newcommand{\AminorSevenRootFive}[1][\defpos]{\grpt[#1]{5}{p1,p3,p1,p1,p1,p1}{Am7R5}}
+\newcommand{\AminorSevenRootFiveOpen}[1][\defpos]{\grpt[#1]{5}{o,p3,o,o,o,o}{Am7R5(o)}}
+\newcommand{\AminorRootFiveAltOne}[1][\defpos]{\grpt[#1]{5}{o,o,p1,p1,p1,p1}{AmR5alt2}}  % alternatieve AmR5
+
+% Bes (Ais)
+\newcommand{\BesFork}[1][\defpos]{\grpt[#1]{5}{p2,p1,p2,x,x,x}{Bes}}
+\newcommand{\BesSeven}[1][\defpos]{\grpt[#1]{t}{p1,p1,p3,p1,p3,p1}{Bes7}}
+\newcommand{\AisSevenRootSix}[1][\defpos]{\grpt[#1]{6}{p1,p3,p1,p2,p1,p1}{A\#}}
+\newcommand{\AisMinorSevenRootSix}[1][\defpos]{\grpt[#1]{6}{p1,p3,p1,p1,p1,p1}{A\#m}}
+
+% B
+\newcommand{\B}[1][\defpos]{\grpt[#1]{7}{p1,p3,p1,p2,p1,p1}{B}}
+\newcommand{\Bsix}[1][\defpos]{\grpt[#1]{7}{p1,p3,p1,p2,p3,p1}{B6}}
+\newcommand{\Bseven}[1][\defpos]{\grpt[#1]{7}{p1,p3,p1,p2,p3,p1}{B7}}
+\newcommand{\Bfork}[1][\defpos]{\grpt[#1]{6}{p2,p1,p2,x,x,x}{B}}
+\newcommand{\Bnine}[1][\defpos]{\grpt[#1]{t}{p2,p2,p1,p2,p2,p2}{B9}}
+\newcommand{\BminorSeven}[1][\defpos]{\grpt[#1]{t}{p3,p3,p5,p3,p4,p3}{Bm7}}
+\newcommand{\BminorRootFiveAltOne}[1][\defpos]{\grpt[#1]{6}{o,o,p1,p1,p1,p1}{BmR5alt2}} % live long democr schuifakkoord
+
+% ****** Define guitartabs/chords (end) ****** 
+
+
+\RequirePackage[full, align-chords = {l}]{leadsheets}
+
+% Suppress the leadsheets bug (this is required for py to generate the files)
+\ExplSyntaxOn
+\prop_if_exist:NF \l__leadsheets_songs_height_prop {
+    \prop_new:N \l__leadsheets_songs_height_prop
+}
+\ExplSyntaxOff
+
+\setcounter{secnumdepth}{0} % hide section number%
+
+\DeclareLanguage{Dutch}
+\DeclareTranslation{Dutch}{leadsheets/verse}{couplet}% unused
+\DeclareTranslation{Dutch}{leadsheets/Chorus}{refrein}
+\DeclareTranslation{Dutch}{leadsheets/lyrics}{tekstdd}
+\DeclareTranslation{Dutch}{leadsheets/composer}{muziek}
+
+\definesongproperty{by}
+\definesongproperty{nr}
+\definesongproperty{datum}
+\definesongproperty{datummuziek}
+\definesongproperty{datumtekst}     % als tekst en lied van verschillende datums zijn
+\definesongproperty{toonsoort}      % ivm formatting van de toonsoort op regel 1
+\definesongproperty{maatsoort}      % 3/4, 4/4 etc.
+
+
+\definesongtitletemplate{tabular}{
+    \ifsongmeasuring
+        {\section*}
+        {\section}%
+        {\songproperty{title} (\songproperty{nr})}
+    \begingroup\footnotesize
+
+    \begin{tabular}{l l l l l l}
+
+        \ifsongproperty{by}
+        {
+            \printsongpropertylist{by}{ \& }{, }{ \& }
+        }{}%
+        \ifsongproperty{composer}
+        {
+            \GetTranslation{leadsheets/composer}: %
+            \printsongpropertylist{composer}{ \& }{, }{ \& }
+
+        }{}%
+        \ifsongproperty{datum}% enkele datum, of apart voor lied en tekst
+        {
+            \printsongpropertylist{datum}{ \& }{ }{ \& }
+        }{%
+            \ifsongproperty{datummuziek}
+            {
+                Muziek:\printsongpropertylist{datummuziek}{ \& }{ }{ \& }
+            }{}%
+            \ifsongproperty{datumtekst}
+            {
+                Tekst:\printsongpropertylist{datumtekst}{ \& }{ }{ \& }
+            }{}%
+        }%
+        \ifsongproperty{lyrics}
+        {
+            &
+            \GetTranslationFor{Dutch}{leadsheets/lyrics}: %
+            \printsongpropertylist{lyrics}{ \& }{, }{ \& }
+        }{}%
+        
+        \ifsongproperty{toonsoort}
+		{
+            & 
+            in:\songproperty{toonsoort}
+        }{}%
+        \ifsongproperty{genre}
+		{
+            % & 
+            % (\songproperty{genre})
+        }{}%
+        \ifsongproperty{maatsoort}
+		{
+            & 
+            maat=\songproperty{maatsoort}
+        }{}%
+        &% always display tempo indication 
+        t=\songproperty{tempo} 
+	\end{tabular}
+	\par\endgroup
+}
+	
+\setleadsheets{
+    title-template=tabular, 
+    verse/numbered=false, 
+    verse/named=true, 
+    verse/label-format=\textit, 
+    chords/format=\sffamily
+}
+
+
+% DISPLAY CHORDNAMES TRUE/FALSE (DEFAULT: FALSE)
+% Check if command-line override 'showChords' exists
+\newboolean{showChordnames}  % do not change
+\ifdefined\showChords
+    \setboolean{showChordnames}{\showChords}  % read from commandline
+\else
+    \setboolean{showChordnames}{false}  % default (if not set on commandline)
+\fi
+
+\notbool{showChordnames}{
+    % If not showChordnames, suppress output
+    \renewcommand{\chord}[1]{}
+}
+
+% DISPLAY MEASURENUMGERS TRUE/FALSE (DEFAULT: FALSE)
+% Check if command-line override 'showMeasures' exists
+\newboolean{showMeasureNumbers}  % do not change
+\ifdefined\showMeasures
+    \setboolean{showMeasureNumbers}{\showMeasures}  % read from commandline
+\else
+    \setboolean{showMeasureNumbers}{false}  % default (if not set on commandline)
+\fi
+
+% SPACE COMMANDS TO SPACE CHORDS OFF FROM MEASURENUMBERS IN CASE THEY OVERLAP
+\newcommand{\spa}{~}
+\newcommand{\spaa}{~~}
+\newcommand{\spaaa}{~~~}
+\newcommand{\spaaab}{~~~~}
+\newcommand{\spaaabb}{~~~~~}
+
+\newcommand{\hspa}{\hspace{0.25cm}}
+\newcommand{\hspaa}{\hspace{0.5cm}}
+\newcommand{\hspaaa}{\hspace{0.75cm}}
+\newcommand{\hspaaab}{\hspace{1.0cm}}
+\newcommand{\hspaaabb}{\hspace{1.25cm}}
+\newcommand{\hspaaabbb}{\hspace{1.5cm}}
+
+% HIDE RESTS AND SPACE CHANGES ETC WHEN NO MEASURES ARE SHOWN
+\notbool{showMeasureNumbers}{%
+    \renewcommand{\wholerest}{}    
+    \renewcommand{\halfrest}{}
+    \renewcommand{\quarterrest}{}
+    \renewcommand{\spa}{}
+    \renewcommand{\spaa}{}
+    \renewcommand{\spaaa}{}
+    \renewcommand{\spaaab}{}
+    \renewcommand{\spaaabb}{}
+    \renewcommand{\hspa}{}
+    \renewcommand{\hspaa}{}
+    \renewcommand{\hspaaa}{}
+    \renewcommand{\hspaaab}{}
+    \renewcommand{\hspaaabb}{}
+    \renewcommand{\hspaaabbb}{}
+}
+
+% --- Counter aanmaken ---
+\makeatletter % needed for \if@filesw
+\newcounter{measurenumber}
+\AtBeginDocument{\setcounter{measurenumber}{1}}  % force reset to 1
+
+
+% --- Startwaarde instellen (bijv. bij begin van het lied) ---
+\newcommand{\setmeasure}[1]{\setcounter{measurenumber}{#1}}
+
+% --- Maatnummer-macro: verhoogt counter en toont het boven de tekst ---
+
+% show depends on boolean; support for measure range; circle around numbers
+\NewDocumentCommand{\m}{o}{%
+    % Only draw if boolean is true
+    \ifbool{showMeasureNumbers}{%
+        % Zero-width box so it doesn't affect horizontal spacing
+        \makebox[0pt][l]{%
+            \tikz[baseline]{%
+                \if@filesw
+                    % Als optioneel argument gegeven is, verhoog met dat getal, anders met 1
+                    \IfNoValueTF{#1}%
+                    {\stepcounter{measurenumber}} % Default: span = 1
+                    {\addtocounter{measurenumber}{#1}}%
+                \fi
+
+                % Determine start and (if needed) end of measure span
+                \pgfmathtruncatemacro{\measurestart}{\value{measurenumber} - \IfNoValueTF{#1}{1}{#1}}%
+                \pgfmathtruncatemacro{\measureend}{\value{measurenumber} - 1}%
+
+                \ifnum\measurestart=\measureend
+                    % Single measure
+                    \node[draw, rectangle, rounded corners=2pt, inner sep=1.8pt, yshift=2.4ex, anchor=base, font=\tiny\bfseries]
+                    {\measurestart};%
+                \else
+                    % Measure range
+                    \node[inner sep=1pt, yshift=2.4ex, anchor=base, font=\tiny\bfseries] {%
+                        \tikz[baseline]{%
+                            \node[draw, rectangle, rounded corners=2pt, inner sep=1.8pt] (start) {\measurestart};%
+                            \node[draw, rectangle, rounded corners=2pt, inner sep=1.8pt, right=5pt of start] (end) {\measureend};%
+                            \node[anchor=base west, font=\tiny\bfseries, right=0.0pt of start] {-};%
+                        }%
+                    };%
+                \fi
+            }%
+        }%
+    }{}%
+}%
+\makeatother
+

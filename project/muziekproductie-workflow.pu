@@ -43,7 +43,7 @@ audio -[#orange]> audio: call Ffmpeg
 u1 -> repos: (manual) create liedtekst.tex
 build -[#orange]> repos: use analysis.txt
 
-u1 -[#green]> ltgenerate : run script
+u1 -[#green]> ltgenerate : run script (or call remote API)
 ltgenerate -[#green]> dist: render liedtekst .pdf, render structuur .pdf
 
 ' upload (in the near future, upload will be after record)

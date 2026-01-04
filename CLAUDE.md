@@ -350,3 +350,216 @@ When testing changes:
 - Verify all 5 variants generate correctly (`--only 1` through `--only 5`)
 - Test path resolution with both relative and absolute paths
 - Validate generated filenames don't contain invalid characters
+
+## Cloud API (Docker Container)
+
+The system includes a Docker-based REST API for cloud deployment, allowing remote PDF generation without local LaTeX installation.
+
+### Architecture
+
+**Local vs Cloud:**
+- **Local**: Uses `lt-generate.py` directly with `paths.jsonc` configuration
+- **Cloud**: Uses Docker container with FastAPI endpoints that wrap `lt-generate.py` functionality
+
+**Key differences:**
+- Cloud API accepts file uploads instead of local file paths
+- Config files are cached in-memory (or persistent volume if mounted)
+- Multiple PDFs are returned as ZIP file with timestamp
+- No `paths.jsonc` needed - API manages temporary directories internally
+
+### Docker Structure
+
+```
+app/
+  main.py                    # FastAPI application with endpoints
+  lt_generate_api.py         # API-specific wrapper around lt-generate.py
+  lt_generate.py             # Original script (imported, not modified)
+  lt_configloader.py         # Config loader
+  pathconfig.py              # Path utilities (imported but not used in API)
+  liedbasis.sty             # LaTeX package
+  cache/
+    configs/                 # Cached lt-config.jsonc files (keyed by song title)
+```
+
+### API Endpoints
+
+**`POST /compile`**
+- Upload .tex file → returns ZIP with PDFs
+- Optional: config_file (also caches for future use)
+- Optional: sty_file (custom liedbasis.sty override)
+- Parameters: `only` (0/-1/1-5), `tab_orientation` (left/right/traditional)
+- Response filename: `{song_title}_{YYYYMMDD_HHMMSS}.zip`
+- Automatically detects structuur files (filename ends with " structuur.tex")
+
+**`GET /config/{song_title}`**
+- Retrieve cached config for a song
+
+**`POST /config/{song_title}`**
+- Upload/update config without compiling
+
+**`DELETE /config/{song_title}`**
+- Remove cached config
+
+**`GET /configs`**
+- List all cached song titles
+
+**`GET /health`**
+- Health check endpoint
+
+### API Workflow
+
+**Single request (with config):**
+```bash
+curl -X POST http://api-url/compile \
+  -F "tex_file=@Such A Beauty (6).tex" \
+  -F "config_file=@lt-config.jsonc" \
+  -F "only=5" \
+  -OJ
+```
+
+**Pre-cache configs:**
+```bash
+# Upload config once
+curl -X POST http://api-url/config/Such%20A%20Beauty%20(6) \
+  -F "config_file=@lt-config.jsonc"
+
+# Later: compile without config (uses cache)
+curl -X POST http://api-url/compile \
+  -F "tex_file=@Such A Beauty (6).tex" \
+  -OJ
+```
+
+### Config Caching Mechanism
+
+**Cache key:** Song title extracted from .tex filename
+- `"Such A Beauty (6).tex"` → cache key: `"Such A Beauty (6)"`
+- Stored as: `/app/cache/configs/Such A Beauty (6).jsonc`
+
+**Cache behavior:**
+- If config uploaded in request: use immediately + cache for future
+- If no config in request: try to load from cache
+- Cache persists for container lifetime (use volume mount for persistence)
+
+**Pre-loading configs in image:**
+- Existing configs can be copied to `app/cache/configs/` during Docker build
+- Useful for rarely-changing configs
+
+### Response Format
+
+**Success:**
+```
+ZIP file containing:
+  - All generated PDFs (including transpositions)
+  - console.log (captured stdout/stderr)
+```
+
+**Failure:**
+```
+ZIP file containing:
+  - error.txt (error message + console output)
+  - *.log (LaTeX log files)
+  - console.log (captured stdout/stderr)
+```
+
+### LaTeX Packages in Docker
+
+The Docker image includes TinyTeX with these packages:
+- **Core**: collection-latex, collection-fontsrecommended, collection-latexrecommended
+- **Graphics/Layout**: pgf, tikz-cd, currfile, lastpage, anyfontsize, xstring, savesym
+- **Music**: gchords, leadsheets, translations, musixtex, musixtex-fonts, musixguit
+- **L3**: l3kernel, l3packages, l3experimental
+- **Utilities**: xcolor, etoolbox, metafont
+
+### Docker Commands
+
+**Build:**
+```bash
+docker build -t liedteksten-api .
+```
+
+**Run:**
+```bash
+# Basic
+docker run -p 8000:8000 liedteksten-api
+
+# With persistent config cache
+docker run -p 8000:8000 \
+  -v /path/to/configs:/app/cache/configs \
+  liedteksten-api
+```
+
+**Deploy to cloud:**
+- Scaleway, Azure Container Apps, Google Cloud Run, etc.
+- Ensure volume mount for `/app/cache/configs` if persistence needed
+- No special environment variables required
+
+### API Implementation Details
+
+**`lt_generate_api.py` functions:**
+- `compile_for_api()`: Main entry point, creates temp directories and orchestrates compilation
+- `compile_liedtekst_variants()`: Generates all variants (1-5) based on `only` parameter
+- `compile_tex_variant()`: Compiles single variant with specific parameters (adapted from original `compile_tex_file()`)
+- `compile_tex_simple()`: For structuur documents (no variants)
+- `extract_song_title_from_filename()`: Extracts cache key from filename
+- `is_structuur_file()`: Checks if filename ends with " structuur.tex"
+- `create_temp_structure()`: Creates required directory structure for compilation
+
+**Console output capture:**
+- Uses `io.StringIO` to redirect `sys.stdout` and `sys.stderr`
+- Captured output included in ZIP as `console.log`
+- Allows debugging without SSH access to container
+
+**Temporary directory management:**
+- Each request gets unique temp dir: `/tmp/ltgen_{uuid}/`
+- Structure: `input/{song_title}/{song_title}.tex` + optional config
+- Cleaned up after ZIP creation (success or failure)
+
+**Custom .sty handling:**
+- If uploaded: placed in temp root, TEXINPUTS updated to include temp root
+- LaTeX searches current dir first, then system tree → uploaded .sty takes precedence
+- Default liedbasis.sty installed at: `/home/pdfgen/.TinyTeX/texmf-dist/tex/latex/local/`
+
+### Security Considerations
+
+- Container runs as non-root user `pdfgen` (UID 1001)
+- File size limits: .tex (10MB), .jsonc (1MB), .sty (5MB)
+- pdflatex runs with `-no-shell-escape` (prevents arbitrary code execution)
+- Temporary directories isolated per request
+- No access to host filesystem (except mounted volumes)
+
+### Differences from Local Workflow
+
+**What's the same:**
+- Same LaTeX compilation (pdflatex, twice for references)
+- Same variant generation logic (1-5)
+- Same transposition handling
+- Same config matching system
+- Same output filename conventions
+
+**What's different:**
+- No `paths.jsonc` - API manages temp directories
+- Song title from filename, not command-line argument
+- Config identified by song title, not folder location
+- Multiple PDFs packaged as ZIP instead of separate files
+- Console output captured and included in response
+- No `--no-structuur` option - structuur files uploaded separately
+
+### Troubleshooting
+
+**"Module not found" errors:**
+- Ensure `lt-generate.py` renamed to `lt_generate.py` (no hyphen) in app/ folder
+
+**"File not found" LaTeX errors:**
+- Check Dockerfile has all required packages
+- Rebuild image after package changes
+
+**Config not found:**
+- Verify song title extraction matches cache key
+- Check `/app/cache/configs/` contents with `docker exec`
+
+**Large response times:**
+- First compilation takes longer (font cache generation)
+- Subsequent compilations faster
+- Consider pre-warming container with dummy compile
+
+For complete API documentation, see `API-README.md`.
