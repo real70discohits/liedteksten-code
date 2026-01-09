@@ -177,9 +177,10 @@ Dit script genereert de volgende bestanden:
 
 - NWC subfolder in liedmap met individuele sectiebestanden
 - `volgorde.jsonc` bestand dat de volgorde van secties definieert
-- Bass staff in NWC bestanden (voor tempo, maatsoort, akkoorden)
+- Bass staff (notenbalk) in NWC bestanden (voor tempo, maatsoort, akkoorden)
 - Ritme staff in NWC bestanden (voor maataantallen)
-- Zang staff in NWC bestanden (voor liedteksten)
+- Zang staff in NWC bestanden (voor liedteksten mapping naar maatnummers)
+- Volgorde van staffs is vrij, maar moet gelijk zijn in alle sectiebestanden.
 
 ---
 
