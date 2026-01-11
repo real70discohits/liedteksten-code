@@ -137,6 +137,30 @@ def count_vooraf_measures(staff_content):
     return bars_before
 
 
+def multiple_notes_count_as_one(element):
+    """Boolean function: detects slurs and ties, meaning that multiple notes 
+    count as one (so only a single note for singing and lyrics).
+
+    An element is a single line in a noteworthy .nwctxt file, such
+    as "|Note|Dur:8th|Pos:-4|Opts:Stem=Up,Beam=First".
+    """
+    pos = find_part_of_element(element, "Pos")
+    return element.count('Slur') > 0 or (pos is not None and pos.endswith('^'))
+
+
+def find_part_of_element(element, startswith):
+    """Returns the full part of an element when that part starts with the given string.
+    Example: find_part_of_element("|Note|Dur:8th|Pos:-3^|Opts:Stem=Up,Beam=End", "Pos") returns "Pos:-3^".
+    """
+    parts = element.split('|')
+    result = None
+    for item in parts:
+        if item.lower().startswith(startswith.lower()):  # Case-insensitive match
+            result = item
+            break
+    return result
+
+
 def map_lyrics_to_measures(staff_content, syllables):
     """Map lyrics syllables to measure numbers.
 
@@ -159,7 +183,7 @@ def map_lyrics_to_measures(staff_content, syllables):
                 measure_map[current_measure] = []
         elif element.startswith(NWC_PREFIX_NOTE) and syllable_index < len(syllables):
             if skip_next_note:
-                if element.count('Slur') > 0 or element.endswith('^'):
+                if multiple_notes_count_as_one(element):
                     skip_next_note = True
                 else:
                     skip_next_note = False
@@ -169,7 +193,7 @@ def map_lyrics_to_measures(staff_content, syllables):
                     measure_map[current_measure] = []
                 measure_map[current_measure].append(syllables[syllable_index])
                 syllable_index += 1
-                if element.count('Slur') > 0 or element.endswith('^'):
+                if multiple_notes_count_as_one(element):
                     skip_next_note = True
         elif element.startswith(NWC_PREFIX_REST):
             # Skip rests - no syllable assignment
