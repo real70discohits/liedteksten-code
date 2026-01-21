@@ -210,6 +210,7 @@ python lt-generate.py [liedtitels...] [opties]
 | `--engine` | `pdflatex`, `xelatex`, `lualatex` | `pdflatex` | Specificeer welke TeX engine te gebruiken voor compilatie |
 | `--tab-orientation` | `left`, `right`, `traditional` | `left` | Oriëntatie van gitaartabs. Bepaalt hoe de snaren worden weergegeven |
 | `-n`, `--only` | `-1`, `0`, `1`, `2`, `3`, `4`, `5` | `0` | Genereer alleen specifieke variant(en). Zie variant tabel hieronder |
+| `--large-print` | vlag | Uit | Optimaliseer de PDF output voor leesbaarheid: groot font, en vetgedrukt. |
 
 #### Varianten
 
@@ -289,17 +290,18 @@ Per lied kan een `lt-config.jsonc` bestand worden gemaakt met layout-aanpassinge
 {
   "configurations": [
     {
+      "description": "Compacte layout voor Vader Jacob met akkoorden",
       "condition": {
         "songId": 1,
         "showMeasures": true,
         "showChords": true,
-        "showTabs": null  // null = match elke waarde
+        "showTabs": null,  // null = match elke waarde
+        "largePrint": false
       },
       "action": {
         "adjustMargins": "1.5cm",
         "adjustFontsize": "10pt"
-      },
-      "description": "Compacte layout voor Vader Jacob met akkoorden"
+      }
     }
   ]
 }

@@ -54,7 +54,8 @@ async def compile_tex(
     config_file: Optional[UploadFile] = File(None, description="Optional lt-config.jsonc file"),
     sty_file: Optional[UploadFile] = File(None, description="Optional custom liedbasis.sty file"),
     only: int = Form(default=0, description="Variant to generate: 0=all, -1=configured only, 1-5=specific variant"),
-    tab_orientation: str = Form(default="left", description="Guitar tab orientation: left, right, or traditional")
+    tab_orientation: str = Form(default="left", description="Guitar tab orientation: left, right, or traditional"),
+    large_print: bool = Form(default=False, description="Optimize PDF output for readability: true/false")
 ):
     """
     Compile a .tex file to PDF(s).
@@ -131,7 +132,8 @@ async def compile_tex(
             config_content=config_content,
             sty_content=sty_content,
             only=only,
-            tab_orientation=tab_orientation
+            tab_orientation=tab_orientation,
+            large_print=large_print
         )
 
         # Create ZIP file

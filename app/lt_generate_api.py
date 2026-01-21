@@ -137,7 +137,8 @@ def compile_tex_simple(song_title: str, input_folder: Path, output_folder: Path,
 def compile_tex_variant(song_title: str, input_folder: Path, output_folder: Path,
                        show_measures: bool = False, show_chords: bool = False,
                        show_tabs: bool = False, tab_orientation: str = 'left',
-                       cleanup: bool = True, debug: bool = False) -> int:
+                       cleanup: bool = True, large_print: bool = False, 
+                       debug: bool = False) -> int:
     """
     Compile a single variant of a liedtekst.
     Returns number of PDFs generated (can be > 1 due to transpositions).
@@ -215,13 +216,15 @@ def compile_tex_variant(song_title: str, input_folder: Path, output_folder: Path
         _showmeasures = 'true' if show_measures else 'false'
         _showchords = 'true' if show_chords else 'false'
         _showtabs = 'true' if show_tabs else 'false'
+        _large_print = '\\def\\largePrint{}' if large_print else ''
 
         # Get configuration
         _set_margins = ""
         _set_fontsize = ""
         lied_config = get_config(configurations, song_id,
                                 show_measures, show_chords,
-                                show_tabs, tab_orientation)
+                                show_tabs, tab_orientation,
+                                large_print)
 
         if lied_config:
             print(f"   Applying configuration: {lied_config.description}")
@@ -234,6 +237,7 @@ def compile_tex_variant(song_title: str, input_folder: Path, output_folder: Path
         pdflatex_args = (f""
                     f"{_set_margins}"
                     f"{_set_fontsize}"
+                    f"{_large_print}"
                     f"\\def\\showMeasures{{{_showmeasures}}}"
                     f"\\def\\showChords{{{_showchords}}}"
                     f"\\def\\showTabs{{{_showtabs}}}"
@@ -281,7 +285,7 @@ def compile_tex_variant(song_title: str, input_folder: Path, output_folder: Path
 
 def compile_liedtekst_variants(song_title: str, input_folder: Path, output_folder: Path,
                                only: int = 0, tab_orientation: str = 'left',
-                               cleanup: bool = True, debug: bool = False) -> int:
+                               cleanup: bool = True, large_print=False, debug: bool = False) -> int:
     """
     Compile liedtekst with specified variants.
     Returns: number of successfully compiled PDFs
@@ -334,30 +338,30 @@ def compile_liedtekst_variants(song_title: str, input_folder: Path, output_folde
     # Variant 1: text only
     if should_generate_variant(1):
         success += compile_tex_variant(song_title, input_folder, output_folder,
-                                      cleanup=cleanup, debug=debug)
+                                      cleanup=cleanup, large_print=large_print, debug=debug)
 
     # Variant 2: text + measures
     if should_generate_variant(2):
         success += compile_tex_variant(song_title, input_folder, output_folder,
-                                      show_measures=True, cleanup=cleanup, debug=debug)
+                                      show_measures=True, cleanup=cleanup, large_print=large_print, debug=debug)
 
     # Variant 3: text + chords
     if should_generate_variant(3):
         success += compile_tex_variant(song_title, input_folder, output_folder,
-                                      show_chords=True, cleanup=cleanup, debug=debug)
+                                      show_chords=True, cleanup=cleanup, large_print=large_print, debug=debug)
 
     # Variant 4: text + measures + chords
     if should_generate_variant(4):
         success += compile_tex_variant(song_title, input_folder, output_folder,
                                       show_measures=True, show_chords=True,
-                                      cleanup=cleanup, debug=debug)
+                                      cleanup=cleanup, large_print=large_print, debug=debug)
 
     # Variant 5: text + measures + chords + tabs
     if should_generate_variant(5):
         success += compile_tex_variant(song_title, input_folder, output_folder,
                                       show_measures=True, show_chords=True,
                                       show_tabs=True, tab_orientation=tab_orientation,
-                                      cleanup=cleanup, debug=debug)
+                                      cleanup=cleanup, large_print=large_print, debug=debug)
 
     return success
 
@@ -368,7 +372,8 @@ def compile_for_api(
     config_content: Optional[str] = None,
     sty_content: Optional[str] = None,
     only: int = 0,
-    tab_orientation: str = 'left'
+    tab_orientation: str = 'left',
+    large_print: bool = False,
 ) -> CompileResult:
     """
     Compile a .tex file for the API.
@@ -380,6 +385,7 @@ def compile_for_api(
         sty_content: Optional custom liedbasis.sty content
         only: Which variant to generate (0=all, -1=configured only, 1-5=specific)
         tab_orientation: Guitar tab orientation (left/right/traditional)
+        large_print: optimize output for readability: bold and sans serif font
 
     Returns:
         CompileResult with success status, PDF files, logs, and console output
@@ -418,7 +424,7 @@ def compile_for_api(
             success_count = compile_liedtekst_variants(
                 song_title, input_folder, output_folder,
                 only=only, tab_orientation=tab_orientation,
-                cleanup=True, debug=False
+                cleanup=True, large_print=large_print, debug=False
             )
 
         # Get console output

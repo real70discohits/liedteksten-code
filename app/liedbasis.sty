@@ -30,6 +30,15 @@
 
 \newcommand{\ul}{\underline}
 
+% OPTIMIZE FOR READABILITY: LARGE PRINT 
+% Check if command-line override 'largePrint' exists
+\ifdefined\largePrint
+    \usepackage{helvet}
+    \renewcommand{\familydefault}{\sfdefault}
+    \AtBeginDocument{\bfseries}  % Bold
+\fi%
+
+
 % SET MARGINS
 % If you want your page to have less whitespace at the top/bottom and left/right.
 % Check if command-line arg 'setMargins' exists
@@ -461,4 +470,3 @@
     }{}%
 }%
 \makeatother
-

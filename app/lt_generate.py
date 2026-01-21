@@ -35,7 +35,8 @@ from pathconfig import load_and_resolve_paths, validate_file_exists
 # a single call to this method only happens if a song has multiple transpositions.
 def compile_tex_file(
     songtitle, input_folder, output_folder, cleanup=True, engine='pdflatex',
-    show_measures=False, show_chords=False, show_tabs=False, tab_orientation='left', debug=False):
+    show_measures=False, show_chords=False, show_tabs=False, 
+    tab_orientation='left', large_print=False, debug=False):
 
     # ***  Verify .tex file exists ***
     tex_file = input_folder / songtitle / f"{songtitle}.tex"
@@ -103,13 +104,15 @@ def compile_tex_file(
         _showmeasures = 'true' if show_measures else 'false'
         _showchords = 'true' if show_chords else 'false'
         _showtabs = 'true' if show_tabs else 'false'
+        _large_print = '\\def\\largePrint{}' if large_print else ''
 
         # lookup configuration for set_margins and set_fontsize
         _set_margins = ""
         _set_fontsize = ""
         lied_config: ConfigItem = get_config(configurations, song_id,
                                             show_measures, show_chords,
-                                            show_tabs, tab_orientation)
+                                            show_tabs, tab_orientation,
+                                            large_print)
 
         if not lied_config:
             print(f"   No configuration found for id {song_id} with these parametersettings.")  # not an error
@@ -124,6 +127,7 @@ def compile_tex_file(
         pdflatex_args = (f""
                     f"{_set_margins}"
                     f"{_set_fontsize}"
+                    f"{_large_print}"
                     f"\\def\\showMeasures{{{_showmeasures}}}"
                     f"\\def\\showChords{{{_showchords}}}"
                     f"\\def\\showTabs{{{_showtabs}}}"
@@ -460,6 +464,7 @@ def main():
     parser.add_argument('--no-cleanup', action='store_true', help='Keep auxiliary files')
     parser.add_argument('--no-structuur', action='store_true', help='Skip generating structuur PDFs')
     parser.add_argument('--debug', action='store_true', help='Show pdflatex output (sets capture_output=False)')
+    parser.add_argument('--large-print', action='store_true', help='Optimize output for readability (bold, large font)')
     parser.add_argument('--engine', default='pdflatex', help='TeX engine (default: pdflatex)')
     parser.add_argument('--tab-orientation',
                         choices=['left', 'right', 'traditional'],
@@ -469,6 +474,9 @@ def main():
                         help='Generate only this variant (0 = all, -1 = only configured, 1-5 = specific variant)')
 
     args = parser.parse_args()
+
+    if args.large_print:
+        print("Generating PDF's optimized for readability.")
 
     if args.songtitles:
         songtitles = args.songtitles
@@ -558,27 +566,27 @@ def main():
     # Generate variant 1: text only
     songs_v1 = get_songs_for_variant(1)
     if songs_v1:
-        success = sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, debug=args.debug) for f in songs_v1)
+        success = sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, large_print=args.large_print, debug=args.debug) for f in songs_v1)
 
     # Generate variant 2: text + measures
     songs_v2 = get_songs_for_variant(2)
     if songs_v2:
-        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True, debug=args.debug) for f in songs_v2)
+        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True, large_print=args.large_print, debug=args.debug) for f in songs_v2)
 
     # Generate variant 3: text + chords
     songs_v3 = get_songs_for_variant(3)
     if songs_v3:
-        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=False, show_chords=True, debug=args.debug) for f in songs_v3)
+        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=False, show_chords=True, large_print=args.large_print, debug=args.debug) for f in songs_v3)
 
     # Generate variant 4: text + measures + chords
     songs_v4 = get_songs_for_variant(4)
     if songs_v4:
-        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True, debug=args.debug) for f in songs_v4)
+        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True, large_print=args.large_print, debug=args.debug) for f in songs_v4)
 
     # Generate variant 5: text + measures + chords + tabs
     songs_v5 = get_songs_for_variant(5)
     if songs_v5:
-        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True, show_tabs=True, tab_orientation=tab_orientation, debug=args.debug) for f in songs_v5)
+        success = success + sum(compile_tex_file(f, paths.input_folder, paths.distributie_folder, not args.no_cleanup, args.engine, show_measures=True, show_chords=True, show_tabs=True, tab_orientation=tab_orientation, large_print=args.large_print, debug=args.debug) for f in songs_v5)
 
     # Generate structuur PDF for each liedtekst (unless --no-structuur)
     if not args.no_structuur:

@@ -14,6 +14,7 @@ class Condition:
     showChords: Optional[bool]
     showTabs: Optional[bool]
     tabOrientation: Optional[str]
+    largePrint: Optional[bool]
 
 @dataclass
 class Action:
@@ -85,7 +86,7 @@ class ConfigLoader:
 
 def get_config(configs: list[ConfigItem], lied_id: int,
             show_measures: bool, show_chords: bool,
-            show_tabs: bool, tab_orientation: str) -> Optional[ConfigItem]:
+            show_tabs: bool, tab_orientation: str, large_print: bool) -> Optional[ConfigItem]:
     """Lookup configuration for a song and parameters.
     
     Returns the FIRST matching configuration from the list.
@@ -102,4 +103,6 @@ def get_config(configs: list[ConfigItem], lied_id: int,
                     or config.condition.showTabs is None)
                 and (config.condition.tabOrientation == tab_orientation
                     or config.condition.tabOrientation is None)
+                and (config.condition.largePrint == large_print
+                    or config.condition.largePrint is None)
             ), None)

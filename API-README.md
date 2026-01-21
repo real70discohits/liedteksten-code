@@ -83,6 +83,7 @@ POST /compile
     - 4 = tekst + maatnummers + akkoorden
     - 5 = alles (tekst + maatnummers + akkoorden + gitaargrepen)
 - `tab_orientation` (string, optional): `left`, `right`, of `traditional` (default: `left`)
+- `large_print` (bool, optional): default `false`. For optimized readability of PDF's (large, bold).
 
 **Response:** ZIP file met:
 - Bij succes: Alle PDFs + `console.log`

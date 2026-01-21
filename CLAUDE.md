@@ -387,7 +387,7 @@ app/
 - Upload .tex file → returns ZIP with PDFs
 - Optional: config_file (also caches for future use)
 - Optional: sty_file (custom liedbasis.sty override)
-- Parameters: `only` (0/-1/1-5), `tab_orientation` (left/right/traditional)
+- Parameters: `only` (0/-1/1-5), `tab_orientation` (left/right/traditional), `large_print` (true/false)
 - Response filename: `{song_title}_{YYYYMMDD_HHMMSS}.zip`
 - Automatically detects structuur files (filename ends with " structuur.tex")
 
