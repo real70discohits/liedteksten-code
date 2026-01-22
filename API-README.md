@@ -104,6 +104,12 @@ curl -X POST http://localhost:8000/compile \
   -F "tex_file=@Such A Beauty (6).tex" \
   -OJ
 
+# Pad opgeven is mogelijk met curl, bv dit relatieve pad (let op de quotes
+# ivm de spaties in de foldernaam)
+curl -X POST http://localhost:8000/compile \
+  -F 'tex_file=@"Such A Beauty (6)/Such A Beauty (6).tex"' \
+  -OJ
+
 # Of gebruik -o om zelf een naam te kiezen:
 curl -X POST http://localhost:8000/compile \
   -F "tex_file=@Such A Beauty (6).tex" \
@@ -127,6 +133,13 @@ curl -X POST http://localhost:8000/compile \
   -F "tex_file=@Such A Beauty (6).tex" \
   -F "only=-1" \
   -F "tab_orientation=right" \
+  -OJ
+
+# Voor optimized readability
+curl -X POST http://localhost:8000/compile \
+  -F "tex_file=@Such A Beauty (6).tex" \
+  -F "only=1" \
+  -F "large_print=true" \
   -OJ
 ```
 
