@@ -77,7 +77,8 @@ async def compile_tex(
 
     # Validate tab_orientation
     if tab_orientation not in ['left', 'right', 'traditional']:
-        raise HTTPException(status_code=400, detail="tab_orientation must be 'left', 'right', or 'traditional'")
+        raise HTTPException(status_code=400, detail="tab_orientation must \
+                            be 'left', 'right', or 'traditional'")
 
     # Validate only parameter
     if only < -1 or only > 5:
@@ -90,7 +91,8 @@ async def compile_tex(
         # Read tex file
         tex_content = await tex_file.read()
         if len(tex_content) > MAX_TEX_SIZE:
-            raise HTTPException(status_code=400, detail=f"tex_file too large (max {MAX_TEX_SIZE/1024/1024}MB)")
+            raise HTTPException(status_code=400, detail=f"tex_file too \
+                                large (max {MAX_TEX_SIZE/1024/1024}MB)")
         tex_content = tex_content.decode('utf-8')
 
         # Handle config file
@@ -102,7 +104,8 @@ async def compile_tex(
 
             config_bytes = await config_file.read()
             if len(config_bytes) > MAX_CONFIG_SIZE:
-                raise HTTPException(status_code=400, detail=f"config_file too large (max {MAX_CONFIG_SIZE/1024/1024}MB)")
+                raise HTTPException(status_code=400, detail=f"config_file too \
+                                    large (max {MAX_CONFIG_SIZE/1024/1024}MB)")
 
             config_content = config_bytes.decode('utf-8')
 
@@ -121,7 +124,8 @@ async def compile_tex(
 
             sty_bytes = await sty_file.read()
             if len(sty_bytes) > MAX_STY_SIZE:
-                raise HTTPException(status_code=400, detail=f"sty_file too large (max {MAX_STY_SIZE/1024/1024}MB)")
+                raise HTTPException(status_code=400, detail=f"sty_file too \
+                                    large (max {MAX_STY_SIZE/1024/1024}MB)")
 
             sty_content = sty_bytes.decode('utf-8')
 
@@ -157,7 +161,7 @@ async def compile_tex(
                             shutil.rmtree(temp_root, ignore_errors=True)
             else:
                 # Add error info
-                error_text = f"Compilation failed\n\n"
+                error_text = "Compilation failed\n\n"
                 if result.error_message:
                     error_text += f"Error: {result.error_message}\n\n"
                 error_text += f"Console output:\n{result.console_output}"
@@ -236,7 +240,8 @@ async def upload_config(
     try:
         config_bytes = await config_file.read()
         if len(config_bytes) > MAX_CONFIG_SIZE:
-            raise HTTPException(status_code=400, detail=f"config_file too large (max {MAX_CONFIG_SIZE/1024/1024}MB)")
+            raise HTTPException(status_code=400, detail=f"config_file too \
+                                large (max {MAX_CONFIG_SIZE/1024/1024}MB)")
 
         config_content = config_bytes.decode('utf-8')
 

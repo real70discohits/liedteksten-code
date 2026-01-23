@@ -46,8 +46,8 @@ def is_structuur_file(filename: str) -> bool:
 
 
 def create_temp_structure(song_title: str, tex_content: str,
-                         config_content: Optional[str] = None,
-                         sty_content: Optional[str] = None) -> Tuple[Path, Path, Path]:
+                        config_content: Optional[str] = None,
+                        sty_content: Optional[str] = None) -> Tuple[Path, Path, Path]:
     """
     Create temporary directory structure for compilation.
 
@@ -83,7 +83,7 @@ def create_temp_structure(song_title: str, tex_content: str,
 
 
 def compile_tex_simple(song_title: str, input_folder: Path, output_folder: Path,
-                       cleanup: bool = True, debug: bool = False) -> bool:
+                        cleanup: bool = True, debug: bool = False) -> bool:
     """
     Simple compilation for structuur files.
     Compiles .tex file twice for proper references.
@@ -101,13 +101,14 @@ def compile_tex_simple(song_title: str, input_folder: Path, output_folder: Path,
     env['TEXINPUTS'] = f'{tex_input_dir}//;' + env.get('TEXINPUTS', '')
 
     # Compile twice for references
-    for i in range(2):
+    for _ in range(2):
         result = subprocess.run(
-            ['pdflatex',
-             '-interaction=nonstopmode',
-             f'-output-directory={output_folder}',
-             f'-jobname={output_name}',
-             str(tex_file)
+            [
+                'pdflatex',
+                '-interaction=nonstopmode',
+                f'-output-directory={output_folder}',
+                f'-jobname={output_name}',
+                str(tex_file)
             ],
             capture_output=not debug,
             text=True,
@@ -116,7 +117,7 @@ def compile_tex_simple(song_title: str, input_folder: Path, output_folder: Path,
         )
 
         if result.returncode != 0:
-            print(f"❌ LaTeX compilation failed")
+            print("❌ LaTeX compilation failed")
             if result.stderr:
                 print(result.stderr)
             if result.stdout:
@@ -135,10 +136,10 @@ def compile_tex_simple(song_title: str, input_folder: Path, output_folder: Path,
 
 
 def compile_tex_variant(song_title: str, input_folder: Path, output_folder: Path,
-                       show_measures: bool = False, show_chords: bool = False,
-                       show_tabs: bool = False, tab_orientation: str = 'left',
-                       cleanup: bool = True, large_print: bool = False, 
-                       debug: bool = False) -> int:
+                        show_measures: bool = False, show_chords: bool = False,
+                        show_tabs: bool = False, tab_orientation: str = 'left',
+                        cleanup: bool = True, large_print: bool = False, 
+                        debug: bool = False) -> int:
     """
     Compile a single variant of a liedtekst.
     Returns number of PDFs generated (can be > 1 due to transpositions).
@@ -249,11 +250,12 @@ def compile_tex_variant(song_title: str, input_folder: Path, output_folder: Path
         original_cleanup = cleanup
         for i in range(2):
             result = subprocess.run(
-                ['pdflatex',
-                 '-interaction=nonstopmode',
-                 f'-output-directory={output_folder}',
-                 f'-jobname={output_name}',
-                 pdflatex_args
+                [
+                    'pdflatex',
+                    '-interaction=nonstopmode',
+                    f'-output-directory={output_folder}',
+                    f'-jobname={output_name}',
+                    pdflatex_args
                 ],
                 capture_output=not debug,
                 text=True,
@@ -284,8 +286,8 @@ def compile_tex_variant(song_title: str, input_folder: Path, output_folder: Path
 
 
 def compile_liedtekst_variants(song_title: str, input_folder: Path, output_folder: Path,
-                               only: int = 0, tab_orientation: str = 'left',
-                               cleanup: bool = True, large_print=False, debug: bool = False) -> int:
+                                only: int = 0, tab_orientation: str = 'left',
+                                cleanup: bool = True, large_print=False, debug: bool = False) -> int:
     """
     Compile liedtekst with specified variants.
     Returns: number of successfully compiled PDFs
@@ -319,7 +321,7 @@ def compile_liedtekst_variants(song_title: str, input_folder: Path, output_folde
         show_measures, show_chords, show_tabs = variant_params[variant_num]
 
         config = get_config(configurations, song_id, show_measures,
-                          show_chords, show_tabs, tab_orientation)
+                        show_chords, show_tabs, tab_orientation, large_print)
         return config is not None
 
     # Helper to decide if variant should be generated
@@ -338,30 +340,30 @@ def compile_liedtekst_variants(song_title: str, input_folder: Path, output_folde
     # Variant 1: text only
     if should_generate_variant(1):
         success += compile_tex_variant(song_title, input_folder, output_folder,
-                                      cleanup=cleanup, large_print=large_print, debug=debug)
+                                        cleanup=cleanup, large_print=large_print, debug=debug)
 
     # Variant 2: text + measures
     if should_generate_variant(2):
         success += compile_tex_variant(song_title, input_folder, output_folder,
-                                      show_measures=True, cleanup=cleanup, large_print=large_print, debug=debug)
+                                        show_measures=True, cleanup=cleanup, large_print=large_print, debug=debug)
 
     # Variant 3: text + chords
     if should_generate_variant(3):
         success += compile_tex_variant(song_title, input_folder, output_folder,
-                                      show_chords=True, cleanup=cleanup, large_print=large_print, debug=debug)
+                                        show_chords=True, cleanup=cleanup, large_print=large_print, debug=debug)
 
     # Variant 4: text + measures + chords
     if should_generate_variant(4):
         success += compile_tex_variant(song_title, input_folder, output_folder,
-                                      show_measures=True, show_chords=True,
-                                      cleanup=cleanup, large_print=large_print, debug=debug)
+                                        show_measures=True, show_chords=True,
+                                        cleanup=cleanup, large_print=large_print, debug=debug)
 
     # Variant 5: text + measures + chords + tabs
     if should_generate_variant(5):
         success += compile_tex_variant(song_title, input_folder, output_folder,
-                                      show_measures=True, show_chords=True,
-                                      show_tabs=True, tab_orientation=tab_orientation,
-                                      cleanup=cleanup, large_print=large_print, debug=debug)
+                                        show_measures=True, show_chords=True,
+                                        show_tabs=True, tab_orientation=tab_orientation,
+                                        cleanup=cleanup, large_print=large_print, debug=debug)
 
     return success
 

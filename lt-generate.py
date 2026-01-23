@@ -446,7 +446,7 @@ def has_config_for_variant(songtitle, input_folder, variant_number, tab_orientat
     song_id = int(id_match.group(1))
 
     # Check if config exists for this variant
-    lied_config = get_config(configurations, song_id, show_measures, show_chords, show_tabs, tab_orientation)
+    lied_config = get_config(configurations, song_id, show_measures, show_chords, show_tabs, tab_orientation, large_print)
 
     return lied_config is not None
 
