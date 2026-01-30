@@ -2,6 +2,13 @@
 
 Docker, for running nwc-conv.py containerized in the cloud.
 
+## Important
+
+`/app/nwc_convert.py` is a copy of `nwc-convert.py` that resides in the root.
+Renamed with underscore, so it can be imported.
+
+`/app/nwc_utiles.py` idem (no renaming).
+
 ## Base folder
 
 Use cmd or bash and navigate to folder `/services/nwc-conv/`, and run

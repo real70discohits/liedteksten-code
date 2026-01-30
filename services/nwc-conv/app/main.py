@@ -13,6 +13,10 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.responses import FileResponse, JSONResponse
 import aiofiles
 
+from nwc_convert import ( 
+    verify_tools 
+)
+
 app = FastAPI(
     title="Noteworthy Composer (NWCTXT) > MIDI > WAV > FLAC Conversion API",
     description="API for converting NWCTXT files to FLAC",
@@ -45,6 +49,23 @@ async def hello():
     return JSONResponse(
         content={
             "answer": "hello too"
+        }
+    )
+
+@app.post("/convert")
+async def convert_nwctxt(
+    nwctxt_file: UploadFile = File(..., description="NoteWorthy .nwctxt file to convert"),
+):
+    """
+    Converts an .nwctxt noteworthy composer file to audio (.flac)
+    """
+    if not verify_tools():
+        raise HTTPException(status_code=500, detail="Tools are not installed or \
+configured properly on the server")
+    
+    return JSONResponse(
+        content={
+            "answer": "Verified tools. No conversions yet."
         }
     )
 
