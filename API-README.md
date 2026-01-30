@@ -100,6 +100,7 @@ De API suggereert automatisch een filename met timestamp: `{liedtitel}_{YYYYMMDD
 ```bash
 # Basis: upload alleen .tex, genereer alle varianten
 # De API suggereert automatisch: "Such A Beauty (6)_20260102_153045.zip"
+# Assumes current dir contains file Such A Beauty (6).tex.
 curl -X POST http://localhost:8000/compile \
   -F "tex_file=@Such A Beauty (6).tex" \
   -OJ

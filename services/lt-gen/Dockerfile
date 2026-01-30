@@ -61,7 +61,20 @@ RUN tlmgr install \
 
 # Copy requirements file and install Python dependencies
 COPY requirements.txt /tmp/requirements.txt
+COPY liedbasis.sty /tmp/liedbasis.sty
 RUN pip install --no-cache-dir --user -r /tmp/requirements.txt
+
+
+
+
+#################################################################
+#
+# ======================   R U N T I M E   ======================      
+#
+#################################################################
+
+
+
 
 # Stage 2: Runtime stage - minimal and hardened
 FROM python:3.11-slim
@@ -88,10 +101,12 @@ RUN mkdir -p /app /app/cache/configs /tmp/tex-work /tmp/pdf-output && \
 # Copy application code
 COPY --chown=pdfgen:pdfgen app/ /app/
 
+COPY --from=builder /tmp/liedbasis.sty /tmp/liedbasis.sty
+
 # Install liedbasis.sty to LaTeX tree (as root, before switching user)
-RUN cp /app/liedbasis.sty /home/pdfgen/.TinyTeX/texmf-dist/tex/latex/local/ 2>/dev/null || \
+RUN cp /tmp/liedbasis.sty /home/pdfgen/.TinyTeX/texmf-dist/tex/latex/local/ 2>/dev/null || \
     mkdir -p /home/pdfgen/.TinyTeX/texmf-dist/tex/latex/local && \
-    cp /app/liedbasis.sty /home/pdfgen/.TinyTeX/texmf-dist/tex/latex/local/ && \
+    cp /tmp/liedbasis.sty /home/pdfgen/.TinyTeX/texmf-dist/tex/latex/local/ && \
     chown -R pdfgen:pdfgen /home/pdfgen/.TinyTeX/texmf-dist/tex/latex/local
 
 # Set environment variables
@@ -111,5 +126,10 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
 
-# Run with limited shell-escape (security)
-CMD ["python", "main.py"]
+# [oud] Run with limited shell-escape (security)
+# CMD ["python", "main.py"]
+
+# -----------------------------------------------------------------
+# 2j – Start de FastAPI‑app met Uvicorn
+# -----------------------------------------------------------------
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

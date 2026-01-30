@@ -232,3 +232,9 @@ __marimo__/
 *.*-SAVE-ERROR
 *.dvi
 *.pdf
+
+# ignore soundfonts
+*.sf2
+
+# ignore .exe (installers needed for docker images)
+*.exe
