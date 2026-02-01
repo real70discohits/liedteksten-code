@@ -31,3 +31,9 @@ To expose it on e.g. port 8002:
 Make a request to the container:
 
 `curl -X GET http://localhost:8002/health`
+
+Realistic request, run it from the folder where the nwctxt file resides:
+
+`curl -X POST http://localhost:8002/convert -F 'nwctxt_file=@"Angry Money (3).nwctxt"' -F 'staff_names=Zang Bass' -OJ`
+
+`curl -X POST http://localhost:8002/convert -F 'nwctxt_file=@"Angry Money (3).nwctxt"' -F 'staff_names=Bass Ritme' --output STEREOSCOPISCH.ZIP`

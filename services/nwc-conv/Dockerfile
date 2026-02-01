@@ -169,8 +169,8 @@ RUN if [ "$ENABLE_XVFB" = "true" ]; then \
 # ---------- Suppress noisy Wine output ----------
 ENV WINEDEBUG=-all
 ENV WINEDLLOVERRIDES=explorer,winebth=
-# (optioneel) als je Xvfb wilt gebruiken:
-# ENV DISPLAY=:99   # Xvfb will listen on :99 when started
+# (optioneel) als je Xvfb wilt gebruiken: Xvfb will listen on :99 when started
+# ENV DISPLAY=:99   
 
 # Maak een schrijfbare cache‑map voor de api‑gebruiker
 RUN mkdir -p /home/api/.cache/fontconfig && \

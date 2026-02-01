@@ -24,3 +24,9 @@ To expose it on e.g. port 8001:
 Make a request to the container:
 
 `curl -X GET http://localhost:8001/health`
+
+Realistic request, run it from the folder where the tex file resides:
+
+`curl -X POST http://localhost:8001/compile -F "tex_file=@Such A Beauty (6).tex" -OJ`
+
+`curl -X POST http://localhost:8001/compile -F "tex_file=@Such A Beauty (6).tex" --output STEREOSCOPISCH-LYRICS.ZIP`

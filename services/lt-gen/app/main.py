@@ -183,13 +183,15 @@ async def compile_tex(
 
         # Generate filename with timestamp: "Such A Beauty (6)_20260102_153045.zip"
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        download_filename = f"{song_title}_{timestamp}.zip"
+        download_filename = f"{song_title}_LIEDTEKST_{timestamp}.zip"
 
         # Return ZIP
         response = FileResponse(
             path=zip_path,
             media_type="application/zip",
-            filename=download_filename
+            headers={
+                "Content-Disposition": f'attachment; filename="{download_filename}"'
+            }
         )
 
         # Schedule cleanup of ZIP file after response

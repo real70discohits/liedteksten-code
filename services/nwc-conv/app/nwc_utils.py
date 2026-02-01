@@ -4,10 +4,74 @@ This module provides classes and functions for working with .nwctxt files,
 including parsing, staff management, and common operations.
 """
 
+import os
 import re
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 from constants import NWC_PREFIX_ADDSTAFF, NWC_END_MARKER
+
+
+def print_wd():
+    """Print working dir to the console"""
+    cwd = Path.cwd()
+    print("[DEBUG] Huidige werkdirectory:", cwd)
+
+
+def print_wd_contents():
+    cwd = Path.cwd()
+    print_directory_contents(cwd)
+
+
+def print_directory_contents(dir_path: Union[str, Path]) -> None:
+    """
+    Print de namen van alle items in ``dir_path`` (niet‑recursief).
+    Elke regel toont of het een bestand of een map is.
+    """
+    # Normaliseer het pad – accepteert zowel een string als een Path‑object
+    root = Path(dir_path).expanduser().resolve()
+
+    if not root.exists():
+        print(f"❌ Pad bestaat niet: {root}")
+        return
+    if not root.is_dir():
+        print(f"❌ Geen map: {root}")
+        return
+
+    print(f"📁 Inhoud van {root}:")
+    for entry in sorted(root.iterdir()):          # gesorteerd voor voorspelbare output
+        if entry.is_dir():
+            print(f"\t[DIR]  {entry.name}/")
+        elif entry.is_file():
+            print(f"\t[FILE] {entry.name}")
+        else:
+            # Symbolische links, sockets, etc.
+            print(f"\t[???]  {entry.name}")
+
+
+def extract_song_title_from_filename(filename: str) -> str:
+    """
+    Extract song title from .nwctxt filename.
+    Example: "Such A Beauty (6).nwctxt" -> "Such A Beauty (6)"
+    """
+    if filename.endswith('.nwctxt'):
+        return filename[:-7]
+    return filename
+
+
+def verify_soundfont_file():
+    """[METHOD FOR CONTAINERIZED ONLY] Verify the soundfont file exists at the expected location"""
+    # 1. Lees de variabele uit de omgeving
+    sf_path = os.getenv("FLUIDSYNTH_SOUNDFONT")          # geeft None als de variabele niet bestaat
+
+    if not sf_path:
+        raise RuntimeError("Omgeving‑variabele 'FLUIDSYNTH_SOUNDFONT' is niet gezet.")
+
+    sfnt = Path(sf_path)
+    if not sfnt.is_file():
+        print(f"ERR: soundfont file not found: {sf_path}")
+        return False
+    print(f"✔️ _Soundfont file found: {sf_path}")
+    return True
 
 
 class NwcStaff:
