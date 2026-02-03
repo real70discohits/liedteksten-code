@@ -38,7 +38,7 @@ def verify_tools():
     """
     tools = {
         # next line has changed: specific for linux instead of local windows
-        'nwc-conv': ('wine nwc-conv.exe -v', 'nwc-conv: version'),
+        # 'nwc-conv': ('wine nwc-conv.exe -v', 'nwc-conv: version'),
         'fluidsynth': ('fluidsynth -V', 'FluidSynth runtime version'),
         'ffmpeg': ('ffmpeg', 'ffmpeg version')
     }
@@ -122,7 +122,7 @@ def get_output_path(input_path, output_dir, extension):
     return Path(output_dir) / output_filename
 
 
-def run_conversion_step(step_num, description, command, output_file):
+def run_conversion_step(step_num, description, command, output_file, needs_shell=True):
     """
     Run a single conversion step.
 
@@ -141,7 +141,7 @@ def run_conversion_step(step_num, description, command, output_file):
     try:
         result = subprocess.run(
             command,
-            shell=True,
+            shell=needs_shell,
             capture_output=True,
             text=True,
             timeout=300  # 5 minute timeout per step

@@ -88,7 +88,7 @@ for nwctxt_file")
         # Read nwctxt file
         nwctxt_content = await nwctxt_file.read()
         if len(nwctxt_content) > MAX_NWCTXT_SIZE:
-            raise HTTPException(status_code=400, detail=f"tex_file too \
+            raise HTTPException(status_code=400, detail=f"nwctxt_file too \
                                 large (max {MAX_NWCTXT_SIZE/1024}KB)")
 
         # Reset file pointer to beginning for subsequent reads (else they will
@@ -163,6 +163,10 @@ for nwctxt_file")
 
         flac_outputs = []
 
+        # env = os.environ.copy()
+        # env['WINE_DISABLE_PRELOADER'] = '1'
+        # print("Env WINE_DISABLE_PRELOADER:", env.get('WINE_DISABLE_PRELOADER'))
+
         for staff_index, staff in enumerate(staffs_to_convert, 1):
             print(f"{'=' * 60}")
             print(f"Processing staff {staff_index}/{len(staffs_to_convert)}: {staff.name}")
@@ -184,14 +188,23 @@ for nwctxt_file")
             wav_path = OUTPUT_DIR / f"{song_title} {staff.name}.wav"
             flac_path = OUTPUT_DIR / f"{song_title} {staff.name}.flac"
 
+            print("PATH:", os.environ.get('PATH'))
+            print("WINEPATH:", os.environ.get('WINEPATH'))
+            print_directory_contents("/opt/noteworthy/")
+
             # 4. Run conversion pipeline (3 steps)
             # STEP 1: NWC → MIDI
-            cmd1 = f'wine nwc-conv "{temp_path}" "{midi_path}" -1'
+            # cmd1 = f'wine nwc-conv "{temp_path}" "{midi_path}" -1'
+            # cmd1 = f'["setarch", "i386", "-R", "wine", "nwc-conv", "{temp_path}", "{midi_path}", "-1"]'
+            # cmd1 = ["setarch", "x86_64", "-R", "wine", "nwc-conv", str(temp_path), str(midi_path), "-1"]
+            # cmd1 = ["wine", "nwc-conv.exe", str(temp_path), str(midi_path), "-1"]
+            cmd1 = ["wine", "/opt/noteworthy/nwc-conv.exe", str(temp_path), str(midi_path), "-1"]
             if not run_conversion_step(
                 1,
                 f"Converting {staff.name} to MIDI",
                 cmd1,
-                midi_path
+                midi_path,
+                False
             ):
                 temp_path.unlink(missing_ok=True)
                 raise HTTPException(status_code=500, detail="ERR: conversion nwctxt to midi failed")
