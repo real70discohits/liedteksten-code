@@ -147,6 +147,10 @@ def run_conversion_step(step_num, description, command, output_file, needs_shell
             timeout=300  # 5 minute timeout per step
         )
 
+        print("STDERR:", result.stderr)
+        print("STDOUT:", result.stdout)
+        print("Return code:", result.returncode)
+        
         if result.returncode != 0:
             print(f"❌ Command failed with return code {result.returncode}")
             if result.stderr:

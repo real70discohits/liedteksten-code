@@ -317,7 +317,8 @@ for nwctxt_file")
         return response
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
+        print("EXCEPTION:", type(e).__name__, str(e))
+        raise HTTPException(status_code=500, detail=f"Internal serverrr error: {str(e)}") from e
 
 
 if __name__ == "__main__":
