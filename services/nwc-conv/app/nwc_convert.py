@@ -38,7 +38,7 @@ def verify_tools():
     """
     tools = {
         # next line has changed: specific for linux instead of local windows
-        'nwc-conv': ('wine nwc-conv.exe -v', 'nwc-conv: version'),
+        # 'nwc-conv': ('wine nwc-conv.exe -v', 'nwc-conv: version'),
         'fluidsynth': ('fluidsynth -V', 'FluidSynth runtime version'),
         'ffmpeg': ('ffmpeg', 'ffmpeg version')
     }
@@ -147,6 +147,10 @@ def run_conversion_step(step_num, description, command, output_file):
             timeout=300  # 5 minute timeout per step
         )
 
+        print("STDERR:", result.stderr)
+        print("STDOUT:", result.stdout)
+        print("Return code:", result.returncode)
+        
         if result.returncode != 0:
             print(f"❌ Command failed with return code {result.returncode}")
             if result.stderr:
