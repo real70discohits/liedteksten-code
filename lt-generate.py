@@ -109,6 +109,8 @@ def compile_tex_file(
         # lookup configuration for set_margins and set_fontsize
         _set_margins = ""
         _set_fontsize = ""
+        _set_lineheight = ""
+
         lied_config: ConfigItem = get_config(configurations, song_id,
                                             show_measures, show_chords,
                                             show_tabs, tab_orientation,
@@ -122,11 +124,14 @@ def compile_tex_file(
                 _set_margins = f"\\def\\setMargins{{{lied_config.action.adjustMargins}}}"
             if lied_config.action.adjustFontsize:
                 _set_fontsize = f"\\def\\setFontsize{{{lied_config.action.adjustFontsize}}}"
+            if lied_config.action.adjustLineheight:
+                _set_lineheight = f"\\def\\setLineheight{{{lied_config.action.adjustLineheight}}}"
 
         # construct pdflatex arguments
         pdflatex_args = (f""
                     f"{_set_margins}"
                     f"{_set_fontsize}"
+                    f"{_set_lineheight}"
                     f"{_large_print}"
                     f"\\def\\showMeasures{{{_showmeasures}}}"
                     f"\\def\\showChords{{{_showchords}}}"
