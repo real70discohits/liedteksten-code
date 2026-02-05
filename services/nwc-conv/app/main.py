@@ -205,7 +205,10 @@ for nwctxt_file")
             # cmd1 = f'["setarch", "i386", "-R", "wine", "nwc-conv", "{temp_path}", "{midi_path}", "-1"]'
             # cmd1 = ["setarch", "x86_64", "-R", "wine", "nwc-conv", str(temp_path), str(midi_path), "-1"]
             # cmd1 = ["wine", "nwc-conv.exe", str(temp_path), str(midi_path), "-1"]
-            cmd1 = ["wine", "/opt/noteworthy/nwc-conv.exe", str(temp_path), str(midi_path), "-1"]
+            # cmd1 = ["wine", "/opt/noteworthy/nwc-conv.exe", str(temp_path), str(midi_path), "-1"]
+            cmd1 = ["wine", "C:\\Program Files\\Noteworthy Software\\NoteWorthy Composer 2\\nwc-conv.exe",
+                    str(temp_path), str(midi_path), "-1"]
+
             if not run_conversion_step(
                 1,
                 f"Converting {staff.name} to MIDI",

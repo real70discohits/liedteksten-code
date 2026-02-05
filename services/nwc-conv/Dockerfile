@@ -129,6 +129,8 @@ RUN dpkg --add-architecture i386 && \
         ffmpeg \
         fluidsynth \
         xvfb \
+        # qemu might be necessary for running 32bit emulatie on scaleway
+        qemu-user-static \
     && rm -rf /var/lib/apt/lists/*
 
 
@@ -189,18 +191,24 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 # ---------- 2️⃣ Kopieer de Noteworthy‑installatie ----------
 # Escape spaces and parentheses with backslashes
-COPY --from=builder \
-    ["wineprefix/drive_c/Program Files/Noteworthy Software/NoteWorthy Composer 2/", "/opt/noteworthy/"]
+# COPY --from=builder \
+#     ["wineprefix/drive_c/Program Files/Noteworthy Software/NoteWorthy Composer 2/", "/opt/noteworthy/"]
 
 # (optioneel) maak de map zichtbaar voor Wine
-ENV WINEPATH="/opt/noteworthy"
+# ENV WINEPATH="/opt/noteworthy"
+ENV WINEPATH="/wineprefix/drive_c/Program Files/Noteworthy Software/NoteWorthy Composer 2"
+ENV WINEPATH="C:\\Program Files\\Noteworthy Software\\NoteWorthy Composer 2"
+
+COPY --from=builder ["/wineprefix/", "/wineprefix/"]
+ENV WINEPREFIX=/wineprefix
 
 # -----------------------------------------------------------------
 # 2f – Kopieer applicatiecode
 # -----------------------------------------------------------------
 WORKDIR /app
 COPY app/ /app/
-RUN chown -R api:api /app /opt/soundfonts /opt/noteworthy
+RUN chown -R api:api /app /opt/soundfonts 
+#/opt/noteworthy
 
 # -----------------------------------------------------------------
 # 2h – Niet‑root gebruiker activeren
