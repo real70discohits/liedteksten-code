@@ -34,6 +34,7 @@ RUN tlmgr install \
     savesym \
     anyfontsize \
     xstring \
+    setspace \
     && tlmgr path add
 
 # Music-related packages
