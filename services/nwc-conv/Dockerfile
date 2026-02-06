@@ -43,8 +43,9 @@ RUN apt-get update && \
 
 # ---- Maak een Wine‑prefix (isolated Windows‑omgeving) ----
 ENV WINEPREFIX=/wineprefix
-RUN mkdir -p $WINEPREFIX && \
-    wineboot --init   # initialiseert de prefix (creates C:\ drive etc.)
+RUN mkdir -p $WINEPREFIX
+# wineboot nitialiseert de prefix (creates C:\ drive etc.)
+RUN wineboot --init   
 
 # ---- Kopieer de Windows‑installers in de builder image ----
 COPY installers/setup_nwc21.exe /tmp/setup_nwc21.exe
@@ -59,10 +60,12 @@ RUN wine "/tmp/nwcupd_from_v2.1_to_2.75a.exe" /S || \
     { echo "Installer nwcupd_from_v2.1_to_2.75a.exe failed – try a different silent flag"; exit 1; }
 
 
-# Na de installatie liggen de bestanden vermoedelijk onder:
-#   $WINEPREFIX/drive_c/Program Files (x86)/Noteworthy Software/NoteWorthy Composer 2/
-#   Merk op dat 'Worthy' in het 1e geval hoofd- en het 2e geval kleine letter is.
+# Na de installatie liggen de bestanden onder:
+#    /wineprefix/drive_c/Program Files/Noteworthy Software/NoteWorthy Composer 2/
+#    Merk op dat 'Worthy' in het 1e geval hoofd- en het 2e geval kleine letter is.
 # We laten ze in de image staan; later kopiëren we ze naar de runtime‑stage.
+# Er staan ook bestanden (plugins) in:
+#    /wineprefix/drive_c/ProgramData/Noteworthy Software/nwc2/UserPlugins    
 
 # -----------------------------------------------------------------
 # 1d – Python dependencies (FastAPI, uvicorn, requests, etc.)
@@ -129,15 +132,13 @@ RUN dpkg --add-architecture i386 && \
         ffmpeg \
         fluidsynth \
         xvfb \
-        # qemu might be necessary for running 32bit emulatie on scaleway
-        qemu-user-static \
+        # we thought qemu might be necessary for running 32bit emulatie on scaleway, but to no avail
+        # qemu-user-static \
     && rm -rf /var/lib/apt/lists/*
 
 
 # ---------- Kopieer **alle** Wine‑binaries & libraries ----------
-# 2c (a) Executables (wine, wine64, etc.)
-# COPY --from=builder /usr/bin/wine*            /usr/bin/
-# 1. De wine‑executables (wine, wine64, …) – ze zitten onder /opt/wine-stable/bin
+# De wine‑executables (wine, wine64, …) – ze zitten onder /opt/wine-stable/bin
 COPY --from=builder /opt/wine-stable/bin/ /opt/wine-stable/bin/
 
 # # 2c (b) Complete library trees (recursief!)
@@ -190,13 +191,6 @@ COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # ---------- 2️⃣ Kopieer de Noteworthy‑installatie ----------
-# Escape spaces and parentheses with backslashes
-# COPY --from=builder \
-#     ["wineprefix/drive_c/Program Files/Noteworthy Software/NoteWorthy Composer 2/", "/opt/noteworthy/"]
-
-# (optioneel) maak de map zichtbaar voor Wine
-# ENV WINEPATH="/opt/noteworthy"
-ENV WINEPATH="/wineprefix/drive_c/Program Files/Noteworthy Software/NoteWorthy Composer 2"
 ENV WINEPATH="C:\\Program Files\\Noteworthy Software\\NoteWorthy Composer 2"
 
 COPY --from=builder ["/wineprefix/", "/wineprefix/"]
@@ -208,7 +202,6 @@ ENV WINEPREFIX=/wineprefix
 WORKDIR /app
 COPY app/ /app/
 RUN chown -R api:api /app /opt/soundfonts 
-#/opt/noteworthy
 
 # -----------------------------------------------------------------
 # 2h – Niet‑root gebruiker activeren
@@ -223,11 +216,9 @@ ENV PATH="/usr/bin:${PATH}" \
     PYTHONDONTWRITEBYTECODE=1
 
 # -----------------------------------------------------------------
-# 2i – Expose en health‑check (zelfde als in je andere API)
+# 2i – Expose
 # -----------------------------------------------------------------
 EXPOSE 8000
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
 
 # -----------------------------------------------------------------
 # 2j – Start de FastAPI‑app met Uvicorn
