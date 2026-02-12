@@ -21,6 +21,7 @@ class Action:
     """Dada."""
     adjustMargins: Optional[str]
     adjustFontsize: Optional[int]
+    adjustLineheight: Optional[int]
 
 @dataclass
 class ConfigItem:
