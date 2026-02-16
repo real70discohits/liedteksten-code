@@ -97,6 +97,8 @@ def compile_tex_file(
         _chordstext = 'akkoorden' if show_chords else ''
         _gittabtext = 'gitaargrepen' if show_tabs else ''
         output_name = output_name + maak_opsomming([_measurestext, _chordstext, _gittabtext])       # e.g. vla (55) in A met maatnummers, akkoorden en gitaargrepen
+        if large_print:
+            output_name = output_name + " - LargePrint"
         print(f"   Generating: {output_name}.pdf")
 
 
