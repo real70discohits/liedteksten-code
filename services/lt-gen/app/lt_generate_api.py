@@ -210,7 +210,8 @@ def compile_tex_variant(song_title: str, input_folder: Path, output_folder: Path
         _chordstext = 'akkoorden' if show_chords else ''
         _gittabtext = 'gitaargrepen' if show_tabs else ''
         output_name = output_name + maak_opsomming([_measurestext, _chordstext, _gittabtext])
-
+        if large_print:
+            output_name = output_name + " - LargePrint"
         print(f"   Generating: {output_name}.pdf")
 
         # Build pdflatex arguments
