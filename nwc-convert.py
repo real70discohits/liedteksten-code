@@ -91,6 +91,7 @@ def get_input_file_path(input_arg, base_folder=None):
         - If no extension, assume .nwctxt
         - If no path specified, look in base_folder (default: current directory)
     """
+    input_arg  = input_arg + "\\" + input_arg
     path = Path(input_arg)
 
     # If absolute path, use as-is (just add extension if missing)
@@ -176,7 +177,7 @@ def main():
     Loads path configuration and converts NWCTXT files to FLAC format.
     """
     # Load and resolve path configuration
-    paths = load_and_resolve_paths()
+    paths = load_and_resolve_paths("")
 
     # Determine defaults from config
     default_out = str(paths.audio_output_folder)
@@ -336,7 +337,7 @@ Examples:
         # 2. Parse fresh copy, mute all, unmute only this staff
         temp_nwc = NwcFile(input_path)
         temp_nwc.set_all_staffs_muted(True, volume=127)
-        temp_nwc.set_staff_muted_by_name(staff.name, False, volume=127)
+        temp_nwc.set_staff_muted_by_name(str(staff.name), False, volume=127)
         temp_nwc.write_to_file(temp_path)
 
         print(f"Created temporary file with only '{staff.name}' unmuted\n")

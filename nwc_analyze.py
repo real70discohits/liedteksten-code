@@ -410,7 +410,7 @@ def format_output(analysis, song_number=None):
     return "\n".join(lines)
 
 
-def write_analysis_to_file(nwctxt_file_path, tempo=None, timesig=None, use_complete_analysis=True):
+def write_analysis_to_file(songtitle, nwctxt_file_path,  tempo=None, timesig=None, use_complete_analysis=True):
     """Analyze a .nwctxt file and write results to output folder.
 
     Args:
@@ -430,7 +430,7 @@ def write_analysis_to_file(nwctxt_file_path, tempo=None, timesig=None, use_compl
         return None, None
 
     # Load and resolve path configuration
-    paths = load_and_resolve_paths()
+    paths = load_and_resolve_paths(songtitle)
     build_folder = paths.build_folder
 
     # Analyze the file
@@ -480,12 +480,17 @@ def main():
         # It's a path, use as-is
         file_path = Path(input_arg)
     else:
-        # It's just a title, look in build_folder
-        paths = load_and_resolve_paths()
-
+        
+        songtitle = ""
         # Add .nwctxt extension if not present
         if not input_arg.endswith('.nwctxt'):
+            songtitle = input_arg
             input_arg += '.nwctxt'
+        else:
+            songtitle = input_arg.replace(".nwctxt", "")
+
+        # It's just a title, look in build_folder
+        paths = load_and_resolve_paths(songtitle)
 
         # Look in build_folder
         file_path = paths.build_folder / input_arg
@@ -496,7 +501,7 @@ def main():
             print(f"Looking for: {input_arg}")
             sys.exit(1)
 
-    result_file, result_analysis = write_analysis_to_file(file_path)
+    result_file, result_analysis = write_analysis_to_file(songtitle, file_path)
 
     if not result_file:
         sys.exit(1)

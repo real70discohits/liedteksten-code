@@ -404,7 +404,7 @@ def strip_extension(filename: str) -> str:
     return filename[:dot_index]
 
 
-def has_config_for_variant(songtitle, input_folder, variant_number, tab_orientation='left'):
+def has_config_for_variant(songtitle, input_folder, variant_number, large_print, tab_orientation='left'):
     """Check if a song has a configuration for a specific variant.
 
     Args:
@@ -463,8 +463,7 @@ def main():
 
     Loads path configuration and generates PDFs from LaTeX song files.
     """
-    # Load and resolve path configuration
-    paths = load_and_resolve_paths()
+    
 
     parser = argparse.ArgumentParser(description='Compile .tex files with custom output names')
     parser.add_argument('songtitles', nargs='*', help='Specific songtitles (.tex filenames but without extension) to compile (default: all)')
@@ -487,7 +486,14 @@ def main():
 
     if args.songtitles:
         songtitles = args.songtitles
+
+    # Load and resolve path configuration
+    if len(args.songtitles) == 1:
+        paths = load_and_resolve_paths(args.songtitles[0])
     else:
+        paths = load_and_resolve_paths("")
+
+    if not args.songtitles:
         # Find all song folders (folders containing a .tex file with same name as folder)
         songtitles = []
         for folder in paths.input_folder.iterdir():
@@ -521,7 +527,7 @@ def main():
             return True  # Generate all variants
         elif only == -1:
             # Only generate if at least one song has config for this variant
-            return any(has_config_for_variant(song, paths.input_folder, variant_num, tab_orientation)
+            return any(has_config_for_variant(song, paths.input_folder, variant_num, args.large_print, tab_orientation)
                       for song in songtitles)
         elif only == variant_num:
             return True  # Generate only this specific variant
@@ -545,7 +551,7 @@ def main():
         song_variants = {}
         for song in songtitles:
             configured = [v for v in range(1, 6)
-                         if has_config_for_variant(song, paths.input_folder, v, tab_orientation)]
+                         if has_config_for_variant(song, paths.input_folder, v, args.large_print, tab_orientation)]
             if configured:
                 song_variants[song] = configured
 
@@ -565,7 +571,7 @@ def main():
         if only == -1:
             # Only return songs that have config for this variant
             return [song for song in songtitles
-                    if has_config_for_variant(song, paths.input_folder, variant_num, tab_orientation)]
+                    if has_config_for_variant(song, paths.input_folder, variant_num, args.large_print, tab_orientation)]
         else:
             # For other values of 'only', return all songs if variant should be generated
             return songtitles if should_generate_variant(variant_num) else []

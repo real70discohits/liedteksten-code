@@ -969,7 +969,7 @@ def main():
     keep_tempi = args.keep_tempi
 
     # Load and resolve path configuration
-    paths = load_and_resolve_paths()
+    paths = load_and_resolve_paths(songtitle)
 
     # Validate and setup folders
     song_folder, nwc_folder = validate_and_setup_folders(songtitle, paths)
@@ -992,7 +992,7 @@ def main():
     print(f"✅ Success! Concatenated .nwctxt files to {output_nwctxt}")
 
     # Analyze concatenated .nwctxt file (get complete song metadata)
-    analysis_file, complete_analysis = write_analysis_to_file(output_nwctxt, tempo=tempo, timesig=timesig)
+    analysis_file, complete_analysis = write_analysis_to_file(songtitle, output_nwctxt, tempo=tempo, timesig=timesig)
 
     if not complete_analysis:
         print("⚠️ Warning: Analysis failed, continuing with limited data")

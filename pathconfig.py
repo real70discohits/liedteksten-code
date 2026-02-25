@@ -296,7 +296,7 @@ class ResolvedPaths:
                 f"soundfont_path={self.soundfont_path})")
 
 
-def load_and_resolve_paths() -> ResolvedPaths:
+def load_and_resolve_paths(songtitle) -> ResolvedPaths:
     """Load configuration and resolve all paths.
 
     Convenience function for script main() functions. Loads the path
@@ -313,5 +313,7 @@ def load_and_resolve_paths() -> ResolvedPaths:
         song_folder = paths.input_folder / songtitle
     """
     config = load_path_config()
+    config.build_folder = config.build_folder + '/' + songtitle
+    config.distributie_folder = config.distributie_folder + '/' + songtitle
     config_dir = Path(__file__).parent
     return ResolvedPaths(config, config_dir)
