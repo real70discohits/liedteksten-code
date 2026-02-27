@@ -42,6 +42,9 @@ def compile_tex_file(
     tex_file = input_folder / songtitle / f"{songtitle}.tex"
     if not validate_file_exists(tex_file, f"LaTeX file for '{songtitle}'"):
         return False
+    
+    # *** Ensure output folder exists ***
+    output_folder.mkdir(parents=True, exist_ok=True)
 
     # ***  Load song-specific configuration ***
     song_folder = input_folder / songtitle
