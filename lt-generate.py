@@ -554,7 +554,7 @@ def main():
         song_variants = {}
         for song in songtitles:
             configured = [v for v in range(1, 6)
-                         if has_config_for_variant(song, paths.input_folder, v, args.large_print, tab_orientation)]
+                        if has_config_for_variant(song, paths.input_folder, v, args.large_print, tab_orientation)]
             if configured:
                 song_variants[song] = configured
 

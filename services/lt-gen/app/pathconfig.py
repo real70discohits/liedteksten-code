@@ -14,7 +14,7 @@ class PathConfig:
     """Container for path configuration settings."""
 
     def __init__(self, input_folder: str, build_folder: str, distributie_folder: str,
-                 audio_output_folder: str, soundfont_path: Optional[str] = None):
+                audio_output_folder: str, soundfont_path: Optional[str] = None):
         """Initialize PathConfig with folder paths.
 
         Args:
@@ -66,7 +66,7 @@ def load_path_config(config_file: Optional[Path] = None) -> PathConfig:
 
     Args:
         config_file: Path to configuration file. If None, uses 'paths.jsonc'
-                     in the same directory as this module.
+                    in the same directory as this module.
 
     Returns:
         PathConfig object with loaded settings
@@ -85,7 +85,7 @@ def load_path_config(config_file: Optional[Path] = None) -> PathConfig:
         data = load_jsonc(config_file)
     except FileNotFoundError as e:
         print(f"❌ Error: {e}")
-        print(f"   Please create a 'paths.jsonc' configuration file.")
+        print("   Please create a 'paths.jsonc' configuration file.")
         sys.exit(1)
     except (commentjson.JSONLibraryException, ValueError) as e:
         print(f"❌ Error: Invalid JSON in configuration file: {e}")
@@ -99,13 +99,15 @@ def load_path_config(config_file: Optional[Path] = None) -> PathConfig:
         audio_output_folder = data['audio_output_folder']
     except KeyError as e:
         print(f"❌ Error: Missing required field in configuration: {e}")
-        print(f"   Required fields: input_folder, build_folder, distributie_folder, audio_output_folder")
+        print("   Required fields: input_folder, build_folder, \
+            distributie_folder, audio_output_folder")
         sys.exit(1)
 
     # Extract optional fields
     soundfont_path = data.get('soundfont_path', None)
 
-    return PathConfig(input_folder, build_folder, distributie_folder, audio_output_folder, soundfont_path)
+    return PathConfig(input_folder, build_folder, distributie_folder,
+                        audio_output_folder, soundfont_path)
 
 
 def resolve_path(base_path: str, config_dir: Path) -> Path:
