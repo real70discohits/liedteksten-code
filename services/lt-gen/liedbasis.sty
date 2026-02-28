@@ -3,12 +3,23 @@
 
 \ProvidesPackage{liedbasis}
 
-% ***** Fontsize ******
-% Can be set in lt-config.jsonc, per song per configuration.
-% Default recommendation in a regular document: \documentclass[11pt]{article}
-% Example: \fontsize{14pt}{16.8pt}\selectfont   // param 16.8 is lineheight
-% Rule of thumb: lineheight = fontsize * 1.2
-% ***** Fontsize (end) ******
+% ***** Parameters to this package:  ******
+% *
+% *     parameter: setFontsize      (fontsize)
+% *     parameter: setMargins       (top, right, bottom, left)
+% *     parameter: setLineheight    (lineheight)
+% *     parameter: showMeasures     (measure numbers above the text)
+% *     parameter: showChords       (chordnames above the text, like F#, C)
+% *     parameter: showTabs         (graphic display of guitar fingering)
+% *     parameter: transpose        (this pos/neg number transposes from the default song chord)
+% *     parameter: largePrint       (print larger for better readability from more distance like in the studio)
+
+% ***** Parameters to this package (end) ******
+
+
+% Note on lineheight: lineheight by default is derived from fontsize by rule
+%   of thumb: lineheight = fontsize * 1.2
+%   Example: \fontsize{14pt}{16.8pt}\selectfont   // param 16.8 is lineheight
 
 
 \RequirePackage{ifthen}       % for conditional processing
@@ -29,6 +40,12 @@
 \lfoot{\fontsize{6pt}{7.2pt}\selectfont \currfilebase{}.pdf \hspace{0.5cm} \today \hspace{0.5cm} pag. \thepage/\pageref{LastPage}}
 
 \newcommand{\ul}{\underline}
+
+\usepackage{setspace}  % for lineheight (I'm lazy)
+
+\ifdefined\setLineheight
+    \setstretch{\setLineheight}
+\fi%
 
 % OPTIMIZE FOR READABILITY: LARGE PRINT 
 % Check if command-line override 'largePrint' exists
@@ -170,6 +187,7 @@
 % C
 \newcommand{\C}[1][\defpos]{\grpt[#1]{t}{p3,p3,p2,o,p1,o}{C}}
 \newcommand{\Cseven}[1][\defpos]{\grpt[#1]{t}{p3,p3,p2,o,o,o}{C7}}
+\newcommand{\CsevenRootTen}[1][\defpos]{\grpt[#1]{10}{o,p3,p3,p2,p4,o}{C7}}
 \newcommand{\CsevenAddThirteen}[1][\defpos]{\grpt[#1]{t}{p3,p3,p2,p2,o,o}{C7add13}}
 \newcommand{\Cnine}[1][\defpos]{\grpt[#1]{t}{p3,p3,p2,p3,p3,p3}{C9}}
 
@@ -210,6 +228,7 @@
 
 % F
 \newcommand{\F}[1][\defpos]{\grpt[#1]{t}{p1,p3,p3,p2,p1,p1}{F}}
+\newcommand{\FonFive}[1][\defpos]{\grpt[#1]{5}{p1,o,o,p1,p2,p1}{Fon5}}
 \newcommand{\Fseven}[1][\defpos]{\grpt[#1]{t}{p1,p3,p1,p2,p1,p1}{F7}}
 
 % Fm
@@ -379,6 +398,7 @@
 \notbool{showChordnames}{
     % If not showChordnames, suppress output
     \renewcommand{\chord}[1]{}
+    \renewcommand{\writechord}[1]{}
 }
 
 % DISPLAY MEASURENUMGERS TRUE/FALSE (DEFAULT: FALSE)

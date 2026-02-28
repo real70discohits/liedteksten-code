@@ -138,7 +138,7 @@ def compile_tex_simple(song_title: str, input_folder: Path, output_folder: Path,
 def compile_tex_variant(song_title: str, input_folder: Path, output_folder: Path,
                         show_measures: bool = False, show_chords: bool = False,
                         show_tabs: bool = False, tab_orientation: str = 'left',
-                        cleanup: bool = True, large_print: bool = False, 
+                        cleanup: bool = True, large_print: bool = False,
                         debug: bool = False) -> int:
     """
     Compile a single variant of a liedtekst.
@@ -473,6 +473,17 @@ def compile_for_api(
         # Restore stdout/stderr
         sys.stdout = old_stdout
         sys.stderr = old_stderr
+
+
+# Package file
+def get_custom_lied_package_from_local_folder() -> Optional[str]:
+    """Get the liedbasis package from the local folder. Returns content as string, or None."""
+
+    sty_file = Path("/tmp/liedbasis.sty") # see docker
+    if sty_file.exists():
+        with open(sty_file, 'r', encoding='utf-8') as f:
+            return f.read()
+    return None
 
 
 # Config cache management

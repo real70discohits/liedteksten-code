@@ -5,7 +5,6 @@ FastAPI application for lt-generate PDF compilation service.
 import os
 import shutil
 import zipfile
-import tempfile
 from pathlib import Path
 from typing import Optional
 from datetime import datetime
@@ -16,11 +15,13 @@ import aiofiles
 from lt_generate_api import (
     compile_for_api,
     extract_song_title_from_filename,
+    get_custom_lied_package_from_local_folder,
     get_cached_config,
     save_config_to_cache,
     delete_cached_config,
     list_cached_configs
 )
+
 
 app = FastAPI(
     title="Liedteksten PDF Generation API",
@@ -45,7 +46,7 @@ MAX_STY_SIZE = 5 * 1024 * 1024  # 5MB
 @app.get("/health")
 async def health():
     """Health check endpoint"""
-    return {"status": "healthy", "service": "liedteksten-pdf-api"}
+    return {"status": "healthy", "service": "lt-gen API"}
 
 
 @app.post("/compile")
@@ -71,6 +72,7 @@ async def compile_tex(
     If config_file is provided, it will be cached for future requests.
     If not provided, the API checks for a cached config.
     """
+    
     # Validate tex file
     if not tex_file.filename.endswith('.tex'):
         raise HTTPException(status_code=400, detail="Only .tex files are allowed for tex_file")
@@ -117,8 +119,12 @@ async def compile_tex(
 
         # Handle custom sty file
         sty_content = None
-        if sty_file:
+        if not sty_file:
+            print("Using default .sty.")
+            sty_content = get_custom_lied_package_from_local_folder()
+        else:
             # Validate sty file
+            print("Using .sty provided by caller.")
             if not sty_file.filename.endswith('.sty'):
                 raise HTTPException(status_code=400, detail="sty_file must be a .sty file")
 
@@ -181,8 +187,8 @@ async def compile_tex(
                     if temp_root.exists() and temp_root.name.startswith("ltgen_"):
                         shutil.rmtree(temp_root, ignore_errors=True)
 
-        # Generate filename with timestamp: "Such A Beauty (6)_20260102_153045.zip"
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        # Generate filename with timestamp: "Such A Beauty (6)_20260102_153045_324.zip" (ms for extra uniqueness)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
         download_filename = f"{song_title}_LIEDTEKST_{timestamp}.zip"
 
         # Return ZIP
