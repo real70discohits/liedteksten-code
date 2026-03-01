@@ -1,0 +1,21 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            // this one is for debugging python when it runs with fastapi in the WSL environment.
+            "name": "FastAPI Debug lt-gen API",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": ["main:app", "--reload", "--port", "8000"],
+            "cwd": "${workspaceFolder}/services/lt-gen/app",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/services/lt-gen/app", 
+                "PATH": "/home/sjef/.TinyTeX/bin/x86_64-linux:${env:PATH}"
+            }
+        },
+    ]
+}
