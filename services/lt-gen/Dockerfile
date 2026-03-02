@@ -23,6 +23,7 @@ RUN tlmgr install \
     collection-latex \
     collection-fontsrecommended \
     collection-latexrecommended \
+    fancyhdr \
     && tlmgr path add
 
 # Additional packages for liedbasis.sty
@@ -58,6 +59,13 @@ RUN tlmgr install \
     l3kernel \
     l3packages \
     l3experimental \
+    && tlmgr path add
+
+# babel
+RUN tlmgr install \
+    babel \
+    babel-dutch \
+    babel-english \
     && tlmgr path add
 
 # Copy requirements file and install Python dependencies
