@@ -120,7 +120,7 @@
 
 % Note: nameclash \chord for gchords and leadsheets
 \RequirePackage{savesym}    % pkg to solve nameclash
-\RequirePackage{gchords}
+\RequirePackage{gchordsz}
 \savesymbol{chord}  % Saves \chord from gchords as \origchord, to avoid nameclash
 \newcommand{\guitartab}{\origchord}  % use \guitartab for \origchord
 
@@ -154,7 +154,32 @@
     }
 }
 
+% grpt = Guitar Rotated Positioned Tab with Barré (altijd op 1e fret). 
+% 1e 2 params zijn van/tot snaren van de barré.
+\newcommand{\grptb}[6][up]{%
+    \ifthenelse{\boolean{showGuitarTabs}}{%
+        \ifthenelse{\equal{#1}{up}}{%
+            \upchord{\setbarre{1}{#2}{#3}\guitartabrot{#4}{#5}{#6}}  % upline
+        }{%
+            \setbarre{1}{#2}{#3}\guitartabrot{#4}{#5}{#6}  % inline
+        }
+    }{%
+        % Do nothing
+    }
+}
 
+% hetzelfde als grptb, maar nu kun je ook de relatieve positie van de barré opgeven.
+\newcommand{\grptbb}[7][up]{%
+    \ifthenelse{\boolean{showGuitarTabs}}{%
+        \ifthenelse{\equal{#1}{up}}{%
+            \upchord{\setbarre{#2}{#3}{#4}\guitartabrot{#5}{#6}{#7}}  % upline
+        }{%
+            \setbarre{#2}{#3}{#4}\guitartabrot{#5}{#6}{#7}  % inline
+        }
+    }{%
+        % Do nothing
+    }
+}
 
 % ****** Define guitartabs/chords ****** 
 %  Note 1: all are 'upline' (above lyrics) by default: 
@@ -179,114 +204,157 @@
 % Dus: bij F is het 1, bij E is het 0 maar gebruik 't' voor 'thick bar'.
 % p=positie (base=1), x=dempen; o=open; eventueel b=base (bold) note.
 % Niet gebruiken: n=no-note, dus impliciete 'o' (open).
+%
+%   ** Akkoord-command-namen en Akkoord-display-namen **
+%   Voorbeeld (fictief): 
+%       
+%       \newcommand{\CmajThirteen}[1][\defpos]{\grpt[#1]{t}{p3,p3,p2,p2,o,o}{C\#13}}
+%   
+%   ** CmajThirteen is hier de akkoord-command-name: 
+%     - zo'n command MOET UNIEK zijn en cijfers zijn niet toegestaan.
+%     - Deze naam moet _beschrijvend_ zijn, zodat je 'm makkelijk kunt vinden (en je niet duplicaten gaat aanmaken)
+%    
+%   ** C#13 is hier de akkoord-display-name: 
+%     - dit hoeft niet uniek te zijn, en hier zijn cijfers wel toegestaan.
+%     - deze naam hoeft niet uniek beschrijvend te zijn: het kan best zijn dat je twee C7 akkoorden
+%        hebt, maar omdat er een uniek plaatje van de greep bij staat is een niet-unieke naam geen probleem.
+%
+%
+%   ** BARRÉ's maken **
+% Je kunt als volgt een echte barré maken, zoals deze voor F: \barre{1}{1}{6}\guitartab[#1]{t}{p1,p1p3,p1p3,p1p2,p1,p1}{F}
+% Als je een command wil definiëren, gebruik dan grptb (guitar-rotated-positioned-tab-barré):
+%       G6: \newcommand{\Gsix}[1][\defpos]{\grptb[#1]{1}{6}{3}{n,p3,p3,p2,p3,n}{G6}} 
+% Uitleg: de eerste param, #1, is de optionele die default 'up' is, dus positionering boven de tekst.
+% De 2e en 3e zijn de begin- en eindsnaar van de barré (dus meestal {1}{6}).
+% % Daarna komen de standaardparameters voor \chord.
+% Als je de barré niet op de eerste fret wilt gebruik dan command grptbb: dan is de 2e param
+% die van de barré positie, en schuiven de andere param's eentje op.
+%
+% Er is ook een lelijke oplossing, voor noodgevallen (?), bv F: {t}{p1,p1p3,p1p3,p1p2,p1,p1}{F}
+%
+% Some confirmation voor akkoordnamen done at: https://www.oolimo.com/en/guitar-chords/analyze
+%
 % ------------------------------------------------------------
 
 
 \newcommand{\defpos}{up} % defaultposition (up=upline; anything else=inline)
 
+% GRPT(B) = Guitar Rotated Positioned Tab (Barré)
+% grptbb = with extra parameter for position (fret-nr) of barré
+
+% 13 = combinatie van 6 en 7 akkoord (6 + 7 = 13)
+
 % C
-\newcommand{\C}[1][\defpos]{\grpt[#1]{t}{p3,p3,p2,o,p1,o}{C}}
-\newcommand{\Cseven}[1][\defpos]{\grpt[#1]{t}{p3,p3,p2,o,o,o}{C7}}
-\newcommand{\CsevenRootTen}[1][\defpos]{\grpt[#1]{10}{o,p3,p3,p2,p4,o}{C7}}
-\newcommand{\CsevenAddThirteen}[1][\defpos]{\grpt[#1]{t}{p3,p3,p2,p2,o,o}{C7add13}}
-\newcommand{\Cnine}[1][\defpos]{\grpt[#1]{t}{p3,p3,p2,p3,p3,p3}{C9}}
+\newcommand{\C}[1][\defpos]{\grpt[#1]{t}{p3,p3,p2,o,p1,o}{C}}                       % confirmed at oolimo
+\newcommand{\Cseven}[1][\defpos]{\grpt[#1]{t}{p3,p3,p2,o,o,o}{Cmaj7}}               % confirmed at oolimo
+\newcommand{\CsevenBarreEight}[1][\defpos]{\grptb[#1]{1}{6}{8}{n,p3,p3,p2,p4,n}{C7}}% confirmed at oolimo
+\newcommand{\CmajThirteen}[1][\defpos]{\grpt[#1]{t}{p3,p3,p2,p2,o,o}{Cmaj13}}       % confirmed at oolimo
+\newcommand{\Cnine}[1][\defpos]{\grptbb[#1]{3}{4}{6}{t}{p3,p3,p2,n,n,n}{C9}}        % confirmed at oolimo
 
 % Cm
-\newcommand{\CminorSevenRootEight}[1][\defpos]{\grpt[#1]{8}{p1,p3,p1,p1,p1,p1}{Cm7R8}}
+\newcommand{\CminorSeven}[1][\defpos]{\grptb[#1]{1}{6}{8}{n,p3,n,n,n,n}{Cm7}}       % confirmed at oolimo
+\newcommand{\CminorSevenVii}[1][\defpos]{\grptb[#1]{1}{6}{8}{n,p3,n,n,p4,n}{Cm7}}   % confirmed at oolimo
 
-% Des (Cis)
-\newcommand{\CsharpNine}[1][\defpos]{\grpt[#1]{3}{p2,p2,p1,p2,p2,p2}{Cis9}}
-\newcommand{\CisFork}[1][\defpos]{\grpt[#1]{8}{p2,p1,p2,o,o,o}{Cis}}
-\newcommand{\CisForkPlus}[1][\defpos]{\grpt[#1]{8}{p2,p1,p2,p3,p3,p3}{Cis}}
+% Des / C#
+\newcommand{\CISnine}[1][\defpos]{\grptbb[#1]{4}{4}{6}{t}{p4,p4,p3,n,n,n}{C\#9}} % confirmed at oolimo
+\newcommand{\CISfork}[1][\defpos]{\grpt[#1]{8}{p2,p1,p2,o,o,o}{C\#7}}               % confirmed at oolimo
+\newcommand{\CISforkPlus}[1][\defpos]{\grpt[#1]{8}{p2,p1,p2,p3,p3,p3}{C\#7}}        % confirmed at oolimo
 
 % D
-\newcommand{\DrootTwo}[1][\defpos]{\grpt[#1]{t}{p2,o,o,p2,p3,p2}{Dr2}}
+\newcommand{\D}[1][\defpos]{\grpt[#1]{t}{p2,o,o,p2,p3,p2}{D}}                       % confirmed at oolimo
 
-\newcommand{\DsevenRootFive}[1][\defpos]{\grpt[#1]{5}{p1,p1,p3,p1,p3,p1}{DR5O}}
-\newcommand{\Dnine}[1][\defpos]{\grpt[#1]{4}{p2,p2,p1,p2,p2,p2}{D9}}
-\newcommand{\DnineVtwo}[1][\defpos]{\grpt[#1]{3}{x,p3,p2,p3,p1,o}{D9}}
-\newcommand{\DmNine}[1][\defpos]{\grpt[#1]{3}{p3,p3,p1,p3,p3,p3}{Dm9}}
+\newcommand{\DsevenBarreFive}[1][\defpos]{\grptb[#1]{1}{6}{5}{n,n,p3,n,p3,n}{D7}}   % confirmed at oolimo
+\newcommand{\Dnine}[1][\defpos]{\grptbb[#1]{2}{4}{6}{4}{p2,p2,p1,n,n,n}{D9}}        % confirmed at oolimo
+\newcommand{\DnineVii}[1][\defpos]{\grpt[#1]{3}{x,p3,p2,p3,p1,o}{D9}}               % confirmed at oolimo
+\newcommand{\DmNine}[1][\defpos]{\grptbb[#1]{3}{4}{6}{3}{p3,p3,p1,n,n,n}{Dm9}}      % confirmed at oolimo
 
 % Dm
-\newcommand{\DmRootFiveOpen}[1][\defpos]{\grpt[#1]{5}{p1,p1,p3,p1,p2,p1}{DmR5O}}
-\newcommand{\DmSevenRootTen}[1][\defpos]{\grpt[#1]{0}{p1,p3,p1,p1,p1,p1}{Dm7R10}}
+\newcommand{\DmBarreFive}[1][\defpos]{\grptb[#1]{1}{6}{5}{n,n,p3,p3,p2,n}{Dm}}       % confirmed at oolimo
+\newcommand{\DmBarreTen}[1][\defpos]{\grptbb[#1]{2}{1}{6}{9}{n,p4,p4,n,n,n}{Dm}}     % confirmed at oolimo
+\newcommand{\DmSevenBarreFive}[1][\defpos]{\grptb[#1]{1}{6}{5}{n,n,p3,n,p2,n}{Dm7}}  % confirmed at oolimo
+\newcommand{\DmSevenBarreTen}[1][\defpos]{\grptbb[#1]{2}{1}{6}{9}{n,p4,n,n,n,n}{Dm7}}% confirmed at oolimo
 
 % Es (Dis)
 
 % E
-\newcommand{\E}[1][\defpos]{\grpt[#1]{t}{o,p2,p2,p1,o,o}{E}}
-\newcommand{\Eseven}[1][\defpos]{\grpt[#1]{t}{o,p2,p2,p1,p3,o}{E7}}
-\newcommand{\EsevenSusFour}[1][\defpos]{\grpt[#1]{t}{o,p2,o,p2,o,o}{E7sus4}}
-\newcommand{\Enine}[1][\defpos]{\grpt[#1]{6}{o,p2,p1,p2,o,o}{E9}}
+\newcommand{\E}[1][\defpos]{\grpt[#1]{t}{o,p2,p2,p1,o,o}{E}}                        % confirmed at oolimo
+\newcommand{\Eseven}[1][\defpos]{\grpt[#1]{t}{o,p2,p2,p1,p3,o}{E7}}                 % confirmed at oolimo
+\newcommand{\EsevenSus}[1][\defpos]{\grpt[#1]{t}{o,p2,o,p2,o,o}{E7sus}}             % confirmed at oolimo (sus=kwint met half vermeerderd?)
+\newcommand{\EsevenVii}[1][\defpos]{\grpt[#1]{6}{o,p2,p1,p2,o,o}{E7}}               % confirmed at oolimo
 
 % Em
-\newcommand{\Em}[1][\defpos]{\grpt[#1]{t}{o,p2,p2,o,o,o}{Em}}
-\newcommand{\EmSix}[1][\defpos]{\grpt[#1]{t}{o,p4,p2,o,o,o}{Em6}}
-\newcommand{\EmSevenVi}[1][\defpos]{\grpt[#1]{t}{o,p2,p2,o,p3,o}{Em7}}
-\newcommand{\EmSevenVii}[1][\defpos]{\grpt[#1]{t}{o,p2,p2,o,p3,o}{Em7}}
-
+\newcommand{\Em}[1][\defpos]{\grpt[#1]{t}{o,p2,p2,o,o,o}{Em}}                       % confirmed at oolimo
+\newcommand{\EmSix}[1][\defpos]{\grpt[#1]{t}{o,p4,p2,o,o,o}{Em6}}                   % confirmed at oolimo
+\newcommand{\EmSeven}[1][\defpos]{\grpt[#1]{t}{o,p2,p2,o,p3,o}{Em7}}                % confirmed at oolimo
+\newcommand{\EmSevenVii}[1][\defpos]{\grpt[#1]{5}{o,p3,o,o,o,o}{Em7}}               % confirmed at oolimo
 
 % F
-\newcommand{\F}[1][\defpos]{\grpt[#1]{t}{p1,p3,p3,p2,p1,p1}{F}}
-\newcommand{\FonFive}[1][\defpos]{\grpt[#1]{5}{p1,o,o,p1,p2,p1}{Fon5}}
-\newcommand{\Fseven}[1][\defpos]{\grpt[#1]{t}{p1,p3,p1,p2,p1,p1}{F7}}
+\newcommand{\F}[1][\defpos]{\grptb[#1]{1}{6}{t}{n,p3,p3,p2,n,n}{F}}                 % confirmed at oolimo
+\newcommand{\Fsix}[1][\defpos]{\grptb[#1]{1}{6}{t}{n,p3,p3,p2,p3,n}{F6}}            % confirmed at oolimo
+\newcommand{\FsixOnFive}[1][\defpos]{\grpt[#1]{5}{p1,o,o,p1,p2,p1}{F6}}             % confirmed at oolimo
+\newcommand{\Fseven}[1][\defpos]{\grptb[#1]{1}{6}{t}{n,p3,p3,p2,p4,n}{F7}}          % confirmed at oolimo
+\newcommand{\FsevenVii}[1][\defpos]{\grptb[#1]{1}{6}{t}{n,p3,n,p2,p4,n}{F7}}        % confirmed at oolimo
+\newcommand{\Fthirteen}[1][\defpos]{\grptb[#1]{1}{6}{t}{n,p3,n,p2,p3,n}{F13}}       % confirmed at oolimo
 
 % Fm
 
 % Ges (Fis)
-\newcommand{\Fis}[1][\defpos]{\grpt[#1]{t}{p2,p4,p4,p3,p2,p2}{Fis}}
-\newcommand{\FisOpen}[1][\defpos]{\grpt[#1]{t}{o,p4,o,p3,o,o}{Fis (open)}}
-\newcommand{\FisSeven}[1][\defpos]{\grpt[#1]{t}{p2,p4,p2,p3,p2,p2}{Fis7}}
+\newcommand{\FIS}[1][\defpos]{\grptbb[#1]{2}{1}{6}{t}{n,p4,p4,p3,n,n}{F\#}}         % confirmed at oolimo
+\newcommand{\FISopen}[1][\defpos]{\grpt[#1]{t}{o,p4,o,p3,o,o}{F\# (open)}}          % dit is nogal contextueel: geisoleerd is het E13(#11, no3)
+\newcommand{\FISseven}[1][\defpos]{\grptbb[#1]{2}{1}{6}{t}{n,p4,n,p3,n,n}{F\#7}}    % confirmed at oolimo
 
 % Ges (Fis) minor
 
 % G
-\newcommand{\G}[1][\defpos]{\grpt[#1]{3}{p1,p3,p1,p2,p1,p1}{G}}
-\newcommand{\Gsix}[1][\defpos]{\grpt[#1]{3}{p1,p3,p1,p2,p3,p1}{G6}}
-\newcommand{\Gseven}[1][\defpos]{\grpt[#1]{3}{p1,p3,p1,p2,p1,p1}{G7}}
-\newcommand{\GaddNine}[1][\defpos]{\grpt[#1]{3}{p1,p3,p1,p2,p4,p1}{Gadd9}}
+\newcommand{\G}[1][\defpos]{\grptb[#1]{1}{6}{3}{n,p3,p3,p2,n,n}{G}}                 % confirmed at oolimo
+\newcommand{\Gsix}[1][\defpos]{\grptb[#1]{1}{6}{3}{n,p3,p3,p2,p3,n}{G6}}            % confirmed at oolimo
+\newcommand{\Gseven}[1][\defpos]{\grptb[#1]{1}{6}{3}{n,p3,n,p2,n,n}{G7}}            % confirmed at oolimo
+\newcommand{\GsevenVii}[1][\defpos]{\grptb[#1]{1}{6}{3}{n,p3,n,p2,p4,n}{G7}}        % confirmed at oolimo
 
 % Gm
-\newcommand{\GmSevenVi}[1][\defpos]{\grpt[#1]{3}{p1,p3,p3,p1,p1,p4}{Gm7}}
-\newcommand{\GmSevenVii}[1][\defpos]{\grpt[#1]{3}{p1,p3,p1,p1,p1,p1}{Gm7}}          
+\newcommand{\GmSeven}[1][\defpos]{\grptb[#1]{1}{6}{3}{n,p3,p3,n,p4,n}{Gm7}}         % confirmed at oolimo
+\newcommand{\GmSevenVii}[1][\defpos]{\grptb[#1]{1}{6}{3}{n,p3,n,n,n,n}{Gm7}}        % confirmed at oolimo
+\newcommand{\GmSevenViii}[1][\defpos]{\grptb[#1]{1}{6}{3}{n,p3,n,n,p4,n}{Gm7}}      % confirmed at oolimo
 
 % As (Gis)
-\newcommand{\Gis}[1][\defpos]{\grpt[#1]{4}{p1,p3,p1,p2,p1,p1}{G\#}}
-\newcommand{\GisSeven}[1][\defpos]{\grpt[#1]{4}{p1,p3,p1,p2,p1,p1}{G\#7}}
-\newcommand{\GisFork}[1][\defpos]{\grpt[#1]{3}{p2,p1,p2,x,x,x}{Gis}}
+\newcommand{\GIS}[1][\defpos]{\grptb[#1]{1}{6}{4}{n,p3,p3,p2,n,n}{G\#}}             % confirmed at oolimo
+\newcommand{\GISseven}[1][\defpos]{\grptb[#1]{1}{6}{4}{n,p3,n,p2,p4,n}{G\#7}}       % confirmed at oolimo
+\newcommand{\GISfork}[1][\defpos]{\grpt[#1]{3}{p2,p1,p2,x,x,x}{G\#7}}               % confirmed at oolimo
 
 % As (Gis) minor
 
 % A
-\newcommand{\Aopen}[1][\defpos]{\grpt[#1]{t}{o,o,p2,o,p2,o}{Aopen}}
-\newcommand{\ArootFive}[1][\defpos]{\grpt[#1]{5}{p1,p3,p1,p2,p1,p1}{AR5}}
-\newcommand{\AsixRootFive}[1][\defpos]{\grpt[#1]{5}{p1,p3,p1,p2,p3,p1}{A6R5}}
-\newcommand{\Aseven}[1][\defpos]{\grpt[#1]{t}{x,n,p2,p1,p2,n}{A7}}
-\newcommand{\AsevenRootFive}[1][\defpos]{\grpt[#1]{5}{p1,p3,p1,p2,p4,p1}{A7R5}}
-\newcommand{\AfivePlus}[1][\defpos]{\grpt[#1]{t}{o,o,p2,p2,p2,p2}{AR+}}
+\newcommand{\A}[1][\defpos]{\grpt[#1]{t}{o,o,p2,p2,p2,o}{A}}                        % confirmed at oolimo
+\newcommand{\AbarreFive}[1][\defpos]{\grptb[#1]{1}{6}{5}{n,p3,p3,p2,n,n}{A}}        % confirmed at oolimo
+\newcommand{\Asix}[1][\defpos]{\grptbb[#1]{2}{3}{6}{t}{o,o,n,n,n,n}{A6}}            % confirmed at oolimo
+\newcommand{\AsixBarreFive}[1][\defpos]{\grptb[#1]{1}{6}{5}{n,p3,p3,p2,p3,n}{A6}}   % confirmed at oolimo
+\newcommand{\Aseven}[1][\defpos]{\grpt[#1]{t}{o,o,p2,o,p2,o}{A7}}                   % confirmed at oolimo
+\newcommand{\AsevenBarreFive}[1][\defpos]{\grptb[#1]{1}{6}{5}{n,p3,n,p2,n,n}{A7}}   % confirmed at oolimo
+\newcommand{\AsevenBarreFiveVii}[1][\defpos]{\grptb[#1]{1}{6}{5}{n,p3,n,p2,p4,n}{A7}} % confirmed at oolimo
+\newcommand{\AmajSeven}[1][\defpos]{\grpt[#1]{t}{x,n,p2,p1,p2,n}{Amaj7}}            % confirmed at oolimo
 
 % Am
-\newcommand{\AminorSeven}[1][\defpos]{\grpt[#1]{t}{o,o,p2,po,p1,o}{Am7}}
-\newcommand{\AminorSevenShiftPlusTwo}[1][\defpos]{\grpt[#1]{t}{o,o,p4,po,p3,o}{Am7sh2}}
-\newcommand{\AminorRootFive}[1][\defpos]{\grpt[#1]{5}{p1,p3,p3,p1,p1,p1}{AmR5}}
-\newcommand{\AminorSevenRootFive}[1][\defpos]{\grpt[#1]{5}{p1,p3,p1,p1,p1,p1}{Am7R5}}
-\newcommand{\AminorSevenRootFiveOpen}[1][\defpos]{\grpt[#1]{5}{o,p3,o,o,o,o}{Am7R5(o)}}
-\newcommand{\AminorRootFiveAltOne}[1][\defpos]{\grpt[#1]{5}{o,o,p1,p1,p1,p1}{AmR5alt2}}  % alternatieve AmR5
+\newcommand{\Am}[1][\defpos]{\grpt[#1]{t}{o,o,p2,p2,p1,o}{Am}}                          % confirmed at oolimo
+\newcommand{\AmSeven}[1][\defpos]{\grpt[#1]{t}{o,o,p2,po,p1,o}{Am7}}                    % confirmed at oolimo
+\newcommand{\AmSevenBarreFive}[1][\defpos]{\grptb[#1]{1}{6}{5}{n,p3,n,n,n,n}{Am7}}      % confirmed at oolimo
+\newcommand{\AsusThirteen}[1][\defpos]{\grpt[#1]{t}{o,o,p5,po,p4,o}{Asus13}}            % confirmed at oolimo
+\newcommand{\AmBarreFive}[1][\defpos]{\grptb[#1]{1}{6}{5}{n,p3,p3,n,n,n}{Am}}           % confirmed at oolimo
+\newcommand{\AmSevenBarreFiveVii}[1][\defpos]{\grptb[#1]{3}{6}{5}{o,o,n,n,n,n}{Am7}}    % confirmed at oolimo
 
 % Bes (Ais)
 \newcommand{\BesFork}[1][\defpos]{\grpt[#1]{5}{p2,p1,p2,x,x,x}{Bes}}
-\newcommand{\BesSeven}[1][\defpos]{\grpt[#1]{t}{p1,p1,p3,p1,p3,p1}{Bes7}}
-\newcommand{\AisSevenRootSix}[1][\defpos]{\grpt[#1]{6}{p1,p3,p1,p2,p1,p1}{A\#}}
-\newcommand{\AisMinorSevenRootSix}[1][\defpos]{\grpt[#1]{6}{p1,p3,p1,p1,p1,p1}{A\#m}}
+\newcommand{\BESseven}[1][\defpos]{\grptb[#1]{1}{6}{t}{n,n,p3,n,p3,n}{Bes7}}
+\newcommand{\AISsevenBarreSix}[1][\defpos]{\grptb[#1]{1}{6}{6}{n,p3,n,p2,n,n}{A\#}}
+\newcommand{\AISmSevenBarreSix}[1][\defpos]{\grptb[#1]{1}{6}{6}{n,p3,n,n,n,n}{A\#m}}
 
 % B
-\newcommand{\B}[1][\defpos]{\grpt[#1]{7}{p1,p3,p1,p2,p1,p1}{B}}
-\newcommand{\Bsix}[1][\defpos]{\grpt[#1]{7}{p1,p3,p1,p2,p3,p1}{B6}}
-\newcommand{\Bseven}[1][\defpos]{\grpt[#1]{7}{p1,p3,p1,p2,p3,p1}{B7}}
+\newcommand{\B}[1][\defpos]{\grptb[#1]{1}{6}{7}{n,p3,n,p2,n,n}{B}}
+\newcommand{\Bsix}[1][\defpos]{\grptb[#1]{1}{6}{7}{n,p3,n,p2,p3,n}{B6}}
+\newcommand{\Bseven}[1][\defpos]{\grptb[#1]{1}{6}{7}{n,p3,n,p2,p4,n}{B7}}
 \newcommand{\Bfork}[1][\defpos]{\grpt[#1]{6}{p2,p1,p2,x,x,x}{B}}
-\newcommand{\Bnine}[1][\defpos]{\grpt[#1]{t}{p2,p2,p1,p2,p2,p2}{B9}}
-\newcommand{\BminorSeven}[1][\defpos]{\grpt[#1]{t}{p3,p3,p5,p3,p4,p3}{Bm7}}
-\newcommand{\BminorRootSevenAltOne}[1][\defpos]{\grpt[#1]{7}{o,o,p1,p1,p1,p1}{BmR7alt2}} % live long democr schuifakkoord
+\newcommand{\Bnine}[1][\defpos]{\grptbb[#1]{2}{4}{6}{t}{p2,p2,p1,n,n,n}{B9}}
+\newcommand{\BmSeven}[1][\defpos]{\grptbb[#1]{3}{1}{6}{t}{n,n,p5,n,p4,n}{Bm7}}
+\newcommand{\BmBarreSevenAltOne}[1][\defpos]{\grptb[#1]{3}{6}{7}{o,o,n,n,n,n}{BmR7alt2}} % live long democr schuifakkoord
 
 % ****** Define guitartabs/chords (end) ****** 
 
