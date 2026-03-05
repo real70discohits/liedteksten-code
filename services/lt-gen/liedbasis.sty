@@ -265,7 +265,6 @@
 
 % D
 \newcommand{\D}[1][\defpos]{\grpt[#1]{t}{p2,o,o,p2,p3,p2}{D}}                       
-
 \newcommand{\DsevenBarreFive}[1][\defpos]{\grptb[#1]{1}{6}{5}{n,n,p3,n,p3,n}{D7}}   
 \newcommand{\Dnine}[1][\defpos]{\grptbb[#1]{2}{4}{6}{4}{p2,p2,p1,n,n,n}{D9}}        
 \newcommand{\DnineVii}[1][\defpos]{\grpt[#1]{3}{x,p3,p2,p3,p1,o}{D9}}               
@@ -302,10 +301,13 @@
 
 % Fm
 
-% Ges (Fis)
-\newcommand{\FIS}[1][\defpos]{\grptbb[#1]{2}{1}{6}{t}{n,p4,p4,p3,n,n}{F\#}}         
+% Ges, Fis
+\newcommand{\FIS}[1][\defpos]{\grptbb[#1]{2}{1}{6}{t}{n,p4,p4,p3,n,n}{F\#}}
+\newcommand{\GES}{\FIS}
 \newcommand{\FISopen}[1][\defpos]{\grpt[#1]{t}{o,p4,o,p3,o,o}{F\# (open)}}          % dit is nogal contextueel: geisoleerd is het E13(#11, no3)
+\newcommand{\GESopen}{\FISopen}
 \newcommand{\FISseven}[1][\defpos]{\grptbb[#1]{2}{1}{6}{t}{n,p4,n,p3,n,n}{F\#7}}    
+\newcommand{\GESseven}{\FISseven}
 
 % Ges (Fis) minor
 
@@ -320,10 +322,13 @@
 \newcommand{\GmSevenVii}[1][\defpos]{\grptb[#1]{1}{6}{3}{n,p3,n,n,n,n}{Gm7}}        
 \newcommand{\GmSevenViii}[1][\defpos]{\grptb[#1]{1}{6}{3}{n,p3,n,n,p4,n}{Gm7}}      
 
-% As (Gis)
+% As Gis
 \newcommand{\GIS}[1][\defpos]{\grptb[#1]{1}{6}{4}{n,p3,p3,p2,n,n}{G\#}}             
+\newcommand{\AS}{\GIS}
 \newcommand{\GISseven}[1][\defpos]{\grptb[#1]{1}{6}{4}{n,p3,n,p2,p4,n}{G\#7}}       
+\newcommand{\ASseven}{\GISseven}
 \newcommand{\GISfork}[1][\defpos]{\grpt[#1]{3}{p2,p1,p2,x,x,x}{G\#7}}               
+\newcommand{\ASfork}{\GISfork}
 
 % As (Gis) minor
 
