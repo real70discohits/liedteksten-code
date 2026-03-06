@@ -69,7 +69,8 @@ tlmgr install \
     setspace
 
 tlmgr install \
-    gchords \
+    # sk 6/3/2026: gchords is voorlopig vervangen door lokale kopie met wijzigingen ivm barré functionaliteit.
+    # gchords \
     leadsheets \
     translations \
     musixtex \
@@ -96,11 +97,12 @@ mktexlsr
 fmtutil-sys --all 2>/dev/null || fmtutil --all
 updmap-sys 2>/dev/null || updmap
 
-# 6. Install liedbasis.sty
+# 6. Install liedbasis.sty + gchordsz.sty
 echo ""
-echo "[6/8] Installing liedbasis.sty..."
+echo "[6/8] Installing liedbasis.sty and gchordsz.sty..."
 mkdir -p "$HOME/.TinyTeX/texmf-dist/tex/latex/local"
 cp services/lt-gen/liedbasis.sty "$HOME/.TinyTeX/texmf-dist/tex/latex/local/"
+cp services/lt-gen/gchordsz.sty "$HOME/.TinyTeX/texmf-dist/tex/latex/local/"
 mktexlsr
 
 # 7. Create Python virtual environment
