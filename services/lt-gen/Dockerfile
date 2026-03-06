@@ -40,7 +40,8 @@ RUN tlmgr install \
 
 # Music-related packages
 RUN tlmgr install \
-    gchords \
+    # sk 6/3/2026: gchords is voorlopig vervangen door lokale kopie met wijzigingen ivm barré functionaliteit.
+    # gchords \      
     leadsheets \
     translations \
     musixtex \
@@ -71,6 +72,7 @@ RUN tlmgr install \
 # Copy requirements file and install Python dependencies
 COPY requirements.txt /tmp/requirements.txt
 COPY liedbasis.sty /tmp/liedbasis.sty
+COPY gchordsz.sty /tmp/gchordsz.sty
 RUN pip install --no-cache-dir --user -r /tmp/requirements.txt
 
 
@@ -111,12 +113,14 @@ RUN mkdir -p /app /app/cache/configs /tmp/tex-work /tmp/pdf-output && \
 COPY --chown=pdfgen:pdfgen app/ /app/
 
 COPY --from=builder /tmp/liedbasis.sty /tmp/liedbasis.sty
+COPY --from=builder /tmp/gchordsz.sty /tmp/gchordsz.sty
 
-# Install liedbasis.sty to LaTeX tree (as root, before switching user)
-RUN cp /tmp/liedbasis.sty /home/pdfgen/.TinyTeX/texmf-dist/tex/latex/local/ 2>/dev/null || \
-    mkdir -p /home/pdfgen/.TinyTeX/texmf-dist/tex/latex/local && \
+# Install liedbasis.sty and gchordsz.sty to LaTeX tree (as root, before switching user)
+RUN mkdir -p /home/pdfgen/.TinyTeX/texmf-dist/tex/latex/local && \
     cp /tmp/liedbasis.sty /home/pdfgen/.TinyTeX/texmf-dist/tex/latex/local/ && \
-    chown -R pdfgen:pdfgen /home/pdfgen/.TinyTeX/texmf-dist/tex/latex/local
+    cp /tmp/gchordsz.sty /home/pdfgen/.TinyTeX/texmf-dist/tex/latex/local/ && \
+    chown -R pdfgen:pdfgen /home/pdfgen/.TinyTeX/texmf-dist/tex/latex/local && \
+    /home/pdfgen/.TinyTeX/bin/x86_64-linux/mktexlsr
 
 # Set environment variables
 ENV PATH="/home/pdfgen/.TinyTeX/bin/x86_64-linux:/home/pdfgen/.local/bin:${PATH}" \
