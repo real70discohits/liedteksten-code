@@ -1018,7 +1018,7 @@ def main():
     print(f"✅ Success! Created: {labeltrack_file}")
 
     update_liedtekst_tex_file(songtitle, tempo, timesig, song_folder)
-    print(f"✅ Success! Updated liedtekst tempo and timesig for {songtitle}")
+    print(f"✅ Success! Updated liedtekst tempo and timesig in {songtitle}.tex")
 
 
 if __name__ == "__main__":
