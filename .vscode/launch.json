@@ -13,7 +13,7 @@
             "args": ["main:app", "--reload", "--port", "8000"],
             "cwd": "${workspaceFolder}/services/lt-gen/app",
             "env": {
-                "PYTHONPATH": "${workspaceFolder}/services/lt-gen/app", 
+                "PYTHONPATH": "${workspaceFolder}/services/lt-gen/app",
                 "PATH": "/home/sjef/.TinyTeX/bin/x86_64-linux:${env:PATH}"
             }
         },

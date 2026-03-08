@@ -26,13 +26,13 @@ echo "=== WSL Setup for lt-gen FastAPI ==="
 echo ""
 
 # 1. Install system dependencies
-echo "[1/8] Installing system dependencies..."
+echo "[1/9] Installing system dependencies..."
 sudo apt-get update
 sudo apt-get install -y wget perl fontconfig
 
 # 2. Install TinyTeX
 echo ""
-echo "[2/8] Installing TinyTeX..."
+echo "[2/9] Installing TinyTeX..."
 if [ -d "$HOME/.TinyTeX" ]; then
     echo "TinyTeX already installed, skipping..."
 else
@@ -41,7 +41,7 @@ fi
 
 # 3. Add TinyTeX to PATH
 echo ""
-echo "[3/8] Configuring PATH..."
+echo "[3/9] Configuring PATH..."
 if ! grep -q "TinyTeX" ~/.bashrc; then
     echo 'export PATH="$HOME/.TinyTeX/bin/x86_64-linux:$PATH"' >> ~/.bashrc
     echo "Added TinyTeX to ~/.bashrc"
@@ -52,7 +52,7 @@ export PATH="$HOME/.TinyTeX/bin/x86_64-linux:$PATH"
 
 # 4. Install LaTeX packages (matching Dockerfile)
 echo ""
-echo "[4/8] Installing LaTeX packages (this may take a while)..."
+echo "[4/9] Installing LaTeX packages (this may take a while)..."
 tlmgr install \
     collection-latex \
     collection-fontsrecommended \
@@ -92,22 +92,28 @@ tlmgr install \
 
 # 5. Update LaTeX caches
 echo ""
-echo "[5/8] Updating LaTeX caches..."
+echo "[5/9] Updating LaTeX caches..."
 mktexlsr
 fmtutil-sys --all 2>/dev/null || fmtutil --all
 updmap-sys 2>/dev/null || updmap
 
 # 6. Install liedbasis.sty + gchordsz.sty
 echo ""
-echo "[6/8] Installing liedbasis.sty and gchordsz.sty..."
+echo "[6/9] Installing liedbasis.sty and gchordsz.sty..."
 mkdir -p "$HOME/.TinyTeX/texmf-dist/tex/latex/local"
 cp services/lt-gen/liedbasis.sty "$HOME/.TinyTeX/texmf-dist/tex/latex/local/"
 cp services/lt-gen/gchordsz.sty "$HOME/.TinyTeX/texmf-dist/tex/latex/local/"
 mktexlsr
 
-# 7. Create Python virtual environment
+# 7. Create /app directory structure (mirrors Docker container paths)
 echo ""
-echo "[7/8] Setting up Python virtual environment..."
+echo "[7/9] Creating /app directory structure..."
+sudo mkdir -p /app/cache/configs
+sudo chown -R "$USER":"$USER" /app
+
+# 8. Create Python virtual environment
+echo ""
+echo "[8/9] Setting up Python virtual environment..."
 if [ -d ".venv-wsl" ]; then
     echo "Virtual environment .venv-wsl already exists"
 else
@@ -117,9 +123,9 @@ source .venv-wsl/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# 8. Done
+# 9. Done
 echo ""
-echo "[8/8] Setup complete!"
+echo "[9/9] Setup complete!"
 echo ""
 echo "=== Next steps ==="
 echo ""
