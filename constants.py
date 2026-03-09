@@ -7,6 +7,15 @@ This module contains shared constants to avoid magic strings and improve maintai
 STAFF_NAME_BASS = "Bass"
 STAFF_NAME_RITME = "Ritme"
 STAFF_NAME_ZANG = "Zang"
+STAFF_NAME_BASE_DRUM = "Basedrum"
+STAFF_NAME_SNARE_DRUM = "Snare"
+STAFF_NAME_HI_HAT = "HiHat"
+STAFF_NAME_CRASH_CYMBAL = "Crash"
+STAFF_NAME_RIDE_CYMBAL = "Ride"
+STAFF_NAME_TOM_1 = "Tom1"
+STAFF_NAME_TOM_2 = "Tom2"
+STAFF_NAME_FLOOR_TOM = "FloorTom"
+
 
 # File Extensions
 EXT_NWCTXT = ".nwctxt"

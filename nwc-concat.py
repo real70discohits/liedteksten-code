@@ -35,7 +35,12 @@ from constants import (NWC_PREFIX_ADDSTAFF, NWC_PREFIX_STAFF_PROPERTIES,
                         NWC_PREFIX_STAFF_INSTRUMENT, NWC_PREFIX_CLEF,
                         NWC_PREFIX_TIMESIG, NWC_PREFIX_TEMPO, NWC_PREFIX_BAR,
                         NWC_PREFIX_TEXT, NWC_END_MARKER, FOLDER_NWC, EXT_NWCTXT,
-                        EXT_JSONC, STAFF_NAME_BASS, STAFF_NAME_RITME)
+                        EXT_JSONC, STAFF_NAME_BASS, STAFF_NAME_RITME,
+                        STAFF_NAME_BASE_DRUM, STAFF_NAME_SNARE_DRUM,
+                        STAFF_NAME_HI_HAT, STAFF_NAME_CRASH_CYMBAL,
+                        STAFF_NAME_RIDE_CYMBAL, STAFF_NAME_TOM_1,
+                        STAFF_NAME_TOM_2, STAFF_NAME_FLOOR_TOM
+                        )
 
 
 def concatenate_nwctxt_files(file_list, output_file, keep_tempi=False):
@@ -47,19 +52,19 @@ def concatenate_nwctxt_files(file_list, output_file, keep_tempi=False):
         keep_tempi: If False (default), remove tempo indicators from files after the first.
                 If True, keep all tempo indicators.
     """
-    
+
     # Parse the first file to get header and initial staff structure
     header, first_staffs = parse_nwctxt(file_list[0])
-    
+
     # Initialize concatenated staffs with first file's data
     concatenated_staffs = []
     for staff_lines in first_staffs:
         concatenated_staffs.append(staff_lines)
-    
+
     # Process remaining files
     for filepath in file_list[1:]:
         _, staffs = parse_nwctxt(filepath)
-        
+
         # Ensure we have the same number of staffs
         if len(staffs) != len(concatenated_staffs):
             print(f"⚠️ Warning: {filepath} has {len(staffs)} staffs, expected {len(concatenated_staffs)}")
@@ -67,7 +72,7 @@ def concatenate_nwctxt_files(file_list, output_file, keep_tempi=False):
             min_staffs = min(len(staffs), len(concatenated_staffs))
         else:
             min_staffs = len(staffs)
-        
+
         # Concatenate each staff
         for i in range(min_staffs):
             # Skip staff header lines (already have them from first file)
@@ -78,23 +83,23 @@ def concatenate_nwctxt_files(file_list, output_file, keep_tempi=False):
             # Only skip tempo lines if keep_tempi is False (default behavior)
             if not keep_tempi:
                 skip_prefixes.append(NWC_PREFIX_TEMPO)
-            
+
             for line in staffs[i]:
                 if not any(line.startswith(prefix) for prefix in skip_prefixes):
                     staff_data.append(line)
-            
+
             # Add a double bar between sections for clarity
             if staff_data and not staff_data[0].startswith(NWC_PREFIX_BAR):
                 concatenated_staffs[i].append(f'{NWC_PREFIX_BAR}|Style:Double')
-            
+
             concatenated_staffs[i].extend(staff_data)
-    
+
     # Write output file
     with open(output_file, 'w', encoding='utf-8') as f:
         # Write header
         for line in header:
             f.write(line + '\n')
-        
+
         # Write concatenated staffs
         for staff_lines in concatenated_staffs:
             for line in staff_lines:
@@ -148,14 +153,14 @@ def get_measure_count(filepath):
                 current_measure_has_dur = False
             elif '|Dur:' in line:
                 current_measure_has_dur = True
-    
+
     # Count the last measure if it has duration
     if current_measure_has_dur:
         if after_repeat:
             measures_after_repeat += 1
         else:
             total_measures += 1
-    
+
     # Determine final count
     if repeat_count is not None:
         # Use repeat count plus any measures after it
@@ -163,7 +168,7 @@ def get_measure_count(filepath):
     else:
         # No repeat found, use total measures counted
         final_count = total_measures
-    
+
     return final_count if final_count > 0 else None
 
 
@@ -207,7 +212,7 @@ def extract_chords_from_first_staff(filepath):
                                 chords.append(f"{current_chord}({current_measures})")
                             else:
                                 chords.append(current_chord)
-                        
+
                         # Extract new chord (everything after "akk:")
                         new_chord = text_stripped[4:].strip()
                         current_chord = new_chord
@@ -215,28 +220,28 @@ def extract_chords_from_first_staff(filepath):
                         current_measure_has_dur = False
             except (IndexError, ValueError):
                 continue
-        
+
         # Check for Bar marker
         if line.startswith('|Bar|') or line == '|Bar':
             if current_chord is not None and current_measure_has_dur:
                 current_measures += 1
             current_measure_has_dur = False
-        
+
         # Check for duration (note or rest)
         if '|Dur:' in line:
             current_measure_has_dur = True
-    
+
     # Handle the last chord and last measure
     if current_chord is not None:
         # Count last measure if it has duration
         if current_measure_has_dur:
             current_measures += 1
-        
+
         if current_measures > 1:
             chords.append(f"{current_chord}({current_measures})")
         elif current_measures == 1:
             chords.append(current_chord)
-    
+
     # Calculate total measures from chords
     total_from_chords = 0
     for chord in chords:
@@ -249,10 +254,10 @@ def extract_chords_from_first_staff(filepath):
                 total_from_chords += 1
         else:
             total_from_chords += 1
-    
+
     if not chords:
         return "-", 0, True
-    
+
     chord_string = ", ".join(chords)
     return chord_string, total_from_chords, True
 
@@ -439,10 +444,10 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
         chords_per_lieddeel: Dict mapping section_name to (chord_string, chord_count, is_valid)
         pickup_beats: Number of pickup beats at the start of the song
         complete_analysis: Optional dict from analyze_complete_song() with corrected totals.
-                          If provided, uses total_measures and total_duration from this.
-                          If None, falls back to legacy calculation.
+                If provided, uses total_measures and total_duration from this.
+                If None, falls back to legacy calculation.
     """
-    
+
     # Get unique sections in order of first appearance
     unique_lieddelen = []
     seen = set()
@@ -450,7 +455,7 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
         if lieddeel_name not in seen:
             unique_lieddelen.append(lieddeel_name)
             seen.add(lieddeel_name)
-    
+
     # Escape LaTeX special characters in strings
     def escape_latex(text):
         """Escape special LaTeX characters"""
@@ -472,7 +477,7 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
         for old, new in replacements.items():
             text = text.replace(old, new)
         return text
-    
+
     # Write the complete file
     with open(tex_file, 'w', encoding='utf-8') as f:
         # Document header
@@ -483,7 +488,7 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
         f.write(r'\usepackage[margin=2cm]{geometry}' + '\n')
         f.write(r'\pagestyle{empty}' + '\n')
         f.write('\n')
-        
+
         f.write(r'\usepackage{fancyhdr}  % for footer, header' + '\n')
         f.write(r'\pagestyle{fancy}' + '\n')
         f.write(r'\fancyhf{} % clear all header and footer fields' + '\n')
@@ -537,7 +542,7 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
         f.write('\n')
         f.write(r'\vspace{0.5cm}' + '\n')
         f.write('\n')
-        
+
         # Lied delen section
         f.write(r'\subsection*{Lied delen}' + '\n')
         f.write('\n')
@@ -545,7 +550,7 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
         f.write(r'\hline' + '\n')
         f.write(r'\textbf{Naam} & \textbf{\#Maten} & \textbf{Akkoorden (\#mt)} \\' + '\n')
         f.write(r'\hline' + '\n')
-        
+
         for lieddeel_name in unique_lieddelen:
             # Get measure count (from first occurrence)
             measures = None
@@ -553,24 +558,24 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
                 if s == lieddeel_name:
                     measures = m
                     break
-            
+
             # Get chord info
             chord_string, chord_count, is_valid = chords_per_lieddeel.get(
                 lieddeel_name, ("-", 0, True)
             )
-            
+
             measure_str = str(measures) if measures is not None else "?"
-            
+
             # Check if chord count matches measure count
             if chord_string != "-" and measures is not None and chord_count != measures:
                 chord_string += " [INVALID COUNT]"
-            
+
             f.write(f'{escape_latex(lieddeel_name)} & {measure_str} & {escape_latex(chord_string)} \\\\\n')
-        
+
         f.write(r'\hline' + '\n')
         f.write(r'\end{tabular}' + '\n')
         f.write('\n')
-        
+
         # Compositie section
         f.write(r'\subsection*{Compositie}' + '\n')
         f.write('\n')
@@ -578,7 +583,7 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
         f.write('\n')
         f.write(r'\vspace{0.3cm}' + '\n')
         f.write('\n')
-        
+
         # Write table
         f.write(r'\renewcommand{\arraystretch}{1.3}  % some space between rows' + '\n')
         f.write('\n')
@@ -612,7 +617,7 @@ def write_labeltrack_file(labeltrack_file, all_labels):
     Args:
         labeltrack_file: Path to .txt file
         all_labels: List of tuples (label_text, time_in_seconds) containing both
-                   lieddeel markers and LBLTRCK markers
+                lieddeel markers and LBLTRCK markers
     """
     if labeltrack_file is None or all_labels is None:
         print("⚠️ No labeltrack file created because of empty parameter value(s).")
@@ -679,14 +684,14 @@ def update_liedtekst_tex_file(liedtitel, tempo, maatsoort, song_folder=None):
         rf'\g<1>{maatsoort}\g<2>',
         content
     )
-    
+
     # Replace tempo
     new_content = re.sub(
         r'(\\newcommand\{\\tempo\}\{)[^}]*(\})',
         rf'\g<1>{tempo}\g<2>',
         new_content
     )
-    
+
     # Write file
     try:
         with open(tex_file, 'w', encoding='utf-8') as f:
@@ -694,7 +699,7 @@ def update_liedtekst_tex_file(liedtitel, tempo, maatsoort, song_folder=None):
     except Exception as e:
         print(f"❌ Error writing file: {e}")
         return False
-    
+
     print(f"✅ Successfully updated {tex_file}: tempo={tempo}, maatsoort={maatsoort}")
     return True
 
@@ -705,14 +710,14 @@ def get_duration(measurecount_and_starttime_per_lieddeel, tempo, timesig, beats_
     
     Returns None when data is unknown.
     """
-    
+
     beats_before = 0
     if beats_up_front is not None and isinstance(beats_up_front, (int, float)):
         beats_before = beats_up_front
 
     if measurecount_and_starttime_per_lieddeel is None or tempo is None or tempo == 0 or timesig is None:
         return None
-    
+
     # determine the duration of a single measure
     beats_per_second = tempo / 60
     beat_duration = 1 / beats_per_second
@@ -747,7 +752,7 @@ def get_pickup_beats(nwctxt_filepath):
     """
     with open(nwctxt_filepath, 'r', encoding='utf-8') as f:
         lines = f.readlines()
-    
+
     # Check condition 1: StartingBar:0
     has_starting_bar_zero = False
     for line in lines:
@@ -755,10 +760,10 @@ def get_pickup_beats(nwctxt_filepath):
             if '|StartingBar:0' in line:
                 has_starting_bar_zero = True
             break
-    
+
     if not has_starting_bar_zero:
         return 0.0
-    
+
     # Find time signature to determine beat unit
     timesig_denominator = 4  # default
     for line in lines:
@@ -769,11 +774,11 @@ def get_pickup_beats(nwctxt_filepath):
                 break
             except (IndexError, ValueError):
                 pass
-    
+
     # Check condition 2: First Rest before first Bar
     first_rest_dur = None
     found_bar_first = False
-    
+
     for line in lines:
         if line.startswith('|Bar'):
             found_bar_first = True
@@ -786,10 +791,10 @@ def get_pickup_beats(nwctxt_filepath):
                 break
             except IndexError:
                 pass
-    
+
     if found_bar_first or first_rest_dur is None:
         return 0.0
-    
+
     # Calculate beats from duration
     # Map duration names to whole note fractions
     duration_map = {
@@ -801,26 +806,26 @@ def get_pickup_beats(nwctxt_filepath):
         '32nd': 0.03125,
         '64th': 0.015625
     }
-    
+
     # Parse duration (might include modifiers like ,Dotted)
     dur_base = first_rest_dur.split(',')[0]
     dur_base = dur_base.replace("\n","", -1)  # remove any lineendings
     note_value = duration_map.get(dur_base, 0.0)
-    
+
     # Handle dotted notes
     if ',Dotted' in first_rest_dur or ',Dot' in first_rest_dur:
         note_value *= 1.5
     elif ',DblDotted' in first_rest_dur:
         note_value *= 1.75
-    
+
     # Handle triplets
     if ',Triplet' in first_rest_dur:
         note_value *= (2.0 / 3.0)
-    
+
     # Calculate beats based on time signature
     beat_unit_value = 1.0 / timesig_denominator
     beats = note_value / beat_unit_value
-    
+
     return beats
 
 
@@ -983,7 +988,7 @@ def main():
 
     # Process all lieddelen
     (file_list, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, all_labels,
-     tempo, timesig, pickup_beats) = process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder)
+    tempo, timesig, pickup_beats) = process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder)
 
     # Concatenate files
     output_nwctxt = paths.build_folder / f"{songtitle}.nwctxt"
