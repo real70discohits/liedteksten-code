@@ -186,21 +186,34 @@ def _process_file(target_path: Path, template_staff_names: list[str],
         - final_order:   List[str] – staff names after all changes.
     """
     nwc = NwcFile(target_path)
-    existing_names = {s.name for s in nwc.staffs}
 
-    # 1. Add missing staffs.
+    # Use lowercase keys for all name lookups so matching is case-insensitive.
+    # (A song will never have both "BaseDrum" and "Basedrum" as distinct staffs.)
+    def _lower(name):
+        return name.lower() if name is not None else None
+
+    existing_lower = {_lower(s.name) for s in nwc.staffs}
+
+    # 1. Add missing staffs (case-insensitive check).
     added_names: list[str] = []
     for name in template_staff_names:
-        if name not in existing_names:
+        if _lower(name) not in existing_lower:
             template_staff = template_nwc.get_staff_by_name(name)
             new_staff = _extract_first_real_measures(template_staff)
             nwc.staffs.append(new_staff)
             added_names.append(name)
+            existing_lower.add(_lower(name))  # keep set in sync
 
     # 2. Reorder: template staffs first (in template order), then any extras.
-    template_order = {name: i for i, name in enumerate(template_staff_names)}
+    # Build a case-insensitive lookup for sort keys.
+    template_order = {_lower(name): i for i, name in enumerate(template_staff_names)}
+
+    # Staffs present in this file but absent from the template get sorted to the
+    # end with an undefined relative order.  Collect them so we can warn later.
+    extra_names = [s.name for s in nwc.staffs if _lower(s.name) not in template_order]
+
     original_order = [s.name for s in nwc.staffs]
-    nwc.staffs.sort(key=lambda s: template_order.get(s.name, len(template_staff_names)))
+    nwc.staffs.sort(key=lambda s: template_order.get(_lower(s.name), len(template_staff_names)))
     final_order = [s.name for s in nwc.staffs]
     was_reordered = original_order != final_order
 
@@ -209,7 +222,7 @@ def _process_file(target_path: Path, template_staff_names: list[str],
     if modified:
         nwc.write_to_file(target_path)
 
-    return modified, added_names, was_reordered, final_order
+    return modified, added_names, was_reordered, final_order, extra_names
 
 
 # ---------------------------------------------------------------------------
@@ -301,7 +314,7 @@ def main():
     for section_path in unique_section_paths:
         print(f"  {section_path.name}")
 
-        modified, added_names, was_reordered, final_order = _process_file(
+        modified, added_names, was_reordered, final_order, extra_names = _process_file(
             section_path, template_staff_names, template_nwc
         )
 
@@ -311,6 +324,12 @@ def main():
 
         if was_reordered:
             print(f"    ~ Reordered: {', '.join(final_order)}")
+
+        if extra_names:
+            print(f"    ⚠️  Staffs not in template, placed at end: "
+                  f"{', '.join(str(n) for n in extra_names)}")
+            if template_arg is None:
+                print(f"       Tip: run with --template to define the canonical staff order.")
 
         if not modified:
             print(f"    ✓ No changes needed")
