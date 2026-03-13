@@ -30,7 +30,7 @@ from pathlib import Path
 import re
 from pathconfig import load_and_resolve_paths, validate_file_exists, validate_folder_exists, load_jsonc
 from nwc_analyze import write_analysis_to_file
-from nwc_utils import parse_nwctxt, NwcFile
+from nwc_utils import parse_nwctxt, NwcFile, parse_duration
 from constants import (NWC_PREFIX_ADDSTAFF, NWC_PREFIX_STAFF_PROPERTIES,
                         NWC_PREFIX_STAFF_INSTRUMENT, NWC_PREFIX_CLEF,
                         NWC_PREFIX_TIMESIG, NWC_PREFIX_TEMPO, NWC_PREFIX_BAR,
@@ -309,65 +309,6 @@ def extract_tempo_and_timesig(filepath):
 
     return tempo, timesig
 
-
-def parse_duration(line):
-    """Parse NWC duration from Note or Rest line and convert to quarter notes.
-
-    Args:
-        line: Line containing |Dur: specification
-
-    Returns:
-        float: Duration in quarter notes, or 0.0 if not parseable
-    """
-    if '|Dur:' not in line:
-        return 0.0
-
-    try:
-        # Extract the Dur value
-        dur_start = line.find('|Dur:') + 5
-        dur_end = line.find('|', dur_start)
-        if dur_end == -1:
-            dur_value = line[dur_start:].strip()
-        else:
-            dur_value = line[dur_start:dur_end].strip()
-
-        # Base durations in quarter notes
-        duration_map = {
-            'Whole': 4.0,
-            'Half': 2.0,
-            '4th': 1.0,
-            '8th': 0.5,
-            '16th': 0.25,
-            '32nd': 0.125,
-        }
-
-        # Split on comma to separate duration from modifiers like Staccato, Tie, etc.
-        dur_base = dur_value.split(',')[0].strip()
-
-        # Check for dotted variations
-        is_dotted = ',Dotted' in line
-        is_dbl_dotted = ',DblDotted' in line
-
-        # Get base duration
-        base_duration = 0.0
-        for key, value in duration_map.items():
-            if dur_base == key:
-                base_duration = value
-                break
-
-        if base_duration == 0.0:
-            return 0.0
-
-        # Apply modifiers
-        if is_dbl_dotted:
-            return base_duration * 1.75  # 1 + 0.5 + 0.25
-        elif is_dotted:
-            return base_duration * 1.5
-
-        return base_duration
-
-    except (IndexError, ValueError):
-        return 0.0
 
 
 def extract_lbltrck_markers(filepath):
@@ -730,6 +671,8 @@ def get_duration(measurecount_and_starttime_per_lieddeel, tempo, timesig, beats_
     totalduration = 0
     for entry in measurecount_and_starttime_per_lieddeel:
         measure_count = entry[1]
+        if measure_count is None:
+            return None
         lieddeel_duration = (measure_count * measure_duration)
         totalduration += lieddeel_duration
     

@@ -17,6 +17,14 @@ Dit is een Python-gebaseerde toolkit voor het beheren en genereren van bestanden
       - [Voorbeelden](#voorbeelden)
       - [Gegenereerde Bestanden](#gegenereerde-bestanden)
       - [Vereisten](#vereisten)
+    - [propagate-staffs.py](#propagate-staffspy)
+      - [Syntax](#syntax-ps)
+      - [Positionele Parameters](#positionele-parameters-ps)
+      - [Wat het script doet](#wat-het-script-doet)
+      - [Voorbeelden](#voorbeelden-ps)
+      - [Template-locatie](#template-locatie)
+      - [Typische workflow](#typische-workflow)
+      - [Vereisten](#vereisten-ps)
     - [lt-generate.py](#lt-generatepy)
       - [Syntax](#syntax-1)
       - [Positionele Parameters](#positionele-parameters-1)
@@ -64,6 +72,7 @@ Dit is een Python-gebaseerde toolkit voor het beheren en genereren van bestanden
 | Script | Doel |
 |--------|------|
 | **nwc-concat.py** | Voegt NoteWorthy Composer (NWC) sectiebestanden samen tot één compleet bestand en genereert structuurinformatie, analyse en label tracks voor Audacity/Tenacity |
+| **propagate-staffs.py** | Propageert staffs vanuit een template naar alle sectiebestanden van een lied: voegt ontbrekende staffs toe en zet alle staffs in de juiste volgorde |
 | **lt-generate.py** | Genereert PDF's van liedteksten in verschillende varianten (met/zonder akkoorden, maatnummers, tabs) vanuit LaTeX bronbestanden |
 | **nwc-convert.py** | Converteert NWC bestanden naar audioformaten (NWCTXT → MIDI → WAV → FLAC) voor demo's |
 | **nwc_analyze.py** | Analyseert NWC bestanden en koppelt liedteksten aan maatnummers |
@@ -181,6 +190,75 @@ Dit script genereert de volgende bestanden:
 - Ritme staff in NWC bestanden (voor maataantallen)
 - Zang staff in NWC bestanden (voor liedteksten mapping naar maatnummers)
 - Volgorde van staffs is vrij, maar moet gelijk zijn in alle sectiebestanden.
+
+---
+
+### propagate-staffs.py
+
+Propageert staffs vanuit een template naar alle .nwctxt sectiebestanden van een lied.
+Hiermee zorg je dat alle sectiebestanden dezelfde staffs bevatten en in dezelfde volgorde staan, als voorbereiding op `nwc-concat.py`.
+
+#### Syntax
+
+```bash
+python propagate-staffs.py <liedtitel> [template]
+```
+
+#### Positionele Parameters
+
+| Parameter | Beschrijving |
+|-----------|--------------|
+| `liedtitel` | Titel van het lied (verplicht). Moet overeenkomen met de mapnaam in de input folder |
+| `template` | Bestandsnaam van het template .nwctxt bestand (optioneel, zonder extensie, hoofdlettergevoelig). Het bestand moet in de input folder staan (de map die de liedmappen bevat). Als weggelaten, wordt de eerste sectie uit volgorde.jsonc als template gebruikt |
+
+#### Wat het script doet
+
+Het script doorloopt alle unieke sectiebestanden die vermeld staan in `<liedtitel> volgorde.jsonc`:
+
+1. **Ontbrekende staffs toevoegen**: Elke staff die wel in het template zit maar niet in het doelbestand, wordt toegevoegd. De header-regels (AddStaff, StaffProperties, StaffInstrument, Clef, TimeSig, Tempo, Dynamic) worden ongewijzigd gekopieerd, gevolgd door de eerste 2 echte maten uit het template. Een "echte" maat heeft een totale duur van meer dan 1 kwartalnoot (lege maten en opmaten worden overgeslagen).
+
+2. **Volgorde corrigeren**: Alle staffs worden gesorteerd conform de template-volgorde. Staffs die niet in het template voorkomen worden achteraan geplaatst.
+
+3. **Bass-check**: Na verwerking wordt gecontroleerd of de eerste staff de naam "Bass" heeft. Zo niet, wordt een waarschuwing getoond.
+
+Staffs worden nooit verwijderd. Als een sectiebestand al alle staffs in de juiste volgorde heeft, wordt het niet aangeraakt.
+
+#### Voorbeelden
+
+```bash
+# Gebruik de eerste sectie (meestal 'intro') als template
+python propagate-staffs.py "Vader Jacob"
+
+# Gebruik een expliciet template bestand uit de input folder
+python propagate-staffs.py "Vader Jacob" "Mijn Template"
+
+# Extensie mag ook worden opgegeven
+python propagate-staffs.py "Vader Jacob" "Mijn Template.nwctxt"
+```
+
+#### Template-locatie
+
+Template bestanden staan in de input folder (de parent van de git repository, dus dezelfde map als de liedmappen). Zo kun je één template hergebruiken voor meerdere liedjes.
+
+#### Typische workflow
+
+```bash
+# 1. Maak nieuwe sectiebestanden aan in NoteWorthy Composer
+#    Bewaar in: <input_folder>/Vader Jacob/nwc/
+
+# 2. Zorg dat alle sectiebestanden dezelfde staffs hebben
+python propagate-staffs.py "Vader Jacob"
+
+# 3. Pas zonodig de muziekinhoud aan per sectie in NoteWorthy Composer
+
+# 4. Voeg alles samen en genereer structuur
+python nwc-concat.py "Vader Jacob"
+```
+
+#### Vereisten
+
+- `<liedtitel> volgorde.jsonc` in de nwc-subfolder van het lied
+- Template bestand (of het eerste sectiebestand) moet geldig zijn en staffs bevatten
 
 ---
 
@@ -508,6 +586,9 @@ Dit retourneert een dictionary met:
 #    - Vader Jacob vers.nwctxt
 #    - Vader Jacob refrein.nwctxt
 #    Plus: Vader Jacob volgorde.jsonc
+
+# 1b. (Optioneel) Zorg dat alle sectiebestanden dezelfde staffs hebben
+python propagate-staffs.py "Vader Jacob"
 
 # 2. Voeg secties samen en genereer structuur
 python nwc-concat.py "Vader Jacob"

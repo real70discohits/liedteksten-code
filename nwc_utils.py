@@ -209,6 +209,59 @@ class NwcFile:
         return f"NwcFile(path='{self.filepath}', staffs={len(self.staffs)})"
 
 
+def parse_duration(line: str) -> float:
+    """Parse NWC duration from Note or Rest line and convert to quarter notes.
+
+    Args:
+        line: Line containing |Dur: specification
+
+    Returns:
+        float: Duration in quarter notes, or 0.0 if not parseable
+    """
+    if '|Dur:' not in line:
+        return 0.0
+
+    try:
+        dur_start = line.find('|Dur:') + 5
+        dur_end = line.find('|', dur_start)
+        if dur_end == -1:
+            dur_value = line[dur_start:].strip()
+        else:
+            dur_value = line[dur_start:dur_end].strip()
+
+        duration_map = {
+            'Whole': 4.0,
+            'Half': 2.0,
+            '4th': 1.0,
+            '8th': 0.5,
+            '16th': 0.25,
+            '32nd': 0.125,
+        }
+
+        dur_base = dur_value.split(',')[0].strip()
+        is_dotted = ',Dotted' in line
+        is_dbl_dotted = ',DblDotted' in line
+
+        base_duration = 0.0
+        for key, value in duration_map.items():
+            if dur_base == key:
+                base_duration = value
+                break
+
+        if base_duration == 0.0:
+            return 0.0
+
+        if is_dbl_dotted:
+            return base_duration * 1.75
+        elif is_dotted:
+            return base_duration * 1.5
+
+        return base_duration
+
+    except (IndexError, ValueError):
+        return 0.0
+
+
 def parse_nwctxt(filepath: str | Path) -> Tuple[List[str], List[List[str]]]:
     """Parse a .nwctxt file into header and staff sections.
 
