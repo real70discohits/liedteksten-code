@@ -17,37 +17,44 @@ Dit is een Python-gebaseerde toolkit voor het beheren en genereren van bestanden
       - [Voorbeelden](#voorbeelden)
       - [Gegenereerde Bestanden](#gegenereerde-bestanden)
       - [Vereisten](#vereisten)
+    - [init-liedsecties.py](#init-liedsectiespy)
+      - [Syntax {#syntax-il}](#syntax-syntax-il)
+      - [Verplichte Parameters {#verplichte-parameters-il}](#verplichte-parameters-verplichte-parameters-il)
+      - [Optionele Parameters {#optionele-parameters-il}](#optionele-parameters-optionele-parameters-il)
+      - [Voorbeelden {#voorbeelden-il}](#voorbeelden-voorbeelden-il)
+      - [Template-locatie {#template-locatie-il}](#template-locatie-template-locatie-il)
+      - [Vereisten {#vereisten-il}](#vereisten-vereisten-il)
     - [propagate-staffs.py](#propagate-staffspy)
-      - [Syntax](#syntax-ps)
-      - [Positionele Parameters](#positionele-parameters-ps)
-      - [Wat het script doet](#wat-het-script-doet)
-      - [Voorbeelden](#voorbeelden-ps)
-      - [Template-locatie](#template-locatie)
-      - [Typische workflow](#typische-workflow)
-      - [Vereisten](#vereisten-ps)
-    - [lt-generate.py](#lt-generatepy)
       - [Syntax](#syntax-1)
       - [Positionele Parameters](#positionele-parameters-1)
+      - [Wat het script doet](#wat-het-script-doet)
+      - [Voorbeelden](#voorbeelden-1)
+      - [Template-locatie](#template-locatie)
+      - [Typische workflow](#typische-workflow)
+      - [Vereisten](#vereisten-1)
+    - [lt-generate.py](#lt-generatepy)
+      - [Syntax](#syntax-2)
+      - [Positionele Parameters](#positionele-parameters-2)
       - [Optionele Parameters](#optionele-parameters-1)
       - [Varianten](#varianten)
-      - [Voorbeelden](#voorbeelden-1)
+      - [Voorbeelden](#voorbeelden-2)
       - [Transpositie](#transpositie)
       - [Gegenereerde Bestanden](#gegenereerde-bestanden-1)
       - [Configuratie Systeem](#configuratie-systeem)
-      - [Vereisten](#vereisten-1)
-    - [nwc-convert.py](#nwc-convertpy)
-      - [Syntax](#syntax-2)
-      - [Positionele Parameters](#positionele-parameters-2)
-      - [Optionele Parameters](#optionele-parameters-2)
-      - [Voorbeelden](#voorbeelden-2)
-      - [Conversie Pipeline](#conversie-pipeline)
-      - [Gegenereerde Bestanden](#gegenereerde-bestanden-2)
       - [Vereisten](#vereisten-2)
-      - [Soundfonts](#soundfonts)
-    - [nwc\_analyze.py](#nwc_analyzepy)
+    - [nwc-convert.py](#nwc-convertpy)
       - [Syntax](#syntax-3)
       - [Positionele Parameters](#positionele-parameters-3)
+      - [Optionele Parameters](#optionele-parameters-2)
       - [Voorbeelden](#voorbeelden-3)
+      - [Conversie Pipeline](#conversie-pipeline)
+      - [Gegenereerde Bestanden](#gegenereerde-bestanden-2)
+      - [Vereisten](#vereisten-3)
+      - [Soundfonts](#soundfonts)
+    - [nwc\_analyze.py](#nwc_analyzepy)
+      - [Syntax](#syntax-4)
+      - [Positionele Parameters](#positionele-parameters-4)
+      - [Voorbeelden](#voorbeelden-4)
       - [Gegenereerd Bestand](#gegenereerd-bestand)
       - [Maatsoort en Tempo](#maatsoort-en-tempo)
       - [Speciale Concepten](#speciale-concepten)
@@ -71,19 +78,21 @@ Dit is een Python-gebaseerde toolkit voor het beheren en genereren van bestanden
 
 | Script | Doel |
 |--------|------|
-| **nwc-concat.py** | Voegt NoteWorthy Composer (NWC) sectiebestanden samen tot één compleet bestand en genereert structuurinformatie, analyse en label tracks voor Audacity/Tenacity |
+| **init-liedsecties.py** | Initialiseert .nwctxt sectiebestanden voor een lied door ze te kopiëren vanuit een template; bestaande bestanden worden overgeslagen |
 | **propagate-staffs.py** | Propageert staffs vanuit een template naar alle sectiebestanden van een lied: voegt ontbrekende staffs toe en zet alle staffs in de juiste volgorde |
+| **nwc-concat.py** | Voegt NoteWorthy Composer (NWC) sectiebestanden samen tot één compleet bestand en genereert structuurinformatie, analyse en label tracks voor Audacity/Tenacity |
+| **nwc_analyze.py** | Analyseert NWC bestanden en koppelt liedteksten aan maatnummers (onderdeel van nwc-concat) |
 | **lt-generate.py** | Genereert PDF's van liedteksten in verschillende varianten (met/zonder akkoorden, maatnummers, tabs) vanuit LaTeX bronbestanden |
 | **nwc-convert.py** | Converteert NWC bestanden naar audioformaten (NWCTXT → MIDI → WAV → FLAC) voor demo's |
-| **nwc_analyze.py** | Analyseert NWC bestanden en koppelt liedteksten aan maatnummers |
 
 ## Workflow
 
 Het complete proces voor het maken/updaten van een lied (zie ook `project/schema.pu` voor visuele weergave):
 
-1. **Muzieknotatie maken** (Handmatig)
-   - Gebruik NoteWorthy Composer GUI om .nwctxt bestanden te maken per liedsectie (intro, vers, refrein, etc.)
+1. **Muzieknotatie maken** (Handmatig / init-liedsecties.py)
+   - Maak het intro-bestand handmatig in NoteWorthy Composer GUI als startpunt
    - Bewaar in git repository: `<input_folder>/<Liedtitel>/nwc/`
+   - Gebruik `init-liedsecties.py` om de overige sectiebestanden automatisch aan te maken als kopie van het intro-bestand
    - Maak `volgorde.jsonc` om de volgorde van secties te definiëren
 
 2. **nwc-concat.py uitvoeren**
@@ -146,7 +155,7 @@ python nwc-concat.py <liedtitel> [opties]
 
 | Parameter | Waarden | Standaard | Beschrijving |
 |-----------|---------|-----------|--------------|
-| `--keep-tempi` | (vlag) | Uit | Behoud tempo-indicaties in alle lieddelen. Standaard worden tempo-markeringen uit lieddelen na het eerste verwijderd, omdat alleen het eerste liedsectie het tempo bepaalt |
+| `--keep-tempi` | (vlag) | Uit | Behoud tempo-indicaties in alle liedsecties. Standaard worden tempo-markeringen uit liedsecties na het eerste verwijderd, omdat alleen het eerste liedsectie het tempo bepaalt |
 
 #### Voorbeelden
 
@@ -190,6 +199,73 @@ Dit script genereert de volgende bestanden:
 - Ritme staff in NWC bestanden (voor maataantallen)
 - Zang staff in NWC bestanden (voor liedteksten mapping naar maatnummers)
 - Volgorde van staffs is vrij, maar moet gelijk zijn in alle sectiebestanden.
+
+---
+
+### init-liedsecties.py
+
+Initialiseert `.nwctxt` sectiebestanden voor een lied door ze te kopiëren vanuit een template.
+Voor elke opgegeven sectienaam wordt een bestand `<liedtitel> <sectie>.nwctxt` aangemaakt in de
+nwc-submap van het lied. Bestaande bestanden worden nooit overschreven.
+
+Dit script is het startpunt voor een nieuw lied: maak eerst het intro-bestand handmatig in
+NoteWorthy Composer, en gebruik dit script vervolgens om alle overige sectiebestanden klaar te
+zetten. Daarna kan `propagate-staffs.py` worden gebruikt om staffs te synchroniseren.
+
+#### Syntax {#syntax-il}
+
+```bash
+python init-liedsecties.py <liedtitel> --sectie-namen <sectie> [<sectie> ...] [--template <bestandsnaam>]
+```
+
+#### Verplichte Parameters {#verplichte-parameters-il}
+
+| Parameter | Beschrijving |
+|-----------|--------------|
+| `liedtitel` | Titel van het lied (verplicht). Moet overeenkomen met de mapnaam in de input folder |
+| `--sectie-namen` | Eén of meer sectienamen om aan te maken. Meerdere woorden per naam zijn mogelijk met aanhalingstekens |
+
+#### Optionele Parameters {#optionele-parameters-il}
+
+| Parameter | Beschrijving |
+|-----------|--------------|
+| `--template` | Bestandsnaam van het template .nwctxt bestand (zonder extensie). Het bestand moet in de input folder staan. Als niet opgegeven, wordt `<liedtitel> intro.nwctxt` uit de nwc-submap gebruikt |
+
+#### Voorbeelden {#voorbeelden-il}
+
+```bash
+# Maak vers- en refreinbestand aan met intro als standaard template
+python init-liedsecties.py "Vader Jacob" --sectie-namen vers refrein
+
+# Sectienaam met meerdere woorden
+python init-liedsecties.py "Vader Jacob" --sectie-namen vers refrein "overgang couplet refrein"
+
+# Maak alle bestanden aan inclusief intro, met expliciet template uit de input folder
+python init-liedsecties.py "Vader Jacob" --sectie-namen intro vers refrein --template "Mijn Template"
+
+# Tweede run: reeds bestaande bestanden worden overgeslagen
+python init-liedsecties.py "Vader Jacob" --sectie-namen vers refrein brug
+# → "vers" en "refrein" worden overgeslagen als ze al bestaan; "brug" wordt aangemaakt
+```
+
+#### Template-locatie {#template-locatie-il}
+
+Er zijn twee manieren om het template te bepalen:
+
+1. **Expliciet** (`--template "Bestandsnaam"`): het template wordt gezocht in de input folder
+   (de map die alle liedmappen bevat). Zo kan één template voor meerdere liedjes worden hergebruikt.
+
+2. **Impliciet** (geen `--template`): het script zoekt naar `<liedtitel> intro.nwctxt` in de
+   nwc-submap van het lied. Als dit bestand niet bestaat, geeft het script een foutmelding.
+
+**Let op**: als geen `--template` is opgegeven, mag 'intro' niet in `--sectie-namen` staan.
+Het intro-bestand kan niet tegelijk als template en als nieuw bestand fungeren.
+
+#### Vereisten {#vereisten-il}
+
+- De liedmap `<input_folder>/<liedtitel>/` moet bestaan
+- Bij gebruik van de standaard template: `<liedtitel> intro.nwctxt` in de nwc-submap
+- Bij expliciet template: het opgegeven bestand in de input folder
 
 ---
 
@@ -580,14 +656,18 @@ Dit retourneert een dictionary met:
 ### Nieuw Lied Toevoegen
 
 ```bash
-# 1. Maak NWC bestanden in NoteWorthy Composer GUI
+# 1. Maak het intro-bestand in NoteWorthy Composer GUI
 #    Sla op in: <input_folder>/Vader Jacob/nwc/
-#    - Vader Jacob intro.nwctxt
-#    - Vader Jacob vers.nwctxt
-#    - Vader Jacob refrein.nwctxt
+#    - Vader Jacob intro.nwctxt  (handmatig aanmaken als startpunt)
 #    Plus: Vader Jacob volgorde.jsonc
 
-# 1b. (Optioneel) Zorg dat alle sectiebestanden dezelfde staffs hebben
+# 1b. Maak de overige sectiebestanden aan als kopie van het intro-bestand
+python init-liedsecties.py "Vader Jacob" --sectie-namen vers refrein
+#    Dit maakt aan:
+#    - Vader Jacob vers.nwctxt
+#    - Vader Jacob refrein.nwctxt
+
+# 1c. (Optioneel) Zorg dat alle sectiebestanden dezelfde staffs hebben
 python propagate-staffs.py "Vader Jacob"
 
 # 2. Voeg secties samen en genereer structuur

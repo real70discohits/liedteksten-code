@@ -9,7 +9,7 @@ This is a Python-based toolkit for managing and generating files related to
 pop songs such as lyrics, lyrics with guitar tabs and chords, but also
 helper files that map lyrics to measures and structure files that show lied
 statistics and structure or 'composition' in terms of order of sections
-('lieddelen') and their inner structure of chords and measures.
+('lieddelen', 'liedsecties') and their inner structure of chords and measures.
 
 Per song ('lied') the system has 2 files as input, which it processes to generate
 derived files. The single-source-of-truth is a NoteWorthy Composer (.nwctxt) file
@@ -42,10 +42,10 @@ it's understandable how happy I am with this automation.
 
 The typical workflow for creating/updating a song (visualized in `project/schema.pu`):
 
-1. **Create music notation** (Manual)
-   - Use NoteWorthy Composer GUI to create individual .nwctxt files for each
-   song section (intro, verse, chorus, etc.)
+1. **Create music notation** (Manual + init-liedsecties.py)
+   - Use NoteWorthy Composer GUI to create the intro .nwctxt file as a starting point
    - Store in git repository: `<input_folder>/<Song Title>/nwc/`
+   - Run `init-liedsecties.py` to create remaining section files as copies of the intro
    - Create `volgorde.jsonc` to define section sequence
 
 2. **Run nwc-concat.py**
@@ -155,6 +155,22 @@ python lt-generate.py "song" --no-cleanup
 
 # Custom tab orientation
 python lt-generate.py "song" --tab-orientation right
+```
+
+### Initialize Section Files
+
+```bash
+# Create section files as copies of the intro (default template)
+python init-liedsecties.py "Song Title" --sectie-namen vers refrein
+
+# Multi-word section names use quotes
+python init-liedsecties.py "Song Title" --sectie-namen vers refrein "overgang couplet refrein"
+
+# Create all sections including intro, with explicit template from input folder
+python init-liedsecties.py "Song Title" --sectie-namen intro vers refrein --template "My Template"
+
+# Propagate staffs from template to all existing section files
+python propagate-staffs.py "Song Title"
 ```
 
 ### Process NWC Files
