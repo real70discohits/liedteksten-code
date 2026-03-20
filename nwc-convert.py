@@ -345,7 +345,7 @@ Examples:
         # 3. Generate output paths with staff name
         midi_path = song_output_dir / f"{song_title} {staff.name}.mid"
         wav_path = song_output_dir / f"{song_title} {staff.name}.wav"
-        flac_path = song_output_dir / f"{song_title} {staff.name}.flac"
+        flac_path = song_output_dir / f"{song_title} {staff.name}.ogg"
 
         # 4. Run conversion pipeline (3 steps)
         # STEP 1: NWC → MIDI
@@ -373,7 +373,9 @@ Examples:
             sys.exit(1)
 
         # STEP 3: WAV → FLAC
-        cmd3 = f'ffmpeg -y -i "{wav_path}" "{flac_path}"'
+        # -y: overwrite outputfiles without asking; -ac 1=mono (2=sterio); -ar = samplerate
+        # cmd3 = f'ffmpeg -y -i "{wav_path}" "{flac_path}"'
+        cmd3 = f'ffmpeg -y -i "{wav_path}" -ac 1 -ar 48000 -q:a 10 "{flac_path}"'
         if not run_conversion_step(
             3,
             f"Converting {staff.name} WAV to FLAC",
