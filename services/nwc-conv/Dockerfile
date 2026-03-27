@@ -64,8 +64,18 @@ RUN wine "/tmp/nwcupd_from_v2.1_to_2.75a.exe" /S || \
 #    /wineprefix/drive_c/Program Files/Noteworthy Software/NoteWorthy Composer 2/
 #    Merk op dat 'Worthy' in het 1e geval hoofd- en het 2e geval kleine letter is.
 # We laten ze in de image staan; later kopiëren we ze naar de runtime‑stage.
+
+
 # Er staan ook bestanden (plugins) in:
 #    /wineprefix/drive_c/ProgramData/Noteworthy Software/nwc2/UserPlugins    
+# Ik hernoem eerst om de spatie weg te halen:
+# RUN mv "/wineprefix/drive_c/ProgramData/Noteworthy Software/" "/wineprefix/drive_c/ProgramData/Noteworthy_Software/"
+
+# Nu de plugins (user objects) in programdata plaatsen
+ARG target="/wineprefix/drive_c/ProgramData/Noteworthy Software/nwc2/UserPlugins/"
+COPY installers/DrumStaff.fso.nwcuser.lua ${target}
+COPY installers/DrumStaff_AUDIO.fso.nwcuser.lua ${target}
+
 
 # -----------------------------------------------------------------
 # 1d – Python dependencies (FastAPI, uvicorn, requests, etc.)
