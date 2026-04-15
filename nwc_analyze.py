@@ -308,6 +308,8 @@ def analyze_complete_song(file_path, tempo=None, timesig=None):
 
             if tempo is None:
                 for line in bass_lines:
+                    # todo: the below logic only takes the first encountered tempo and takes that for the whole song.
+                    # this must be changed: find all distinct tempi and count the nr of measures per tempo: only then calculate duration.
                     if line.startswith('|Tempo|') and 'Tempo:' in line:
                         try:
                             tempo_part = line.split('Tempo:')[1]
