@@ -39,8 +39,6 @@ def find_song_number(nwctxt_path):
     return numbers[last_number_index] if last_number_index >= 0 else None
 
 
-
-
 def parse_lyric_text(lyric_line):
     """Parse Lyric1 text and split into syllables.
 
@@ -86,30 +84,73 @@ def parse_lyric_text(lyric_line):
     return syllables
 
 
-def count_bars_in_staff(staff_content):
-    """Count the number of |Bar markers in a staff."""
-    return staff_content.count(NWC_PREFIX_BAR)    # to do: if song starts with just a single note, don't count the first measure.
+def count_bare_bars_in_staff(staff_content):
+    """Count the number of |Bar markers in a staff, simple as that: no intelligent counting."""
+    return staff_content.count(NWC_PREFIX_BAR)
 
 
 def detect_begintel(first_staff):
     """Detect if there's a begintel (pickup measure).
 
-    A begintel is typically a single note before the first bar.
+    A begintel is typically a single quarternote before the first bar.
     """
-    # Look for a Note before the first Bar
-    before_first_bar = first_staff.split(NWC_PREFIX_BAR)[0]
-
-    # Check if there's a Note element
-    if NWC_PREFIX_REST in before_first_bar:
+    result = count_kwart_tellen_in_first_measure(first_staff)
+    if result == 1.0:
         return True
     return False
+
+
+def count_kwart_tellen_in_first_measure(first_staff):
+    '''Counts duration in first measure: result is expressed as N (decimal) quarter notes '''
+
+    # Look for a Note before the first Bar
+    first_measure = first_staff.split(NWC_PREFIX_BAR)[0]
+    result = count_kwart_tellen_duration_of_staff_contents_part(first_measure)
+    return result
+
+
+def count_kwart_tellen_duration_of_staff_contents_part(contents):
+
+    # Possible data: notes or rests. Both can have dots or doubledots.
+    # |Note|Dur:32nd|Pos:-1     |Rest|Dur:32nd  |Note|Dur:32nd,Dotted|Pos:-1   |Note|Dur:32nd,DblDotted|Pos:-1 
+    # |Note|Dur:16th|Pos:-1     |Rest|Dur:16th  |Note|Dur:16th,Dotted|Pos:-1   |Note|Dur:16th,DblDotted|Pos:-1 
+    # |Note|Dur:8th|Pos:-1      |Rest|Dur:8th   |Note|Dur:8th,Dotted|Pos:-1    |Note|Dur:8th,DblDotted|Pos:-1 
+    # |Note|Dur:4th|Pos:-1      |Rest|Dur:8th   |Note|Dur:4th,Dotted|Pos:-1    |Note|Dur:4th,DblDotted|Pos:-1 
+    # |Note|Dur:Half|Pos:-1     |Rest|Dur:4th   |Note|Dur:Half,Dotted|Pos:-1   |Note|Dur:Half,DblDotted|Pos:-1 
+    # |Note|Dur:Whole|Pos:-1    |Rest|Dur:Whole |Note|Dur:Whole,Dotted|Pos:-1  |Note|Dur:Whole,DblDotted|Pos:-1 
+
+    duration_in_32 = 0
+    
+    lines = contents.split('\n')
+    for line in lines:
+        if line.startswith(NWC_PREFIX_NOTE) or line.startswith(NWC_PREFIX_REST):
+            if 'Dur:32' in line:
+                duration_in_32 += 1
+            elif 'Dur:16' in line:
+                duration_in_32 += 2
+            elif 'Dur:8' in line:
+                duration_in_32 += 4
+            elif 'Dur:4' in line:
+                duration_in_32 += 8
+            elif 'Dur:Half' in line:
+                duration_in_32 += 16
+            elif 'Dur:Whole' in line:
+                duration_in_32 += 32
+
+            if ',Dotted' in line:
+                duration_in_32 += duration_in_32 / 2
+            elif 'DblDotted' in line:
+                duration_in_32 += duration_in_32 / 2 + duration_in_32 / 4
+    
+    result_as_quarternotes =  duration_in_32 / 8
+    return result_as_quarternotes
 
 
 def count_vooraf_measures(staff_content):
     """Count measures before the 'liedstart' marker.
 
-    Returns the number of measures before the song actually starts,
-    excluding the begintel (first measure with single beat).
+    Returns the number of measures before the song actually starts, by detecting 
+    the 'liedstart' label, and excluding the begintel (first measure with single beat).
     """
     # Find the position of "liedstart" marker
     lines = staff_content.split('\n')
@@ -137,7 +178,7 @@ def count_vooraf_measures(staff_content):
     return bars_before
 
 
-def multiple_notes_count_as_one(element):
+def multiple_notes_count_as_one_syllable(element):
     """Boolean function: detects slurs and ties, meaning that multiple notes 
     count as one (so only a single note for singing and lyrics).
 
@@ -183,7 +224,7 @@ def map_lyrics_to_measures(staff_content, syllables):
                 measure_map[current_measure] = []
         elif element.startswith(NWC_PREFIX_NOTE) and syllable_index < len(syllables):
             if skip_next_note:
-                if multiple_notes_count_as_one(element):
+                if multiple_notes_count_as_one_syllable(element):
                     skip_next_note = True
                 else:
                     skip_next_note = False
@@ -193,7 +234,7 @@ def map_lyrics_to_measures(staff_content, syllables):
                     measure_map[current_measure] = []
                 measure_map[current_measure].append(syllables[syllable_index])
                 syllable_index += 1
-                if multiple_notes_count_as_one(element):
+                if multiple_notes_count_as_one_syllable(element):
                     skip_next_note = True
         elif element.startswith(NWC_PREFIX_REST):
             # Skip rests - no syllable assignment
@@ -202,11 +243,13 @@ def map_lyrics_to_measures(staff_content, syllables):
     return measure_map
 
 
+    
+
 def analyze_nwctxt(file_path):
     """Analyze a .nwctxt file and return lyrics mapping.
 
-    Note: This is a legacy function that returns raw data without corrections.
-    For complete song analysis with corrected totals, use analyze_complete_song().
+    Note: This is a legacy function that returns raw data without corrections (legacy, but in use!!).
+    For complete song analysis with corrected totals, use analyze_complete_song(), which calls this one.
     """
     # Parse the NWC file
     nwc = NwcFile(file_path)
@@ -224,7 +267,7 @@ def analyze_nwctxt(file_path):
         return None
 
     bass_content = bass_staff.get_content()
-    total_bars = count_bars_in_staff(bass_content)
+    total_bars = count_bare_bars_in_staff(bass_content)
 
     # Detect begintel
     has_begintel = detect_begintel(bass_content)
@@ -235,6 +278,71 @@ def analyze_nwctxt(file_path):
     # Count vooraf measures
     vooraf = count_vooraf_measures(bass_content)
 
+
+    # begin sectie: count meastures per tempo
+    # Pseudo-code:
+    #   find next tempo
+    #   find next different tempo:
+    #       if found: count measures in between
+    #       else: count measures until end.
+    
+    bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
+    if bass_staff:
+        bass_lines = bass_staff.lines
+        lines_total = len(bass_lines)
+
+        line_count = 0
+        bar_count = 0
+        tempo = 0
+        first_tempo = 0
+        tempo_measures_tuples = dict()  # dictionary for easy retrieval 
+
+        for line in bass_lines:
+            
+            line_count += 1
+            if line.startswith(NWC_PREFIX_BAR):
+                bar_count += 1
+            elif line.startswith('|Tempo|') and 'Tempo:' in line:
+                try:
+                    # if there's a previous ('old') tempo, store it with its barcount
+                    old_tempo = tempo
+                    old_bar_count = bar_count
+                    if old_tempo > 0:
+                        if old_tempo not in tempo_measures_tuples:
+                            # if tempo not in tempi: bar_count in tempo_tuples invullen bij old_tempo
+                            tempo_measures_tuples[old_tempo] = old_bar_count
+                        else:
+                            # else: # optellen bij bestaande tempo entry
+                            tempo_measures_tuples[old_tempo] += old_bar_count
+
+                    bar_count = 0
+                    tempo_part = line.split('Tempo:')[1]
+                    tempo_str = tempo_part.split('|')[0]
+                    tempo = int(tempo_str)
+                    if len(tempo_measures_tuples)==0:
+                        first_tempo = tempo
+                except (IndexError, ValueError):
+                    print("ERROR in analyze nwctxt")
+                    pass
+
+            # last line then add latest bar_count to last found tempo
+            if line_count == lines_total:
+                if tempo in tempo_measures_tuples:
+                    tempo_measures_tuples[tempo] += bar_count
+                else:
+                    tempo_measures_tuples[tempo] = bar_count
+                if not has_begintel:
+                    tempo_measures_tuples[first_tempo] += 1
+                if vooraf > 0:
+                    tempo_measures_tuples[first_tempo] -= vooraf
+                    
+    # end sectie: count measures per tempo
+
+    # expected values:
+    # 184: 137 (of 138, als maatvooraf nog wordt meegeteld, moet ik nog weghalen)
+    # 174: 32
+
+    
     # Find Zang staff
     zang_staff = nwc.get_staff_by_name(STAFF_NAME_ZANG)
 
@@ -255,10 +363,12 @@ def analyze_nwctxt(file_path):
         'title': title,
         'file': file_path.name,
         'folder': file_path.parent,
-        'total_measures': total_measures,
+        'total_measures': total_measures,   # excludes eventual begintel, but includes vooraf (both are given separately in this object)
         'has_begintel': has_begintel,
         'vooraf': vooraf,
         'measure_map': measure_map,
+        'main_tempo': first_tempo,
+        'tempo_measures_dict': tempo_measures_tuples    # measure count per tempo, corrected for begintel en maten vooraf.
     }
 
 
@@ -299,53 +409,43 @@ def analyze_complete_song(file_path, tempo=None, timesig=None):
     if not basic_analysis:
         return None
 
-    # Extract tempo and timesig if not provided
-    if tempo is None or timesig is None:
+    # Extract timesig if not provided
+    if timesig is None:
         nwc = NwcFile(file_path)
         bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
         if bass_staff:
             bass_lines = bass_staff.lines
-
-            if tempo is None:
-                for line in bass_lines:
-                    # todo: the below logic only takes the first encountered tempo and takes that for the whole song.
-                    # this must be changed: find all distinct tempi and count the nr of measures per tempo: only then calculate duration.
-                    if line.startswith('|Tempo|') and 'Tempo:' in line:
-                        try:
-                            tempo_part = line.split('Tempo:')[1]
-                            tempo_str = tempo_part.split('|')[0]
-                            tempo = int(tempo_str)
-                            break
-                        except (IndexError, ValueError):
-                            pass
-
-            if timesig is None:
-                for line in bass_lines:
-                    if line.startswith('|TimeSig|Signature:'):
-                        try:
-                            sig_part = line.split('|TimeSig|Signature:')[1]
-                            timesig = sig_part.split('|')[0]
-                            break
-                        except (IndexError, ValueError):
-                            pass
+            for line in bass_lines:
+                if line.startswith('|TimeSig|Signature:'):
+                    try:
+                        sig_part = line.split('|TimeSig|Signature:')[1]
+                        timesig = sig_part.split('|')[0]
+                        break
+                    except (IndexError, ValueError):
+                        pass
 
     # Calculate corrected total measures (excluding begintel and vooraf)
     total_measures_corrected = basic_analysis['total_measures'] - basic_analysis['vooraf']
 
-    # Calculate total duration (excluding vooraf measures)
+    # Calculate total duration (excluding vooraf measures): Reckoning with tempo changes.
     total_duration = None
-    if tempo and timesig:
-        try:
-            beats_per_second = tempo / 60
-            beat_duration = 1 / beats_per_second
-            s_beats_per_measure, _, s_beat_base = timesig.partition('/')
-            beats_per_measure = int(s_beats_per_measure)
-            measure_duration = beats_per_measure * beat_duration
-
-            # Duration = only the 'real' measures (excluding vooraf)
-            total_duration = total_measures_corrected * measure_duration
-        except (ValueError, ZeroDivisionError):
-            total_duration = None
+    # only computable if timesig is set:
+    if timesig:
+        total_duration = 0
+        measures_per_tempo_dict = basic_analysis['tempo_measures_dict']
+        for key in measures_per_tempo_dict.keys():
+            try:
+                tempo = key
+                beats_per_second = tempo / 60
+                beat_duration = 1 / beats_per_second
+                s_beats_per_measure, _, s_beat_base = timesig.partition('/')
+                beats_per_measure = int(s_beats_per_measure)
+                measure_duration = beats_per_measure * beat_duration
+                duration_for_tempo = measures_per_tempo_dict[tempo] * measure_duration  # note: begintel en maten vooraf have been excluded already.
+                total_duration += duration_for_tempo
+            except (ValueError, ZeroDivisionError):
+                total_duration = None
+                break
 
     # Renumber measure_map so that the measure containing "liedstart" becomes maat 1
     # Subtract vooraf from all measure numbers
@@ -363,9 +463,9 @@ def analyze_complete_song(file_path, tempo=None, timesig=None):
         'title': basic_analysis['title'],
         'file': basic_analysis['file'],
         'folder': basic_analysis['folder'],
-        'tempo': tempo,
+        'tempo': basic_analysis['main_tempo'],
         'timesig': timesig,
-        'total_bars': count_bars_in_staff(NwcFile(file_path).get_staff_by_name(STAFF_NAME_BASS).get_content()),
+        'total_bars': count_bare_bars_in_staff(NwcFile(file_path).get_staff_by_name(STAFF_NAME_BASS).get_content()),
         'has_begintel': basic_analysis['has_begintel'],
         'vooraf': vooraf,
         'total_measures': total_measures_corrected,
