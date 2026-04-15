@@ -310,7 +310,6 @@ def extract_tempo_and_timesig(filepath):
     return tempo, timesig
 
 
-
 def extract_lbltrck_markers(filepath):
     """Extract LBLTRCK markers with precise beat positions from Bass staff.
 
@@ -849,17 +848,32 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
     timesig = None
     pickup_beats = 0
 
+    previous_tempo = None
+    previous_timesig = None
+
     for lieddeel in volgorde_lieddelen:
         lieddeel_nwctxt = nwc_folder / f"{songtitle} {lieddeel}{EXT_NWCTXT}"
 
         if not validate_file_exists(lieddeel_nwctxt, f"Lieddeel file '{lieddeel}'"):
             sys.exit(1)
 
-        # Extract tempo and timesig from first section, only once per deel
-        if tempo is None and timesig is None:
-            tempo, timesig = extract_tempo_and_timesig(str(lieddeel_nwctxt))
+        # Extract pickup beats from first section only
+        if previous_tempo is None and previous_timesig is None:
             pickup_beats = get_pickup_beats(lieddeel_nwctxt)
             print(f"ℹ️ NOTE: Detected {pickup_beats} beats up front.")
+        
+        # Extract tempo and timesig again and again
+        tempo, timesig = extract_tempo_and_timesig(str(lieddeel_nwctxt))
+
+        # If not found, fall back to previous section's values
+        if tempo is None:
+            tempo = previous_tempo
+        if timesig is None:
+            timesig = previous_timesig 
+
+        # store new fallback values
+        previous_tempo = tempo
+        previous_timesig = timesig
 
         file_list.append(str(lieddeel_nwctxt))
         measure_count = get_measure_count(str(lieddeel_nwctxt))
