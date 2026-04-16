@@ -674,6 +674,7 @@ def get_duration(measurecount_and_starttime_per_lieddeel, tempo, timesig, beats_
             return None
         lieddeel_duration = (measure_count * measure_duration)
         totalduration += lieddeel_duration
+        print(f"lieddeel {entry[0]} has dura: {lieddeel_duration} from measure_count {measure_count} and dur_per_measure of {measure_duration}")
     
     return totalduration  + (beats_before * beat_duration)  
 
@@ -840,6 +841,11 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
         tuple: (file_list, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, all_labels, tempo, timesig, pickup_beats)
         all_labels is a list of tuples: (label_text, time_in_seconds)
     """
+
+    #   A note about this code: it calculates the starttime van een 
+    # lieddeel door de duur van de VOORGAANDE lieddelen te berekenen.
+    # Daarom moet je goed opletten wat current en wat previous is.
+
     file_list = []
     measurecount_and_starttime_per_lieddeel = []
     chords_per_lieddeel = {}
@@ -862,7 +868,16 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
             pickup_beats = get_pickup_beats(lieddeel_nwctxt)
             print(f"ℹ️ NOTE: Detected {pickup_beats} beats up front.")
         
-        # Extract tempo and timesig again and again
+        # For the first lieddeel, read tempo and timesig. 
+        if previous_tempo is None or previous_timesig is None:
+            previous_tempo, previous_timesig = extract_tempo_and_timesig(str(lieddeel_nwctxt))
+        
+        file_list.append(str(lieddeel_nwctxt))
+        measure_count = get_measure_count(str(lieddeel_nwctxt))
+        lieddeel_starttime = get_duration(measurecount_and_starttime_per_lieddeel, previous_tempo, previous_timesig, pickup_beats)
+        measurecount_and_starttime_per_lieddeel.append((lieddeel, measure_count, lieddeel_starttime))
+
+        # Extract tempo and timesig of current lieddeel, needed for calculating start of NEXT section.
         tempo, timesig = extract_tempo_and_timesig(str(lieddeel_nwctxt))
 
         # If not found, fall back to previous section's values
@@ -871,14 +886,9 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
         if timesig is None:
             timesig = previous_timesig 
 
-        # store new fallback values
+        # Store the data under name 'previous', because they actually belong to the previous lieddeel.
         previous_tempo = tempo
         previous_timesig = timesig
-
-        file_list.append(str(lieddeel_nwctxt))
-        measure_count = get_measure_count(str(lieddeel_nwctxt))
-        lieddeel_starttime = get_duration(measurecount_and_starttime_per_lieddeel, tempo, timesig, pickup_beats)
-        measurecount_and_starttime_per_lieddeel.append((lieddeel, measure_count, lieddeel_starttime))
 
         # Add lieddeel label to all_labels list
         all_labels.append((lieddeel, lieddeel_starttime))
