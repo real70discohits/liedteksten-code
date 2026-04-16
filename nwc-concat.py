@@ -109,7 +109,7 @@ def concatenate_nwctxt_files(file_list, output_file, keep_tempi=False):
 
 
 def get_measure_count(filepath):
-    """Extract measure count from Ritme staff in .nwctxt file
+    """Extract measure count from Ritme staff in .nwctxt file (lieddeel)
 
     Looks for a line like |Bar|Style:LocalRepeatClose|Repeat:4 in the Ritme staff
     and extracts the number after Repeat:, then adds any additional measures with
@@ -263,7 +263,7 @@ def extract_chords_from_first_staff(filepath):
 
 
 def extract_tempo_and_timesig(filepath):
-    """Extract tempo and time signature from Bass staff of .nwctxt file
+    """Extract tempo and time signature from Bass staff of .nwctxt file (lieddeel)
 
     Returns:
         tuple: (tempo, timesig)
@@ -311,7 +311,7 @@ def extract_tempo_and_timesig(filepath):
 
 
 def extract_lbltrck_markers(filepath):
-    """Extract LBLTRCK markers with precise beat positions from Bass staff.
+    """Extract LBLTRCK markers with precise beat positions from Bass staff (of a lieddeel).
 
     Scans the Bass staff for Text elements with format 'LBLTRCK: label_text'
     and determines their exact position within measures.
@@ -454,7 +454,7 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
             for _, measures, _ in measurecount_and_starttime_per_lieddeel:
                 if measures is not None:
                     totalmeasures += measures
-            total_duration_seconds = get_duration(measurecount_and_starttime_per_lieddeel, tempo, timesig, pickup_beats)
+            total_duration_seconds = get_duration(measurecount_and_starttime_per_lieddeel, tempo, timesig, pickup_beats)        # legacy indeed: only correct when song has just one tempo.
 
         # Format duration
         if total_duration_seconds is not None:
@@ -681,7 +681,7 @@ def get_duration(measurecount_and_starttime_per_lieddeel, tempo, timesig, beats_
 
 def get_pickup_beats(nwctxt_filepath):
     """
-    Detect and calculate pickup beats (anacrusis) in a NoteWorthy file.
+    Detect and calculate pickup beats (anacrusis) in a NoteWorthy file (lieddeel).
     
     A pickup exists when:
     1. PgSetup contains StartingBar:0
