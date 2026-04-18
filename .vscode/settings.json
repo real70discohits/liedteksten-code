@@ -14,5 +14,8 @@
     "**/*.synctex.gz": true,
     "**/*.nwctxt.bak": true,
     "/*.nwctxt": true
-  }
+  },
+  "python.linting.pylintArgs": [
+    "--max-line-length=120"
+  ]
 }

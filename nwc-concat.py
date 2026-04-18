@@ -29,18 +29,51 @@ import sys
 from pathlib import Path
 import re
 from pathconfig import load_and_resolve_paths, validate_file_exists, validate_folder_exists, load_jsonc
-from nwc_analyze import write_analysis_to_file
+from nwc_analyze import write_analysis_to_file, count_vooraf_measures
 from nwc_utils import parse_nwctxt, NwcFile, parse_duration
 from constants import (NWC_PREFIX_ADDSTAFF, NWC_PREFIX_STAFF_PROPERTIES,
                         NWC_PREFIX_STAFF_INSTRUMENT, NWC_PREFIX_CLEF,
                         NWC_PREFIX_TIMESIG, NWC_PREFIX_TEMPO, NWC_PREFIX_BAR,
                         NWC_PREFIX_TEXT, NWC_END_MARKER, FOLDER_NWC, EXT_NWCTXT,
-                        EXT_JSONC, STAFF_NAME_BASS, STAFF_NAME_RITME,
-                        STAFF_NAME_BASE_DRUM, STAFF_NAME_SNARE_DRUM,
-                        STAFF_NAME_HI_HAT, STAFF_NAME_CRASH_CYMBAL,
-                        STAFF_NAME_RIDE_CYMBAL, STAFF_NAME_TOM_1,
-                        STAFF_NAME_TOM_2, STAFF_NAME_FLOOR_TOM
+                        EXT_JSONC, STAFF_NAME_BASS, STAFF_NAME_RITME
                         )
+
+def get_duration_per_tempo_and_timesig_progression_from_bass_staff(filepath, pickup_beats, start_tempo, start_timesig):
+    """
+    Returns a list of tempo and timesig changes, with their calculated measure_count and duration.
+    Returns the duration of any pickup_beats as well, so the caller can decide what to do with it.
+
+    For exact calculation of duration, we must know both the tempo, the number of measures and
+    the timesig (3/4, 4/4): without the timesig we don't know how many beats are in a measure.
+    """
+
+    # When calculating songduration, pickupbeats must be ignored; whengenerating the labeltrack, they should not.
+    # Therefor, return the duration of any pickup-beats as well, so the caller can decide what to do with it.
+    exclude_first_measure_from_duration = False
+
+    tempo_and_timesig_progression = extract_progression_of_multiple_targets_with_measurecount_from_bass_staff(
+        filepath, exclude_first_measure_from_duration, (find_tempo, start_tempo), (find_timesig, start_timesig))
+
+    # Nu we tempo, timesig en measure_count hebben kunnen we duration gaan berekenen.
+    tempo_and_timesig_progression = [
+        [tempo, timesig, measure_count, calculate_duration(tempo, timesig, measure_count)]
+        for tempo, timesig, measure_count in tempo_and_timesig_progression
+    ] 
+
+    # calculate duration of pickup_beats    
+    has_pickup_beats = pickup_beats > 0
+    pickup_beats_duration = 0
+    if has_pickup_beats:  # and exclude_pickup_beats_from_duration:
+        first_record = tempo_and_timesig_progression[0]
+        first_timesig_teller, first_timesig_noemer = map(int, first_record[1].split('/'))
+        missing_beats_count = first_timesig_teller - pickup_beats
+        # bereken duur van één beat: duur beat (seconden) = 60 / bpm * (noemer / 4)
+        first_tempo = first_record[0]
+        single_beat_duration = 60 / first_tempo * (first_timesig_noemer / 4)
+        # subtract duur van pickupbeats van duration in eerste record
+        pickup_beats_duration = missing_beats_count * single_beat_duration
+
+    return tempo_and_timesig_progression, pickup_beats_duration
 
 
 def concatenate_nwctxt_files(file_list, output_file, keep_tempi=False):
@@ -108,77 +141,233 @@ def concatenate_nwctxt_files(file_list, output_file, keep_tempi=False):
         f.write(f'{NWC_END_MARKER}\n')
 
 
-def get_measure_count(filepath):
-    """Extract measure count from Ritme staff in .nwctxt file (lieddeel)
+# def get_measure_count(filepath):
+#     """Extract measure count from Ritme staff in .nwctxt file (lieddeel)
 
-    Looks for a line like |Bar|Style:LocalRepeatClose|Repeat:4 in the Ritme staff
-    and extracts the number after Repeat:, then adds any additional measures with
-    duration after the repeat-close marker.
+#     Looks for a line like |Bar|Style:LocalRepeatClose|Repeat:4 in the Ritme staff
+#     and extracts the number after Repeat:, then adds any additional measures with
+#     duration after the repeat-close marker.
 
-    If no repeat count is found, counts all measures that contain duration.
+#     If no repeat count is found, counts all measures that contain duration.
+#     """
+#     nwc = NwcFile(filepath)
+
+#     ritme_staff = nwc.get_staff_by_name(STAFF_NAME_RITME)
+#     if not ritme_staff:
+#         return None
+
+#     # Get Ritme staff content for the repeat marker
+#     ritme_staff_lines = ritme_staff.lines
+
+#     repeat_count = None
+#     measures_after_repeat = 0
+#     total_measures = 0
+#     after_repeat = False
+#     current_measure_has_dur = False
+
+#     for line in ritme_staff_lines:
+#         if 'Style:LocalRepeatClose' in line and 'Repeat:' in line:
+#             # Extract the number after Repeat:
+#             try:
+#                 repeat_part = line.split('Repeat:')[1]
+#                 repeat_count = int(repeat_part.split('|')[0])
+#                 after_repeat = True
+#                 current_measure_has_dur = False
+#             except (IndexError, ValueError):
+#                 pass
+#         else:
+#             # Check for Bar marker
+#             if line.startswith('|Bar|') or line == '|Bar':
+#                 if current_measure_has_dur:
+#                     if after_repeat:
+#                         measures_after_repeat += 1
+#                     else:
+#                         total_measures += 1
+#                 current_measure_has_dur = False
+#             elif '|Dur:' in line:
+#                 current_measure_has_dur = True
+
+#     # Count the last measure if it has duration
+#     if current_measure_has_dur:
+#         if after_repeat:
+#             measures_after_repeat += 1
+#         else:
+#             total_measures += 1
+
+#     # Determine final count
+#     if repeat_count is not None:
+#         # Use repeat count plus any measures after it
+#         final_count = repeat_count + measures_after_repeat
+#     else:
+#         # No repeat found, use total measures counted
+#         final_count = total_measures
+
+#     return final_count if final_count > 0 else None
+
+
+def extract_progression_of_multiple_targets_with_measurecount_from_bass_staff(filepath, ignore_first_measure, *finders_with_initial_value):
+    """
+    Extracts the progression of target combinations, such as the combination of tempo and timesig.
+
+    An example of what is meant by 'progression of targets', with tempo and timesig as targets:
+    progress    tempo   timesig     duration
+    1           180     4/4         34          song starts with 34 measures t=180, 'mars' candans
+    2           172     3/4         12          then 12 measures slow 'walz' (hoem-pa-pa)
+    3           180     4/4         42          then back to original tempo and cadans for 42 measures.
+
+    - *finders_with_initial_value is an unlimited list of tuples of find_methods with 
+        their start_value (required!)), unlimited at least in theory: I never tested more than 2.
+    - start_values should be passed when they are not set at the start of the given file.**
+    - if ignore_first_measure is True, 1 is subtracted from the measure_count. For example: for
+        calculating song duration you want to subtract it, but for generating the labeltrack you 
+        don't want that.
+
+    ** Example when start_values are required: suppose you pass a filepath to a lieddeel to this
+    method, then it may inherit its initial tempo from its preceding lieddeel. It may then
+    have a tempo along the way or even no tempo indicator at all. Since the preceding
+    lieddeel is unknown to the current method, it can't resolve these startvalues by itself.
+    But note that this method always first tries to find the indicators itself, because the
+    caller does not yet know for sure about the available indicators in the current lieddeel.
     """
     nwc = NwcFile(filepath)
 
-    ritme_staff = nwc.get_staff_by_name(STAFF_NAME_RITME)
-    if not ritme_staff:
-        return None
+    bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
+    if not bass_staff:
+        return "-", 0, True
 
-    # Get Ritme staff content for the repeat marker
-    ritme_staff_lines = ritme_staff.lines
+    bass_staff_lines = bass_staff.lines
 
-    repeat_count = None
-    measures_after_repeat = 0
-    total_measures = 0
-    after_repeat = False
-    current_measure_has_dur = False
+    # Hint of what this method tries to solve: suppose you want to make a list of all subsequent
+    # changes of a certain parameter in a song, say 'tempo'. That's easy: loop through all
+    # lines and detect each tempo change. 
+    # But then you realize that for each tempo (bpm) you need to know what timesig it has, because
+    # if the value is counted as eight-note beats, it is half as slow as when it counts as
+    # quarternotes! So now you want to list changes to a combination of parameters and
+    # each change must contain a record of both parameters.
+    # So, hopefully, the code hopefully makes more sense: for each parameter that you want to
+    # monitor there's a corresponding find_method (and optional start_value). A
+    # parameter that you want to monitor is called a _target_ (search target).
 
-    for line in ritme_staff_lines:
-        if 'Style:LocalRepeatClose' in line and 'Repeat:' in line:
-            # Extract the number after Repeat:
-            try:
-                repeat_part = line.split('Repeat:')[1]
-                repeat_count = int(repeat_part.split('|')[0])
-                after_repeat = True
-                current_measure_has_dur = False
-            except (IndexError, ValueError):
-                pass
-        else:
-            # Check for Bar marker
-            if line.startswith('|Bar|') or line == '|Bar':
-                if current_measure_has_dur:
-                    if after_repeat:
-                        measures_after_repeat += 1
+
+    # -- INITIALIZATION start --
+
+    results = []   # list of lists: the inner list is in the order of the find_methods
+    nr_of_values_per_result_record = 3  # tempo, timesig, duration
+    first_result = [None] * nr_of_values_per_result_record
+
+    # Problem: for the first record, targets may have been set at the beginning of the song but
+    # maybe they're not: we don't know yet so should we use the inherited values or not?
+    # Solution: we always use the startvalues, and in case indeed the targets are found
+    # at the beginning of the song, the measures_count is still 0 and the first record,
+    # with our start_values, is deleted automatically. So nothing complex here!
+
+    # Initialize first_result with startvalues. Note: for intro, this will result in default values 120 and '4/4'.
+    i_fm = 0   # indexer for the list of find_methods, 0-based
+    for find_method, startvalue in finders_with_initial_value:
+        first_result[i_fm] = startvalue
+        i_fm += 1
+
+    results.append(first_result)
+    # -- INITIALIZATION end --    
+    # Status: all targets have a value in first_result (but no measure_count yet).
+
+    # nu regel voor regel het hele bestand doorlopen op zoek naar changed targets
+    result = [None] * nr_of_values_per_result_record  # [None, None, None, ...]
+    last_result = results[-1]  # [-1] returns the last element of a list. We need this to detect changes.
+    last_target = None
+    measures_count = 0
+    current_measure_has_duration = False
+    i_line = 0
+    for line in bass_staff_lines:   # we'll find the same targets initially, but they will be ignored.
+        i_line += 1
+        i_fm = 0
+        for find_method, _ in finders_with_initial_value:
+            found_target = find_method(line)  # returns the target value, defined elsewhere
+            if found_target is not None:
+                # check wether it has changed
+                last_target = last_result[i_fm]
+                if found_target != last_target:
+                    # Check wether the previous settings had any duration:
+                    # Als nog geen measures gevonden zijn, dus voor de vorige tempo/timesig settings, en
+                    # we vinden alweer de volgende tempo of timesig indicator, dan zitten we kennelijk
+                    # nog in dezelfde maat: één van de vorige waardes wordt dus overruled: in dat geval
+                    # moeten we dus niet een nieuw record toevoegen maar de bestaande wijzigen.
+                    if measures_count == 0:
+                        # update existing record instead of add new one
+                        result = last_result        # let result point to the existing record (result and last_result now point to the same record)
+                        result[i_fm] = found_target # update value
+                        # 'update the records'
+                        last_target = found_target
                     else:
-                        total_measures += 1
-                current_measure_has_dur = False
-            elif '|Dur:' in line:
-                current_measure_has_dur = True
+                        # store measurecount of previous change in last position of result list.
+                        last_result[-1] = measures_count
+                        # 'update the records' (administratie bijwerken)
+                        result = last_result.copy() # copy previous result
+                        result[i_fm] = found_target # update with the found target
+                        results.append(result)
+                        last_result = result 
+                        measures_count = 0      # reset counter
+                break  # done for this line, goto next
+            i_fm += 1
+    
+        # Check for Bar marker
+        if line.startswith('|Bar|') or line == '|Bar':
+            if current_measure_has_duration:        # last_target is not None and ... weggehaald
+                measures_count += 1
+            current_measure_has_duration = False
 
-    # Count the last measure if it has duration
-    if current_measure_has_dur:
-        if after_repeat:
-            measures_after_repeat += 1
+        # Check for duration (note or rest)
+        if '|Dur:' in line:
+            current_measure_has_duration = True
+
+    # Fill in measures_count for the last result because loop 
+    #   exited before count had been completed and stored
+    if last_result is not None:
+        # Count last measure, since it hasn't been counted in yet
+        if current_measure_has_duration:
+            measures_count += 1
+
+        # store count (or delete record if count is empty)
+        if measures_count != 0:  # stefan: weetniet waarom 1 en niet 0
+            last_result[-1] = measures_count
         else:
-            total_measures += 1
+            results.pop()   # remove last entry (points to last_result btw) if it has no duration
+    
+    # als pickup beat, dan 1 maat afhalen van de eerste fase
+    if ignore_first_measure:
+        results[0][-1] -= 1   # 1 afhalen van de de laatste waarde van het eerste record
 
-    # Determine final count
-    if repeat_count is not None:
-        # Use repeat count plus any measures after it
-        final_count = repeat_count + measures_after_repeat
-    else:
-        # No repeat found, use total measures counted
-        final_count = total_measures
+    # hier niet de duur of iets anders berekenen: dit is immers een 'generieke' methode.
 
-    return final_count if final_count > 0 else None
+    return results
 
 
-def extract_chords_from_first_staff(filepath):
-    """Extract chord progression from Bass staff of .nwctxt file
+def calculate_duration(tempo, timesig, measure_count):
+    """Straight mathematics: returns the number of seconds.
+    
+    Given bpm (beats per minutes = tempo), the value of a single beat (the y 
+    in timesig x/y), the number of beats per measure (the x in timesig x/y) and
+    the number of measures (measure_count) we can simply calculate its 
+    duration as a number of seconds.
 
+    formule (van claude): duur maat (seconden) = (teller / noemer) * 4 * (60 / bpm)
+    Dus dat keer aantal maten is de totale te retourneren duur
+    """
+    teller, noemer = map(int, timesig.split('/'))  # numerator, denominator
+    duration = measure_count * (teller / noemer) * 4 * (60 / tempo)
+    return duration
+
+
+def extract_targets_with_measurecount_from_bass_staff(filepath, find_method):
+    """Extracts the progression of targets from the Bass staff of a .nwctxt file.
+    For each target, the number of measures is counted (equal targets are not aggregated).
+
+    The 'find_method' parameter is a ref to a function: for example find_chord, find_tempo etc.
+    
     Returns:
-        tuple: (chord_string, total_measures, is_valid)
-        - chord_string: formatted string like "B, F#, E(2), B(5)" or "-" if no chords
-        - total_measures: total count of measures
+        tuple: (target, total_measures, is_valid)
+        - target: the type of thing you're looking for. E.g. chord, as a formatted string like "B, F#, E(2), B(5)" or "-" if no chords
+        - total_measures: total count of measures for that target
         - is_valid: True if count matches expected
     """
     nwc = NwcFile(filepath)
@@ -189,80 +378,173 @@ def extract_chords_from_first_staff(filepath):
 
     bass_staff_lines = bass_staff.lines
 
-    chords = []
-    current_chord = None
+    targets: list[tuple[int, int]] = []
+    current_target = None
     current_measures = 0
-    current_measure_has_dur = False
+    current_measure_has_duration = False
 
     for line in bass_staff_lines:
-        # Check for chord indication in Text entries
-        if line.startswith('|Text|') and 'Text:"' in line:
-            # Extract the text content
-            try:
-                text_start = line.find('Text:"') + 6
-                text_end = line.find('"', text_start)
-                if text_end > text_start:
-                    text_content = line[text_start:text_end]
-                    # Check if it starts with "akk:" (ignoring whitespace)
-                    text_stripped = text_content.strip()
-                    if text_stripped.startswith('akk:'):
-                        # Save previous chord if any
-                        if current_chord is not None:
-                            if current_measures > 1:
-                                chords.append(f"{current_chord}({current_measures})")
-                            else:
-                                chords.append(current_chord)
-
-                        # Extract new chord (everything after "akk:")
-                        new_chord = text_stripped[4:].strip()
-                        current_chord = new_chord
-                        current_measures = 0
-                        current_measure_has_dur = False
-            except (IndexError, ValueError):
-                continue
+        # Check for target indication line
+        found_target = find_method(line)  # returns the target value, defined elsewhere
+        if found_target is not None:
+            if found_target == current_target:
+                continue  # redundant repetition apparently; nothing really changes
+            # Save previous target if any
+            if current_target is not None:
+                if current_measures > 1:
+                    targets.append((current_target, current_measures))
+                else:
+                    targets.append((current_target, 0))
+            current_target = found_target
+            current_measures = 0
+            current_measure_has_duration = False
 
         # Check for Bar marker
         if line.startswith('|Bar|') or line == '|Bar':
-            if current_chord is not None and current_measure_has_dur:
+            if current_target is not None and current_measure_has_duration:
                 current_measures += 1
-            current_measure_has_dur = False
+            current_measure_has_duration = False
 
         # Check for duration (note or rest)
         if '|Dur:' in line:
-            current_measure_has_dur = True
+            current_measure_has_duration = True
 
-    # Handle the last chord and last measure
-    if current_chord is not None:
+    # Handle the last target and last measure
+    if current_target is not None:
         # Count last measure if it has duration
-        if current_measure_has_dur:
+        if current_measure_has_duration:
             current_measures += 1
 
         if current_measures > 1:
-            chords.append(f"{current_chord}({current_measures})")
+            targets.append((current_target, current_measures))
         elif current_measures == 1:
-            chords.append(current_chord)
+            targets.append((current_target, 0))
+
+    return targets
+
+
+def find_bar(line):
+    """
+    Returns 1 if line contains a bar; returns None otherwise.
+    Assumes as input a line from an nwctxt file.
+    """
+    if line.startswith(NWC_PREFIX_BAR) or line == '|Bar':
+        return 1
+    else:
+        return None
+
+
+def find_tempo(line):
+    """
+    Returns a tempo > 0 if line contains a tempo; returns None otherwise.
+    Assumes as input a line from an nwctxt file.
+    """
+    # Look for tempo
+    if line.startswith(NWC_PREFIX_TEMPO) and 'Tempo:' in line:
+        try:
+            # Extract tempo value after "Tempo:"
+            tempo_part = line.split('Tempo:')[1]
+            # Get the number before the next pipe or end of string
+            tempo_str = tempo_part.split('|')[0]
+            tempo = int(tempo_str)
+            return tempo
+        except (IndexError, ValueError):
+            pass
+    return None
+
+
+def find_timesig(line):
+    """
+    Returns a timesig (e.g. 4/4) if line contains a timesig; returns None otherwise.
+    Assumes as input a line from an nwctxt file.
+    """
+    # Look for timesig
+    if line.startswith(f'{NWC_PREFIX_TIMESIG}Signature:'):
+        try:
+            # Extract signature after "Signature:"
+            sig_part = line.split(f'{NWC_PREFIX_TIMESIG}Signature:')[1]
+            # Get the signature before the next pipe or end of string
+            timesig = sig_part.split('|')[0]
+            return timesig
+        except (IndexError, ValueError):
+            pass
+    return None
+
+
+def find_chord(line):
+    """
+    Returns a chord if line contains an 'akk:'-text; returns None otherwise.
+    Assumes as input a line from an nwctxt file.
+    """
+    # Check for chord indication in Text entries
+    if line.startswith('|Text|') and 'Text:"' in line:
+        # Extract the text content
+        try:
+            text_start = line.find('Text:"') + 6
+            text_end = line.find('"', text_start)
+            if text_end > text_start:
+                text_content = line[text_start:text_end]
+                # Check if it starts with "akk:" (ignoring whitespace)
+                text_stripped = text_content.strip()
+                if text_stripped.startswith('akk:'):
+                    # Extract new chord (everything after "akk:")
+                    new_chord = text_stripped[4:].strip()
+                    return new_chord
+        except (IndexError, ValueError):
+            pass
+    return None
+
+
+def extract_tempi_from_bass_staff(filepath):
+    """Extracts the tempo progression from the Bass staff of a .nwctxt file.
+    For each tempo, the number of measures is counted (equal tempi are not aggregated).
+
+    Returns:
+        tuple: (tempo, total_measures, is_valid)
+        - chord_string: 120, etc.
+        - total_measures: total count of measures
+        - is_valid: True if count matches expected
+    """
+    return extract_targets_with_measurecount_from_bass_staff(filepath, find_tempo)
+
+
+def extract_timesigs_from_bass_staff(filepath):
+    """Extracts the timesignature (3/4, 4/4) progression from the Bass staff of a .nwctxt file.
+    For each timesig, the number of measures is counted (equal tempi are not aggregated).
+
+    Returns:
+        tuple: (timesig, total_measures, is_valid)
+        - timesig: 3/4, 4/4 etc.
+        - total_measures: total count of measures
+        - is_valid: True if count matches expected
+    """
+    return extract_targets_with_measurecount_from_bass_staff(filepath, find_timesig)
+
+
+def extract_chords_from_bass_staff(filepath):
+    """Extract chord progression from Bass staff of .nwctxt file
+
+    Returns:
+        tuple: (chord_string, total_measures, is_valid)
+        - chord_string: formatted string like "B, F#, E(2), B(5)" or "-" if no chords
+        - total_measures: total count of measures
+        - is_valid: True if count matches expected
+    """
+    targets = extract_targets_with_measurecount_from_bass_staff(filepath, find_chord)
 
     # Calculate total measures from chords
     total_from_chords = 0
-    for chord in chords:
-        if '(' in chord:
-            # Extract number from parentheses
-            try:
-                count = int(chord.split('(')[1].rstrip(')'))
-                total_from_chords += count
-            except (IndexError, ValueError):
-                total_from_chords += 1
-        else:
-            total_from_chords += 1
+    for _, count in targets:
+        total_from_chords += count
 
-    if not chords:
+    if not targets:
         return "-", 0, True
 
-    chord_string = ", ".join(chords)
+    chord_string = ", ".join(f"{chord} ({measure_count})" for chord, measure_count in targets)
     return chord_string, total_from_chords, True
 
 
-def extract_tempo_and_timesig(filepath):
+def extract_tempo_and_timesig_from_bass_staff(filepath):
     """Extract tempo and time signature from Bass staff of .nwctxt file (lieddeel)
 
     Returns:
@@ -283,25 +565,12 @@ def extract_tempo_and_timesig(filepath):
 
     for line in staff_lines:
         # Look for tempo (only first occurrence)
-        if tempo is None and line.startswith(NWC_PREFIX_TEMPO) and 'Tempo:' in line:
-            try:
-                # Extract tempo value after "Tempo:"
-                tempo_part = line.split('Tempo:')[1]
-                # Get the number before the next pipe or end of string
-                tempo_str = tempo_part.split('|')[0]
-                tempo = int(tempo_str)
-            except (IndexError, ValueError):
-                pass
+        if tempo is None:
+            tempo = find_tempo(line)
 
         # Look for time signature (only first occurrence)
-        if timesig is None and line.startswith(f'{NWC_PREFIX_TIMESIG}Signature:'):
-            try:
-                # Extract signature after "Signature:"
-                sig_part = line.split(f'{NWC_PREFIX_TIMESIG}Signature:')[1]
-                # Get the signature before the next pipe or end of string
-                timesig = sig_part.split('|')[0]
-            except (IndexError, ValueError):
-                pass
+        if timesig is None:
+            timesig = find_timesig(line)
 
         # Stop searching once both are found
         if tempo is not None and timesig is not None:
@@ -310,7 +579,7 @@ def extract_tempo_and_timesig(filepath):
     return tempo, timesig
 
 
-def extract_lbltrck_markers(filepath):
+def extract_lbltrck_markers_from_bass_staff(filepath):
     """Extract LBLTRCK markers with precise beat positions from Bass staff (of a lieddeel).
 
     Scans the Bass staff for Text elements with format 'LBLTRCK: label_text'
@@ -372,7 +641,7 @@ def extract_lbltrck_markers(filepath):
     return markers
 
 
-def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, pickup_beats, complete_analysis=None):
+def write_latex_file(tex_file, songtitle, tempo, timesig, data_per_lieddeel, chords_per_lieddeel, pickup_beats_first_lieddeel, complete_analysis=None):
     """Write complete LaTeX file with song meta info
 
     Args:
@@ -380,7 +649,8 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
         songtitle: Title of the song
         tempo: Tempo value (integer) or None
         timesig: Time signature string (e.g. "4/4") or None
-        measurecount_and_starttime_per_lieddeel: List of tuples (section_name, measure_count, start_time) in structure order
+        data_per_lieddeel: List of tuples (lieddeel, lieddeel_measure_count, 
+            lieddeel_starttime_with_pickupbeats, lieddeel_duration_with_pickupbeats, duration_of_pickup_beats)
         chords_per_lieddeel: Dict mapping section_name to (chord_string, chord_count, is_valid)
         pickup_beats: Number of pickup beats at the start of the song
         complete_analysis: Optional dict from analyze_complete_song() with corrected totals.
@@ -391,7 +661,7 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
     # Get unique sections in order of first appearance
     unique_lieddelen = []
     seen = set()
-    for lieddeel_name, _, _ in measurecount_and_starttime_per_lieddeel:
+    for lieddeel_name, _, _, _, _ in data_per_lieddeel:
         if lieddeel_name not in seen:
             unique_lieddelen.append(lieddeel_name)
             seen.add(lieddeel_name)
@@ -450,11 +720,12 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
             total_duration_seconds = complete_analysis['total_duration']
         else:
             # Legacy calculation (for backwards compatibility)
-            totalmeasures = 0
-            for _, measures, _ in measurecount_and_starttime_per_lieddeel:
-                if measures is not None:
-                    totalmeasures += measures
-            total_duration_seconds = get_duration(measurecount_and_starttime_per_lieddeel, tempo, timesig, pickup_beats)        # legacy indeed: only correct when song has just one tempo.
+            # totalmeasures = 0
+            # for _, measures, _ in measurecount_and_starttime_per_lieddeel:
+            #     if measures is not None:
+            #         totalmeasures += measures
+            # total_duration_seconds = get_duration(measurecount_and_starttime_per_lieddeel, tempo, timesig, pickup_beats)        # legacy indeed: only correct when song has just one tempo.
+            raise AssertionError  # complete_analysis must be true (legacy no longer supported)
 
         # Format duration
         if total_duration_seconds is not None:
@@ -494,7 +765,7 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
         for lieddeel_name in unique_lieddelen:
             # Get measure count (from first occurrence)
             measures = None
-            for s, m, _ in measurecount_and_starttime_per_lieddeel:
+            for s, m, _, _, _ in data_per_lieddeel:
                 if s == lieddeel_name:
                     measures = m
                     break
@@ -533,7 +804,7 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
         f.write(r'\hline' + '\n')
 
         totalmeasures = 0
-        for i, (section, measures, _) in enumerate(measurecount_and_starttime_per_lieddeel, 1):
+        for i, (section, measures, _, _, _) in enumerate(data_per_lieddeel, 1):
             if measures is not None:
                 totalmeasures += measures
 
@@ -644,47 +915,12 @@ def update_liedtekst_tex_file(liedtitel, tempo, maatsoort, song_folder=None):
     return True
 
 
-def get_duration(measurecount_and_starttime_per_lieddeel, tempo, timesig, beats_up_front):
-    """Calculate total duration of the array of lieddelen with their measure count
-    given tempo (bpm) and timesignature (3/4, 4/4 etc.).
-    
-    Returns None when data is unknown.
-    """
-
-    beats_before = 0
-    if beats_up_front is not None and isinstance(beats_up_front, (int, float)):
-        beats_before = beats_up_front
-
-    if measurecount_and_starttime_per_lieddeel is None or tempo is None or tempo == 0 or timesig is None:
-        return None
-
-    # determine the duration of a single measure
-    beats_per_second = tempo / 60
-    beat_duration = 1 / beats_per_second
-    s_beats_per_measure, _, s_beat_base = timesig.partition('/')  # beat base is not needed? Dit gaat mis bij 6/8 vermoed ik, nog checken.
-    beats_per_measure = int(s_beats_per_measure)
-    beat_base = int(s_beat_base)
-    measure_duration = beats_per_measure * beat_duration
-
-    # calculate duration of all given lieddelen
-    totalduration = 0
-    for entry in measurecount_and_starttime_per_lieddeel:
-        measure_count = entry[1]
-        if measure_count is None:
-            return None
-        lieddeel_duration = (measure_count * measure_duration)
-        totalduration += lieddeel_duration
-        print(f"lieddeel {entry[0]} has dura: {lieddeel_duration} from measure_count {measure_count} and dur_per_measure of {measure_duration}")
-    
-    return totalduration  + (beats_before * beat_duration)  
-
-
-def get_pickup_beats(nwctxt_filepath):
+def get_pickup_beats_from_first_staff(nwctxt_filepath):
     """
     Detect and calculate pickup beats (anacrusis) in a NoteWorthy file (lieddeel).
     
     A pickup exists when:
-    1. PgSetup contains StartingBar:0
+    1. [UPDATE: NO LONGER CONDITION] PgSetup contains StartingBar:0
     2. First Rest comes before first Bar
     
     Args:
@@ -697,15 +933,15 @@ def get_pickup_beats(nwctxt_filepath):
         lines = f.readlines()
 
     # Check condition 1: StartingBar:0
-    has_starting_bar_zero = False
-    for line in lines:
-        if line.startswith('|PgSetup|'):
-            if '|StartingBar:0' in line:
-                has_starting_bar_zero = True
-            break
+    # has_starting_bar_zero = False
+    # for line in lines:
+    #     if line.startswith('|PgSetup|'):
+    #         if '|StartingBar:0' in line:
+    #             has_starting_bar_zero = True
+    #         break
 
-    if not has_starting_bar_zero:
-        return 0.0
+    # if not has_starting_bar_zero:
+    #     return 0.0
 
     # Find time signature to determine beat unit
     timesig_denominator = 4  # default
@@ -829,6 +1065,9 @@ def load_song_structure(songtitle, nwc_folder):
         sys.exit(1)
 
 
+# to do: vooraf_measures zijn nog included in het resultaat: die moeten echter opgeteld worden 
+# bij de pickupbeats en als geheel moet de duur ervan berekend worden zodat die optioneel van
+# de totale duur kan worden afgetrokken.
 def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
     """Process all lieddelen and extract metadata.
 
@@ -847,55 +1086,96 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
     # Daarom moet je goed opletten wat current en wat previous is.
 
     file_list = []
-    measurecount_and_starttime_per_lieddeel = []
+    data_per_lieddeel = []
     chords_per_lieddeel = {}
     all_labels = []
     tempo = None
     timesig = None
-    pickup_beats = 0
+    pickup_beats_in_first_lieddeel = 0   # to be set once
+    vooraf_measures = 0
+    pickup_beats = 0                    # to be set for each lieddeel (should be 0 except for the first lieddeel)
+    inherited_tempo = 120   # these are the defaults that you will see when you don't set them in the intro lieddeel
+    inherited_timesig = '4/4'
+    tempo_and_timesig_progression_in_lieddeel = None
 
-    previous_tempo = None
-    previous_timesig = None
-
+    i_lieddeel = 0
     for lieddeel in volgorde_lieddelen:
         lieddeel_nwctxt = nwc_folder / f"{songtitle} {lieddeel}{EXT_NWCTXT}"
 
         if not validate_file_exists(lieddeel_nwctxt, f"Lieddeel file '{lieddeel}'"):
             sys.exit(1)
 
-        # Extract pickup beats from first section only
-        if previous_tempo is None and previous_timesig is None:
-            pickup_beats = get_pickup_beats(lieddeel_nwctxt)
+        # data_per_lieddeel only contains all preceding lieddelen, until the current one.
+        # Datastructuur = list of 
+        #   0-lieddeel, 
+        #   1-lieddeel_measure_count, 
+        #   2-lieddeel_starttime, 
+        #   3-lieddeel_duration, 
+        #   4-duration_of_pickup_beats
+
+        # tempo_and_timesig_progression_in_lieddeel contains progress over an entire lieddeel.
+        # Datastructuur = list of 
+        #   0-tempo, 
+        #   1-timesig, 
+        #   2-measure_count,
+        #   3-duration
+
+        # Extract pickup beats for first section only
+        if i_lieddeel == 0:
+            pickup_beats_in_first_lieddeel = get_pickup_beats_from_first_staff(lieddeel_nwctxt)   # todo: ik vertrouw de correctheid van die get_pickup_beats method niet
+            # vooraf_measures = count_vooraf_measures(arg missing: needs bass staff contents)
+            pickup_beats = pickup_beats_in_first_lieddeel  # for further processing
             print(f"ℹ️ NOTE: Detected {pickup_beats} beats up front.")
-        
-        # For the first lieddeel, read tempo and timesig. 
-        if previous_tempo is None or previous_timesig is None:
-            previous_tempo, previous_timesig = extract_tempo_and_timesig(str(lieddeel_nwctxt))
-        
+        else:
+            pickup_beats = 0   # alleen in eerste lieddeel houden we rekening met pickup_beats. In andere lieddelen zijn pickup beats simpelweg een fout die je daar maar moet herstellen.
+            vooraf_measures = 0
+            # get tempo/timesig from preceding lieddeel
+            inherited_tempo = tempo_and_timesig_progression_in_lieddeel[-1][0]      # from last record get first value
+            inherited_timesig = tempo_and_timesig_progression_in_lieddeel[-1][1]    # from last record get second value
+
         file_list.append(str(lieddeel_nwctxt))
-        measure_count = get_measure_count(str(lieddeel_nwctxt))
-        lieddeel_starttime = get_duration(measurecount_and_starttime_per_lieddeel, previous_tempo, previous_timesig, pickup_beats)
-        measurecount_and_starttime_per_lieddeel.append((lieddeel, measure_count, lieddeel_starttime))
 
-        # Extract tempo and timesig of current lieddeel, needed for calculating start of NEXT section.
-        tempo, timesig = extract_tempo_and_timesig(str(lieddeel_nwctxt))
+        # Extract tempo and timesig progression from current lieddeel
+        (
+            tempo_and_timesig_progression_in_lieddeel, 
+            duration_of_pickup_beats
+        ) = \
+            get_duration_per_tempo_and_timesig_progression_from_bass_staff(
+                lieddeel_nwctxt, pickup_beats, inherited_tempo, inherited_timesig
+            )
+        
+        # Store first tempo and timesig, for return value. 
+        if i_lieddeel == 0:
+            tempo = tempo_and_timesig_progression_in_lieddeel[0][0]
+            timesig = tempo_and_timesig_progression_in_lieddeel[0][1]
 
-        # If not found, fall back to previous section's values
-        if tempo is None:
-            tempo = previous_tempo
-        if timesig is None:
-            timesig = previous_timesig 
+        # Count measures for current entire lieddeel
+        lieddeel_measure_count = sum(measure_count for  _, _, measure_count, _ in tempo_and_timesig_progression_in_lieddeel)
+        
+        # Sum durations of all preceding lieddelen: this gives us the starttime of the current one.
+        lieddeel_starttime_with_pickupbeats = 0
+        lieddeel_starttime_without_pickupbeats = 0
+        if i_lieddeel != 0:
+            lieddeel_starttime_with_pickupbeats = sum(duration for  _, _, _, duration, _ in data_per_lieddeel)
+            lieddeel_starttime_without_pickupbeats = lieddeel_starttime_with_pickupbeats - data_per_lieddeel[0][4]
 
-        # Store the data under name 'previous', because they actually belong to the previous lieddeel.
-        previous_tempo = tempo
-        previous_timesig = timesig
-
+        # Calculate durations (and other values) of current lieddeel
+        # Note: in practice, only the first lieddeel can have pickupbeats, but we do it for all.
+        lieddeel_duration_with_pickupbeats = sum(duration for  _, _, _, duration in tempo_and_timesig_progression_in_lieddeel)
+        lieddeel_duration_without_pickupbeats = lieddeel_duration_with_pickupbeats - duration_of_pickup_beats
+        
+        # Store results
+        data_per_lieddeel.append((lieddeel, lieddeel_measure_count, lieddeel_starttime_with_pickupbeats, 
+                                    lieddeel_duration_with_pickupbeats, duration_of_pickup_beats))
+        
         # Add lieddeel label to all_labels list
-        all_labels.append((lieddeel, lieddeel_starttime))
+        all_labels.append((lieddeel, lieddeel_starttime_with_pickupbeats))   
+        # note: duration of pickup_beats has not been subtracted from 
+        # starttime: that is exactly so required for the labeltrack!
 
         # Extract LBLTRCK markers and calculate their absolute times
-        lbltrck_markers = extract_lbltrck_markers(str(lieddeel_nwctxt))
-        if lbltrck_markers and tempo and timesig:
+        lbltrck_markers = extract_lbltrck_markers_from_bass_staff(str(lieddeel_nwctxt))     # to do: this is not an exact calculation: to be improved.
+        if lbltrck_markers:
             # Calculate timing parameters
             beats_per_second = tempo / 60
             beat_duration = 1 / beats_per_second
@@ -911,18 +1191,19 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
                 beats_within_measure = beat_pos_in_quarters * (4.0 / beat_base)
                 time_within_measure = beats_within_measure * beat_duration
 
-                marker_time = lieddeel_starttime + (measure_number * measure_duration) + time_within_measure
+                marker_time = lieddeel_starttime_with_pickupbeats + (measure_number * measure_duration) + time_within_measure
                 all_labels.append((label_text, marker_time))
 
         # Extract chord info only once per unique section
         if lieddeel not in chords_per_lieddeel:
-            chord_string, chord_count, is_valid = extract_chords_from_first_staff(str(lieddeel_nwctxt))
+            chord_string, chord_count, is_valid = extract_chords_from_bass_staff(str(lieddeel_nwctxt))
             chords_per_lieddeel[lieddeel] = (chord_string, chord_count, is_valid)
 
-        measure_str = f" ({measure_count} measures)" if measure_count else ""
+        measure_str = f" ({lieddeel_measure_count} measures)" if lieddeel_measure_count else ""
         print(f"Adding lieddeel: {lieddeel}{measure_str}")
+        i_lieddeel += 1
 
-    return file_list, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, all_labels, tempo, timesig, pickup_beats
+    return file_list, data_per_lieddeel, chords_per_lieddeel, all_labels, tempo, timesig, pickup_beats_in_first_lieddeel
 
 
 def main():
@@ -954,8 +1235,11 @@ def main():
     print(f"Tempo handling: {'Keep all tempi' if keep_tempi else 'Remove tempi from lieddelen 2+'}")
 
     # Process all lieddelen
-    (file_list, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, all_labels,
-    tempo, timesig, pickup_beats) = process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder)
+    (file_list, data_per_lieddeel, chords_per_lieddeel, all_labels,
+    main_tempo, main_timesig, pickup_beats_in_first_lieddeel) = process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder)
+
+    # file_list, data_per_lieddeel, chords_per_lieddeel, all_labels, tempo, timesig, pickup_beats_in_first_lieddeel
+    # data_per_lieddeel: lieddeel, lieddeel_measure_count, lieddeel_starttime_with_pickupbeats, lieddeel_duration_with_pickupbeats, duration_of_pickup_beats))
 
     # Concatenate files
     output_nwctxt = paths.build_folder / f"{songtitle}.nwctxt"
@@ -964,7 +1248,7 @@ def main():
     print(f"✅ Success! Concatenated .nwctxt files to {output_nwctxt}")
 
     # Analyze concatenated .nwctxt file (get complete song metadata)
-    analysis_file, complete_analysis = write_analysis_to_file(songtitle, output_nwctxt, tempo=tempo, timesig=timesig)
+    _ , complete_analysis = write_analysis_to_file(songtitle, output_nwctxt)
 
     if not complete_analysis:
         print("⚠️ Warning: Analysis failed, continuing with limited data")
@@ -977,19 +1261,19 @@ def main():
     # Generate complete LaTeX structure file using analysis data
     tex_file = paths.build_folder / f"{songtitle} structuur.tex"
     print(f"Generating: {tex_file}")
-    write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_starttime_per_lieddeel,
-                    chords_per_lieddeel, pickup_beats, complete_analysis)
+    write_latex_file(tex_file, songtitle, main_tempo, main_timesig, data_per_lieddeel,
+                    chords_per_lieddeel, pickup_beats_in_first_lieddeel, complete_analysis)
     print(f"✅ Success! Created: {tex_file}")
 
     # Generate label track file for Tenacity in song-specific subfolder
     song_audio_folder = paths.audio_output_folder / songtitle
     song_audio_folder.mkdir(parents=True, exist_ok=True)
-    labeltrack_file = song_audio_folder / f"{songtitle} labeltrack t_{tempo}.txt"
+    labeltrack_file = song_audio_folder / f"{songtitle} labeltrack t_{main_tempo}.txt"
     print(f"Generating: {labeltrack_file}")
     write_labeltrack_file(labeltrack_file, all_labels)
     print(f"✅ Success! Created: {labeltrack_file}")
 
-    update_liedtekst_tex_file(songtitle, tempo, timesig, song_folder)
+    update_liedtekst_tex_file(songtitle, main_tempo, main_timesig, song_folder)
     print(f"✅ Success! Updated liedtekst tempo and timesig in {songtitle}.tex")
 
 

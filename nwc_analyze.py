@@ -243,8 +243,6 @@ def map_lyrics_to_measures(staff_content, syllables):
     return measure_map
 
 
-    
-
 def analyze_nwctxt(file_path):
     """Analyze a .nwctxt file and return lyrics mapping.
 
@@ -257,8 +255,6 @@ def analyze_nwctxt(file_path):
     # Extract metadata from header
     header_content = '\n'.join(nwc.header_lines)
     title = parse_song_info(header_content)
-
-    file_name = file_path.stem
 
     # Get Bass staff to count total measures
     bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
@@ -278,6 +274,17 @@ def analyze_nwctxt(file_path):
     # Count vooraf measures
     vooraf = count_vooraf_measures(bass_content)
 
+    # determine first timesig
+    first_timesig = None
+    bass_lines = bass_staff.lines
+    for line in bass_lines:
+        if line.startswith('|TimeSig|Signature:'):
+            try:
+                sig_part = line.split('|TimeSig|Signature:')[1]
+                first_timesig = sig_part.split('|')[0]
+                break
+            except (IndexError, ValueError):
+                pass
 
     # begin sectie: count meastures per tempo
     # Pseudo-code:
@@ -285,7 +292,7 @@ def analyze_nwctxt(file_path):
     #   find next different tempo:
     #       if found: count measures in between
     #       else: count measures until end.
-    
+
     bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
     if bass_staff:
         bass_lines = bass_staff.lines
@@ -295,10 +302,10 @@ def analyze_nwctxt(file_path):
         bar_count = 0
         tempo = 0
         first_tempo = 0
-        tempo_measures_tuples = dict()  # dictionary for easy retrieval 
+        tempo_measures_tuples = dict()  # dictionary for easy retrieval
 
         for line in bass_lines:
-            
+
             line_count += 1
             if line.startswith(NWC_PREFIX_BAR):
                 bar_count += 1
@@ -368,11 +375,12 @@ def analyze_nwctxt(file_path):
         'vooraf': vooraf,
         'measure_map': measure_map,
         'main_tempo': first_tempo,
+        'main_timesig': first_timesig,
         'tempo_measures_dict': tempo_measures_tuples    # measure count per tempo, corrected for begintel en maten vooraf.
     }
 
 
-def analyze_complete_song(file_path, tempo=None, timesig=None):
+def analyze_complete_song(file_path):
     """Complete analysis of a merged .nwctxt file with corrected totals.
 
     This function provides a single source of truth for all song metadata,
@@ -409,31 +417,19 @@ def analyze_complete_song(file_path, tempo=None, timesig=None):
     if not basic_analysis:
         return None
 
-    # Extract timesig if not provided
-    if timesig is None:
-        nwc = NwcFile(file_path)
-        bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
-        if bass_staff:
-            bass_lines = bass_staff.lines
-            for line in bass_lines:
-                if line.startswith('|TimeSig|Signature:'):
-                    try:
-                        sig_part = line.split('|TimeSig|Signature:')[1]
-                        timesig = sig_part.split('|')[0]
-                        break
-                    except (IndexError, ValueError):
-                        pass
-
     # Calculate corrected total measures (excluding begintel and vooraf)
     total_measures_corrected = basic_analysis['total_measures'] - basic_analysis['vooraf']
 
-    # Calculate total duration (excluding vooraf measures): Reckoning with tempo changes.
+    # Calculate total duration (excluding vooraf measures): Reckoning with tempo changes (but not with
+    # timesig changes!: eventually replace this logic with the one in nwc-concat: 
+    # extract_progression_of_multiple_targets_with_measurecount_from_bass_staff)
     total_duration = None
+    timesig = basic_analysis['main_timesig']
     # only computable if timesig is set:
     if timesig:
         total_duration = 0
         measures_per_tempo_dict = basic_analysis['tempo_measures_dict']
-        for key in measures_per_tempo_dict.keys():
+        for key in measures_per_tempo_dict.keys():  # tempo's are the keys
             try:
                 tempo = key
                 beats_per_second = tempo / 60
@@ -464,12 +460,12 @@ def analyze_complete_song(file_path, tempo=None, timesig=None):
         'file': basic_analysis['file'],
         'folder': basic_analysis['folder'],
         'tempo': basic_analysis['main_tempo'],
-        'timesig': timesig,
+        'timesig': basic_analysis['main_timesig'],
         'total_bars': count_bare_bars_in_staff(NwcFile(file_path).get_staff_by_name(STAFF_NAME_BASS).get_content()),
         'has_begintel': basic_analysis['has_begintel'],
         'vooraf': vooraf,
         'total_measures': total_measures_corrected,
-        'total_duration': total_duration,
+        'total_duration': total_duration,   # this is OK for the .tex file, but not exact enough for the labeltrack
         'measure_map': measure_map_renumbered,
     }
 
@@ -512,15 +508,15 @@ def format_output(analysis, song_number=None):
     return "\n".join(lines)
 
 
-def write_analysis_to_file(songtitle, nwctxt_file_path,  tempo=None, timesig=None, use_complete_analysis=True):
-    """Analyze a .nwctxt file and write results to output folder.
+def write_analysis_to_file(songtitle, nwctxt_file_path, use_complete_analysis=True):
+    """Analyze a .nwctxt file (complete, concatenated, song) and write results to output folder.
 
     Args:
         nwctxt_file_path: Path to the .nwctxt file (string or Path object)
         tempo: Optional tempo (BPM) for complete analysis
         timesig: Optional time signature (e.g. "4/4") for complete analysis
         use_complete_analysis: If True (default), use analyze_complete_song() with corrected totals.
-                              If False, use legacy analyze_nwctxt() with raw data.
+                                If False, use legacy analyze_nwctxt() with raw data.
 
     Returns:
         tuple: (Path to created analysis file or None, analysis dict or None)
@@ -537,7 +533,7 @@ def write_analysis_to_file(songtitle, nwctxt_file_path,  tempo=None, timesig=Non
 
     # Analyze the file
     if use_complete_analysis:
-        analysis = analyze_complete_song(file_path, tempo=tempo, timesig=timesig)
+        analysis = analyze_complete_song(file_path)
     else:
         analysis = analyze_nwctxt(file_path)
 
