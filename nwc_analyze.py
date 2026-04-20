@@ -12,8 +12,8 @@ from pathlib import Path
 from pathconfig import load_and_resolve_paths
 from nwc_utils import NwcFile
 from constants import (STAFF_NAME_BASS, STAFF_NAME_ZANG, NWC_PREFIX_BAR,
-                       NWC_PREFIX_NOTE, NWC_PREFIX_REST, NWC_PREFIX_TEXT,
-                       NWC_MARKER_LIEDSTART)
+                        NWC_PREFIX_NOTE, NWC_PREFIX_REST, NWC_PREFIX_TEXT,
+                        NWC_MARKER_LIEDSTART)
 
 
 def parse_song_info(content):
