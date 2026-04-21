@@ -50,11 +50,41 @@ def get_duration_per_tempo_and_timesig_progression_from_bass_staff(filepath, sta
     tempo_and_timesig_progression = extract_progression_of_multiple_targets_with_measurecount_from_bass_staff(
         filepath, (find_tempo, start_tempo), (find_timesig, start_timesig))
 
-
-
     # Nu we tempo, timesig en measure_count hebben kunnen we duration gaan berekenen.
+    
+    # BUG: NIET VOOR INTRO, WANT DAN MOET JE WETEN OF DE EERSTE MAAT EEN PICKUP MAAT IS
+    # 
+    # FUNCTIE VAN PICKUPBEATS
+    # de functie van de pickupbeat(s) is het issue te voorkomen dat in Tenacity geluid op de 
+    # allereerste tel krakerig afspeelt of zelfs laat wegvallen, met als gevolg dat je tijdens het inspelen
+    # verkeerd gaat tellen: daarom de eerste tel altijd overslaan. Qua definitie hoeft het niet één tel te zijn
+    # maar spreken we van pickupbeats zodra er minder tellen in de eerste maat zitten dan de timesig aangeeft.
+    #
+    # FUNCTIE VAN VOORAFMATEN
+    # De functie van voorafmaten is om tijdens recording tijd te hebben tussen het _starten_ van de opname,
+    # waarvoor je één hand nodig hebt en ik dus mijn plectrum met neerleggen, en 
+    # het begin van het muziekstuk, omdat ik altijd loop te hannesen met het omhangen van mijn gitaar en 
+    # positioneren van mijn plectrum, het op de juiste plek voor de mic gaan staan etc. 
+    #
+    # DOELEN
+    # - duur van het liedje berekenen (ergo: pickupbeats en voorafmaten _niet_ meenemen)
+    # - labeltrack maken met exacte tijdsposities (ergo: pickupbeats en voorafmaten _wel_ meenemen)
+    
+    # COMPLICATIE:
+    # - Duration berekenen we vaak op basis van het aantal maten, maar voor een maat met pickupbeats
+    #   is dat incorrect omdat daar minder tellen inzitten dan de timesig aangeeft.
+    # 
+    # Dus code-structuur:
+    # tempo/timesig analyse: is onafhankelijk van pickupbeats en voorafmaten, want telt gewoon het aantal maten en niet duration.
+    # calculate_pickupbeats: param tempo/timesig analyse: telt aantal beats in eerste maat als dat minder is dan timesig-teller; 
+    #       needs timesig/tempo om duration ervan te bepalen. 
+    #       Returns beats_count, beats_duration. 
+    # calculate_voorafmaten: param pickupbeats, tempo/timesig: telt aantal HELE maten before liedstart, zonder pickupbeats. 
+    #       needs pickupbeats om wel/niet eerste maat te negeren en timesig/tempo om duration te bepalen. 
+    #       Returns measures_count, measures_duration.
+    
     tempo_and_timesig_progression = [
-        [tempo, timesig, measure_count, calculate_duration(tempo, timesig, measure_count)]
+        [tempo, timesig, measure_count, calculate_duration_by_measure_count(tempo, timesig, measure_count)]
         for tempo, timesig, measure_count in tempo_and_timesig_progression
     ] 
 
@@ -256,7 +286,7 @@ def extract_progression_of_multiple_targets_with_measurecount_from_bass_staff(fi
     return results
 
 
-def calculate_duration(tempo, timesig, measure_count):
+def calculate_duration_by_measure_count(tempo, timesig, measure_count):
     """Straight mathematics: returns the number of seconds.
     
     Given bpm (beats per minutes = tempo), the value of a single beat (the y 
@@ -272,7 +302,7 @@ def calculate_duration(tempo, timesig, measure_count):
     return duration
 
 
-def calculate_duration(tempo, beat_count):
+def calculate_duration_by_beat_count(tempo, beat_count):
     """Straight mathematics: returns the number of seconds.
     
     Given bpm (beats per minutes = tempo) and the number of beats (beat_count)
@@ -890,7 +920,7 @@ def get_beats_before_target_from_first_staff(nwctxt_filepath, tempo, timesig, fi
             dur_with_modifier = contents.split("|Dur:")[1].split("|")[0]    # e.g. "4th,Dotted", or "Whole"
             beats_count += get_beats_for_notelength_name(dur_with_modifier, timesig)
 
-    beats_duration = calculate_duration(tempo, beats_count)
+    beats_duration = calculate_duration_by_beat_count(tempo, beats_count)
 
     return beats_count, beats_duration
 
