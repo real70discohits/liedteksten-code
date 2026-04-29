@@ -696,17 +696,6 @@ def get_pickup_beats(nwctxt_filepath):
     with open(nwctxt_filepath, 'r', encoding='utf-8') as f:
         lines = f.readlines()
 
-    # Check condition 1: StartingBar:0
-    has_starting_bar_zero = False
-    for line in lines:
-        if line.startswith('|PgSetup|'):
-            if '|StartingBar:0' in line:
-                has_starting_bar_zero = True
-            break
-
-    if not has_starting_bar_zero:
-        return 0.0
-
     # Find time signature to determine beat unit
     timesig_denominator = 4  # default
     for line in lines:
