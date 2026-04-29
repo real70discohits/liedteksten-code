@@ -209,6 +209,31 @@ class NwcFile:
         return f"NwcFile(path='{self.filepath}', staffs={len(self.staffs)})"
 
 
+def calc_timing(tempo: int, timesig: str):
+    """Calculate timing parameters from tempo and time signature.
+
+    NOTE: measure_duration is incorrect for compound meters like 6/8, where the
+    tempo (BPM) refers to quarter notes but the beat unit is an eighth note.
+
+    Args:
+        tempo: Tempo in BPM (quarter notes per minute)
+        timesig: Time signature string, e.g. "4/4" or "3/4"
+
+    Returns:
+        tuple: (beat_duration, measure_duration, beats_per_measure, beat_base)
+        - beat_duration: seconds per quarter-note beat (60 / tempo)
+        - measure_duration: seconds per full measure
+        - beats_per_measure: numerator of time signature
+        - beat_base: denominator of time signature
+    """
+    beat_duration = 60.0 / tempo
+    s_beats_per_measure, _, s_beat_base = timesig.partition('/')
+    beats_per_measure = int(s_beats_per_measure)
+    beat_base = int(s_beat_base)
+    measure_duration = beats_per_measure * beat_duration
+    return beat_duration, measure_duration, beats_per_measure, beat_base
+
+
 def parse_duration(line: str) -> float:
     """Parse NWC duration from Note or Rest line and convert to quarter notes.
 

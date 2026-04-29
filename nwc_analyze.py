@@ -10,7 +10,7 @@ import sys
 import re
 from pathlib import Path
 from pathconfig import load_and_resolve_paths
-from nwc_utils import NwcFile
+from nwc_utils import NwcFile, calc_timing
 from constants import (STAFF_NAME_BASS, STAFF_NAME_ZANG, NWC_PREFIX_BAR,
                        NWC_PREFIX_NOTE, NWC_PREFIX_REST, NWC_PREFIX_TEXT,
                        NWC_MARKER_LIEDSTART)
@@ -334,12 +334,7 @@ def analyze_complete_song(file_path, tempo=None, timesig=None):
     total_duration = None
     if tempo and timesig:
         try:
-            beats_per_second = tempo / 60
-            beat_duration = 1 / beats_per_second
-            s_beats_per_measure, _, s_beat_base = timesig.partition('/')
-            beats_per_measure = int(s_beats_per_measure)
-            measure_duration = beats_per_measure * beat_duration
-
+            _, measure_duration, _, _ = calc_timing(tempo, timesig)
             # Duration = only the 'real' measures (excluding vooraf)
             total_duration = total_measures_corrected * measure_duration
         except (ValueError, ZeroDivisionError):

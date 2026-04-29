@@ -30,7 +30,7 @@ from pathlib import Path
 import re
 from pathconfig import load_and_resolve_paths, validate_file_exists, validate_folder_exists, load_jsonc
 from nwc_analyze import write_analysis_to_file
-from nwc_utils import parse_nwctxt, NwcFile, parse_duration
+from nwc_utils import parse_nwctxt, NwcFile, parse_duration, calc_timing
 from constants import (NWC_PREFIX_ADDSTAFF, NWC_PREFIX_STAFF_PROPERTIES,
                         NWC_PREFIX_STAFF_INSTRUMENT, NWC_PREFIX_CLEF, NWC_PREFIX_REST,
                         NWC_PREFIX_TIMESIG, NWC_PREFIX_TEMPO, NWC_PREFIX_BAR,
@@ -685,13 +685,7 @@ def get_duration(measurecount_and_starttime_per_lieddeel, tempo, timesig, beats_
     if measurecount_and_starttime_per_lieddeel is None or tempo is None or tempo == 0 or timesig is None:
         return None
 
-    # determine the duration of a single measure
-    beats_per_second = tempo / 60
-    beat_duration = 1 / beats_per_second
-    s_beats_per_measure, _, s_beat_base = timesig.partition('/')  # beat base is not needed? Dit gaat mis bij 6/8 vermoed ik, nog checken.
-    beats_per_measure = int(s_beats_per_measure)
-    beat_base = int(s_beat_base)
-    measure_duration = beats_per_measure * beat_duration
+    beat_duration, measure_duration, beats_per_measure, beat_base = calc_timing(tempo, timesig)
 
     # calculate duration of all given lieddelen
     totalduration = 0
@@ -890,13 +884,7 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
         # Extract LBLTRCK markers and calculate their absolute times
         lbltrck_markers = extract_lbltrck_markers(str(lieddeel_nwctxt))
         if lbltrck_markers and tempo and timesig:
-            # Calculate timing parameters
-            beats_per_second = tempo / 60
-            beat_duration = 1 / beats_per_second
-            s_beats_per_measure, _, s_beat_base = timesig.partition('/')
-            beats_per_measure = int(s_beats_per_measure)
-            beat_base = int(s_beat_base)
-            measure_duration = beats_per_measure * beat_duration
+            beat_duration, measure_duration, _, beat_base = calc_timing(tempo, timesig)
 
             # Add each marker with its precise absolute time
             for label_text, measure_number, beat_pos_in_quarters in lbltrck_markers:
