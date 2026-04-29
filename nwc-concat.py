@@ -32,7 +32,7 @@ from pathconfig import load_and_resolve_paths, validate_file_exists, validate_fo
 from nwc_analyze import write_analysis_to_file
 from nwc_utils import parse_nwctxt, NwcFile, parse_duration
 from constants import (NWC_PREFIX_ADDSTAFF, NWC_PREFIX_STAFF_PROPERTIES,
-                        NWC_PREFIX_STAFF_INSTRUMENT, NWC_PREFIX_CLEF,
+                        NWC_PREFIX_STAFF_INSTRUMENT, NWC_PREFIX_CLEF, NWC_PREFIX_REST,
                         NWC_PREFIX_TIMESIG, NWC_PREFIX_TEMPO, NWC_PREFIX_BAR,
                         NWC_PREFIX_TEXT, NWC_END_MARKER, FOLDER_NWC, EXT_NWCTXT,
                         EXT_JSONC, STAFF_NAME_BASS, STAFF_NAME_RITME,
@@ -126,11 +126,21 @@ def get_measure_count(filepath):
     # Get Ritme staff content for the repeat marker
     ritme_staff_lines = ritme_staff.lines
 
+    # Detect pickup: rest before first bar (only present in the first section file)
+    has_pickup = False
+    for line in ritme_staff_lines:
+        if line.startswith('|Bar|') or line == '|Bar':
+            break
+        elif line.startswith(NWC_PREFIX_REST) and '|Dur:' in line:
+            has_pickup = True
+            break
+
     repeat_count = None
     measures_after_repeat = 0
     total_measures = 0
     after_repeat = False
     current_measure_has_dur = False
+    past_pickup = not has_pickup
 
     for line in ritme_staff_lines:
         if 'Style:LocalRepeatClose' in line and 'Repeat:' in line:
@@ -146,7 +156,9 @@ def get_measure_count(filepath):
             # Check for Bar marker
             if line.startswith('|Bar|') or line == '|Bar':
                 if current_measure_has_dur:
-                    if after_repeat:
+                    if not past_pickup:
+                        past_pickup = True
+                    elif after_repeat:
                         measures_after_repeat += 1
                     else:
                         total_measures += 1
@@ -333,10 +345,21 @@ def extract_lbltrck_markers(filepath):
         return []
 
     staff_lines = bass_staff.lines
+
+    # Detect pickup: rest before first bar in Bass staff
+    has_pickup = False
+    for line in staff_lines:
+        if line.startswith(NWC_PREFIX_BAR) or line == '|Bar':
+            break
+        elif line.startswith(NWC_PREFIX_REST) and '|Dur:' in line:
+            has_pickup = True
+            break
+
     markers = []
     current_measure = 0
     current_beat_pos = 0.0  # Position within current measure in quarter notes
     current_measure_has_dur = False
+    past_pickup = not has_pickup
 
     for line in staff_lines:
         # Check for LBLTRCK marker in Text entries
@@ -360,7 +383,10 @@ def extract_lbltrck_markers(filepath):
         # Track measure boundaries
         if line.startswith(NWC_PREFIX_BAR) or line == '|Bar':
             if current_measure_has_dur:
-                current_measure += 1
+                if not past_pickup:
+                    past_pickup = True
+                else:
+                    current_measure += 1
                 current_beat_pos = 0.0
             current_measure_has_dur = False
 
@@ -684,8 +710,8 @@ def get_pickup_beats(nwctxt_filepath):
     Detect and calculate pickup beats (anacrusis) in a NoteWorthy file.
     
     A pickup exists when:
-    1. PgSetup contains StartingBar:0
-    2. First Rest comes before first Bar
+    1. First Rest comes before first Bar
+    2. This rest has a duration of 1 quarter note.
     
     Args:
         nwctxt_filepath: Path to .nwctxt file
@@ -693,12 +719,15 @@ def get_pickup_beats(nwctxt_filepath):
     Returns:
         float: Number of pickup beats, or 0.0 if no pickup
     """
-    with open(nwctxt_filepath, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
+    nwc = NwcFile(nwctxt_filepath)
+    bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
+    if not bass_staff:
+        return 0.0
+    staff_lines = bass_staff.lines
 
     # Find time signature to determine beat unit
     timesig_denominator = 4  # default
-    for line in lines:
+    for line in staff_lines:
         if line.startswith('|TimeSig|Signature:'):
             try:
                 sig = line.split('Signature:')[1].split('|')[0]
@@ -707,12 +736,12 @@ def get_pickup_beats(nwctxt_filepath):
             except (IndexError, ValueError):
                 pass
 
-    # Check condition 2: First Rest before first Bar
+    # Check: First Rest before first Bar in Bass staff
     first_rest_dur = None
     found_bar_first = False
 
-    for line in lines:
-        if line.startswith('|Bar'):
+    for line in staff_lines:
+        if line.startswith('|Bar|') or line == '|Bar':
             found_bar_first = True
             break
         elif line.startswith('|Rest|Dur:'):
