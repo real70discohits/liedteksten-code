@@ -859,13 +859,20 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
         tuple: (file_list, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, all_labels, tempo, timesig, pickup_beats)
         all_labels is a list of tuples: (label_text, time_in_seconds)
     """
+    _DEFAULT_TEMPO = 120
+    _DEFAULT_TIMESIG = '4/4'
+
     file_list = []
     measurecount_and_starttime_per_lieddeel = []
     chords_per_lieddeel = {}
     all_labels = []
-    tempo = None
-    timesig = None
     pickup_beats = 0
+
+    prev_tempo = _DEFAULT_TEMPO
+    prev_timesig = _DEFAULT_TIMESIG
+    first_lieddeel_tempo = None
+    first_lieddeel_timesig = None
+    current_start_time = None  # set after first lieddeel's pickup is known
 
     for lieddeel in volgorde_lieddelen:
         lieddeel_nwctxt = nwc_folder / f"{songtitle} {lieddeel}{EXT_NWCTXT}"
@@ -873,34 +880,49 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
         if not validate_file_exists(lieddeel_nwctxt, f"Lieddeel file '{lieddeel}'"):
             sys.exit(1)
 
-        # Extract tempo and timesig from first section, only once per deel
-        if tempo is None and timesig is None:
-            tempo, timesig = extract_tempo_and_timesig(str(lieddeel_nwctxt))
+        # Extract this lieddeel's own tempo/timesig; inherit from predecessor if absent
+        lieddeel_tempo, lieddeel_timesig = extract_tempo_and_timesig(str(lieddeel_nwctxt))
+        if lieddeel_tempo is None:
+            lieddeel_tempo = prev_tempo
+        if lieddeel_timesig is None:
+            lieddeel_timesig = prev_timesig
+        prev_tempo = lieddeel_tempo
+        prev_timesig = lieddeel_timesig
+
+        beat_duration, measure_duration, _, beat_base = calc_timing(lieddeel_tempo, lieddeel_timesig)
+
+        # First lieddeel: capture values for return and determine pickup offset
+        if first_lieddeel_tempo is None:
+            first_lieddeel_tempo = lieddeel_tempo
+            first_lieddeel_timesig = lieddeel_timesig
             pickup_beats = get_pickup_beats(lieddeel_nwctxt)
+            current_start_time = pickup_beats * beat_duration
             print(f"ℹ️ NOTE: Detected {pickup_beats} beats up front.")
 
         file_list.append(str(lieddeel_nwctxt))
         measure_count = get_measure_count(str(lieddeel_nwctxt))
-        lieddeel_starttime = get_duration(measurecount_and_starttime_per_lieddeel, tempo, timesig, pickup_beats)
+        lieddeel_starttime = current_start_time
         measurecount_and_starttime_per_lieddeel.append((lieddeel, measure_count, lieddeel_starttime))
 
         # Add lieddeel label to all_labels list
         all_labels.append((lieddeel, lieddeel_starttime))
 
-        # Extract LBLTRCK markers and calculate their absolute times
+        # Extract LBLTRCK markers and calculate their absolute times using this lieddeel's timing
         lbltrck_markers = extract_lbltrck_markers(str(lieddeel_nwctxt))
-        if lbltrck_markers and tempo and timesig:
-            beat_duration, measure_duration, _, beat_base = calc_timing(tempo, timesig)
-
-            # Add each marker with its precise absolute time
+        if lbltrck_markers and lieddeel_starttime is not None:
             for label_text, measure_number, beat_pos_in_quarters in lbltrck_markers:
                 # Convert quarter note position to beats in current time signature
                 # Example: in 4/4, quarter = 1 beat; in 6/8, quarter = 0.5 beats
                 beats_within_measure = beat_pos_in_quarters * (4.0 / beat_base)
                 time_within_measure = beats_within_measure * beat_duration
-
                 marker_time = lieddeel_starttime + (measure_number * measure_duration) + time_within_measure
                 all_labels.append((label_text, marker_time))
+
+        # Advance cumulative time by this lieddeel's own duration
+        if measure_count is not None and current_start_time is not None:
+            current_start_time += measure_count * measure_duration
+        else:
+            current_start_time = None  # measure count unknown; subsequent times unreliable
 
         # Extract chord info only once per unique section
         if lieddeel not in chords_per_lieddeel:
@@ -910,7 +932,7 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
         measure_str = f" ({measure_count} measures)" if measure_count else ""
         print(f"Adding lieddeel: {lieddeel}{measure_str}")
 
-    return file_list, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, all_labels, tempo, timesig, pickup_beats
+    return file_list, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, all_labels, first_lieddeel_tempo, first_lieddeel_timesig, pickup_beats
 
 
 def main():
