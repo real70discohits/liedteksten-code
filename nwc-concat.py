@@ -29,7 +29,7 @@ import sys
 from pathlib import Path
 import re
 from pathconfig import load_and_resolve_paths, validate_file_exists, validate_folder_exists, load_jsonc
-from nwc_analyze import write_analysis_to_file
+from nwc_analyze import write_analysis_to_file, count_vooraf_measures
 from nwc_utils import parse_nwctxt, NwcFile, parse_duration, calc_timing
 from constants import (NWC_PREFIX_ADDSTAFF, NWC_PREFIX_STAFF_PROPERTIES,
                         NWC_PREFIX_STAFF_INSTRUMENT, NWC_PREFIX_CLEF, NWC_PREFIX_REST,
@@ -180,6 +180,12 @@ def get_measure_count(filepath):
     else:
         # No repeat found, use total measures counted
         final_count = total_measures
+
+    # Subtract maten vooraf: full measures before 'liedstart' in the Bass staff
+    # (count_vooraf_measures already excludes the pickup measure)
+    bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
+    if bass_staff:
+        final_count -= count_vooraf_measures(bass_staff.get_content())
 
     return final_count if final_count > 0 else None
 
