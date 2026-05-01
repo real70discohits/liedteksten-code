@@ -30,11 +30,12 @@ from pathlib import Path
 import re
 from pathconfig import load_and_resolve_paths, validate_file_exists, validate_folder_exists, load_jsonc
 from nwc_analyze import write_analysis_to_file, count_vooraf_measures
-from nwc_utils import parse_nwctxt, NwcFile, parse_duration, calc_timing
+from nwc_utils import parse_nwctxt, NwcFile, parse_duration, calc_timing, TimingSegment
 from constants import (NWC_PREFIX_ADDSTAFF, NWC_PREFIX_STAFF_PROPERTIES,
                         NWC_PREFIX_STAFF_INSTRUMENT, NWC_PREFIX_CLEF, NWC_PREFIX_REST,
                         NWC_PREFIX_TIMESIG, NWC_PREFIX_TEMPO, NWC_PREFIX_BAR,
-                        NWC_PREFIX_TEXT, NWC_END_MARKER, FOLDER_NWC, EXT_NWCTXT,
+                        NWC_PREFIX_TEXT, NWC_END_MARKER, NWC_MARKER_LIEDSTART,
+                        FOLDER_NWC, EXT_NWCTXT,
                         EXT_JSONC, STAFF_NAME_BASS, STAFF_NAME_RITME,
                         STAFF_NAME_BASE_DRUM, STAFF_NAME_SNARE_DRUM,
                         STAFF_NAME_HI_HAT, STAFF_NAME_CRASH_CYMBAL,
@@ -790,6 +791,145 @@ def get_pickup_beats(nwctxt_filepath):
     return beats
 
 
+def extract_timing_segments(filepath, initial_tempo, initial_timesig):
+    """Build list of TimingSegment for the counted measures in a lieddeel file.
+
+    A tempo or timesig change applies from the start of the measure in which it appears.
+    Pickup and maten vooraf are skipped (not counted).
+
+    Args:
+        filepath: Path to .nwctxt file
+        initial_tempo: Tempo to assume at the start (inherited or default)
+        initial_timesig: Time signature to assume at the start (inherited or default)
+
+    Returns:
+        List of TimingSegment, one per consecutive block of same tempo/timesig.
+        Returns empty list if Bass staff not found.
+    """
+    nwc = NwcFile(filepath)
+    bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
+    if not bass_staff:
+        return []
+
+    staff_lines = bass_staff.lines
+
+    # Pre-scan: pickup = rest before first bar
+    has_pickup = False
+    for line in staff_lines:
+        if line.startswith('|Bar|') or line == '|Bar':
+            break
+        elif line.startswith(NWC_PREFIX_REST) and '|Dur:' in line:
+            has_pickup = True
+            break
+
+    past_pickup = not has_pickup
+
+    current_tempo = initial_tempo
+    current_timesig = initial_timesig
+    pending_tempo = None
+    pending_timesig = None
+    has_pending_change = False
+
+    segments = []
+    current_seg_measures = 0
+    current_measure_has_dur = False
+
+    def flush_segment():
+        nonlocal current_seg_measures, current_tempo, current_timesig
+        nonlocal pending_tempo, pending_timesig, has_pending_change
+        if current_seg_measures > 0:
+            segments.append(TimingSegment(current_tempo, current_timesig, current_seg_measures))
+        if pending_tempo is not None:
+            current_tempo = pending_tempo
+        if pending_timesig is not None:
+            current_timesig = pending_timesig
+        pending_tempo = None
+        pending_timesig = None
+        has_pending_change = False
+        current_seg_measures = 0
+
+    def apply_pending():
+        nonlocal current_tempo, current_timesig, pending_tempo, pending_timesig, has_pending_change
+        if pending_tempo is not None:
+            current_tempo = pending_tempo
+        if pending_timesig is not None:
+            current_timesig = pending_timesig
+        pending_tempo = None
+        pending_timesig = None
+        has_pending_change = False
+
+    for line in staff_lines:
+        if line.startswith(NWC_PREFIX_TEMPO) and 'Tempo:' in line:
+            try:
+                new_tempo = int(line.split('Tempo:')[1].split('|')[0])
+                if new_tempo != current_tempo:
+                    pending_tempo = new_tempo
+                    has_pending_change = True
+            except (IndexError, ValueError):
+                pass
+
+        if line.startswith(f'{NWC_PREFIX_TIMESIG}Signature:'):
+            try:
+                new_timesig = line.split(f'{NWC_PREFIX_TIMESIG}Signature:')[1].split('|')[0]
+                if new_timesig != current_timesig:
+                    pending_timesig = new_timesig
+                    has_pending_change = True
+            except (IndexError, ValueError):
+                pass
+
+        if '|Dur:' in line:
+            current_measure_has_dur = True
+
+        if (line.startswith('|Bar|') or line == '|Bar') and current_measure_has_dur:
+            if not past_pickup:
+                past_pickup = True
+                apply_pending()  # pickup doesn't count but tempo still propagates
+            else:
+                if has_pending_change:
+                    flush_segment()
+                current_seg_measures += 1
+            current_measure_has_dur = False
+
+    # Handle last measure (NWC files have no trailing bar)
+    if current_measure_has_dur and past_pickup:
+        if has_pending_change:
+            flush_segment()
+        current_seg_measures += 1
+
+    if current_seg_measures > 0:
+        segments.append(TimingSegment(current_tempo, current_timesig, current_seg_measures))
+
+    return segments
+
+
+def time_at_measure(segments, measure_number):
+    """Return (elapsed_time, beat_duration, beat_base) at the start of a measure (0-based).
+
+    Args:
+        segments: List of TimingSegment from extract_timing_segments
+        measure_number: 0-based measure index within the lieddeel
+
+    Returns:
+        tuple: (elapsed_time_seconds, beat_duration_seconds, beat_base)
+    """
+    elapsed = 0.0
+    measures_seen = 0
+    for seg in segments:
+        _, measure_duration, _, beat_base = calc_timing(seg.tempo, seg.timesig)
+        beat_duration = 60.0 / seg.tempo
+        if measures_seen + seg.measure_count > measure_number:
+            elapsed += (measure_number - measures_seen) * measure_duration
+            return elapsed, beat_duration, beat_base
+        elapsed += seg.measure_count * measure_duration
+        measures_seen += seg.measure_count
+    # Fallback: beyond all segments
+    if segments:
+        last = segments[-1]
+        _, _, _, beat_base = calc_timing(last.tempo, last.timesig)
+        return elapsed, 60.0 / last.tempo, beat_base
+    return elapsed, 60.0 / 120, 4
+
+
 def validate_and_setup_folders(songtitle, paths):
     """Validate input/output folders and song structure.
 
@@ -899,6 +1039,9 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
             current_start_time = pickup_beats * beat_duration
             print(f"ℹ️ NOTE: Detected {pickup_beats} beats up front.")
 
+        # Build timing segments for intra-lieddeel tempo/timesig changes
+        timing_segments = extract_timing_segments(str(lieddeel_nwctxt), lieddeel_tempo, lieddeel_timesig)
+
         file_list.append(str(lieddeel_nwctxt))
         measure_count = get_measure_count(str(lieddeel_nwctxt))
         lieddeel_starttime = current_start_time
@@ -907,22 +1050,29 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
         # Add lieddeel label to all_labels list
         all_labels.append((lieddeel, lieddeel_starttime))
 
-        # Extract LBLTRCK markers and calculate their absolute times using this lieddeel's timing
+        # Extract LBLTRCK markers with per-measure tempo/timesig precision
         lbltrck_markers = extract_lbltrck_markers(str(lieddeel_nwctxt))
         if lbltrck_markers and lieddeel_starttime is not None:
             for label_text, measure_number, beat_pos_in_quarters in lbltrck_markers:
-                # Convert quarter note position to beats in current time signature
-                # Example: in 4/4, quarter = 1 beat; in 6/8, quarter = 0.5 beats
-                beats_within_measure = beat_pos_in_quarters * (4.0 / beat_base)
-                time_within_measure = beats_within_measure * beat_duration
-                marker_time = lieddeel_starttime + (measure_number * measure_duration) + time_within_measure
+                if timing_segments:
+                    time_in_lieddeel, seg_beat_duration, seg_beat_base = time_at_measure(timing_segments, measure_number)
+                else:
+                    time_in_lieddeel = measure_number * measure_duration
+                    seg_beat_duration = beat_duration
+                    seg_beat_base = beat_base
+                beats_within_measure = beat_pos_in_quarters * (4.0 / seg_beat_base)
+                time_within_measure = beats_within_measure * seg_beat_duration
+                marker_time = lieddeel_starttime + time_in_lieddeel + time_within_measure
                 all_labels.append((label_text, marker_time))
 
-        # Advance cumulative time by this lieddeel's own duration
-        if measure_count is not None and current_start_time is not None:
-            current_start_time += measure_count * measure_duration
-        else:
-            current_start_time = None  # measure count unknown; subsequent times unreliable
+        # Advance cumulative time using timing segments for accuracy
+        if current_start_time is not None:
+            if timing_segments:
+                current_start_time += sum(seg.duration() for seg in timing_segments)
+            elif measure_count is not None:
+                current_start_time += measure_count * measure_duration
+            else:
+                current_start_time = None
 
         # Extract chord info only once per unique section
         if lieddeel not in chords_per_lieddeel:

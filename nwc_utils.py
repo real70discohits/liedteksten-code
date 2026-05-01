@@ -5,6 +5,7 @@ including parsing, staff management, and common operations.
 """
 
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple
 from constants import NWC_PREFIX_ADDSTAFF, NWC_END_MARKER
@@ -232,6 +233,18 @@ def calc_timing(tempo: int, timesig: str):
     beat_base = int(s_beat_base)
     measure_duration = beats_per_measure * beat_duration
     return beat_duration, measure_duration, beats_per_measure, beat_base
+
+
+@dataclass
+class TimingSegment:
+    """A consecutive run of measures sharing the same tempo and time signature."""
+    tempo: int
+    timesig: str
+    measure_count: int
+
+    def duration(self) -> float:
+        _, measure_duration, _, _ = calc_timing(self.tempo, self.timesig)
+        return self.measure_count * measure_duration
 
 
 def parse_duration(line: str) -> float:
