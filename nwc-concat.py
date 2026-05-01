@@ -109,6 +109,23 @@ def concatenate_nwctxt_files(file_list, output_file, keep_tempi=False):
         f.write(f'{NWC_END_MARKER}\n')
 
 
+def _measure_duration_qn(timesig: str) -> float:
+    """Return measure duration in quarter notes for a timesig string like '4/4'."""
+    beats, _, base = timesig.partition('/')
+    return int(beats) * 4.0 / int(base)
+
+
+def _pre_bar_duration_qn(staff_lines) -> float:
+    """Sum all Note/Rest durations before the first bar marker, in quarter notes."""
+    total = 0.0
+    for line in staff_lines:
+        if line.startswith('|Bar|') or line == '|Bar':
+            break
+        if '|Dur:' in line:
+            total += parse_duration(line)
+    return total
+
+
 def get_measure_count(filepath):
     """Extract measure count from Ritme staff in .nwctxt file
 
@@ -127,14 +144,17 @@ def get_measure_count(filepath):
     # Get Ritme staff content for the repeat marker
     ritme_staff_lines = ritme_staff.lines
 
-    # Detect pickup: rest before first bar (only present in the first section file)
-    has_pickup = False
+    # Detect pickup: content before first bar that doesn't fill a complete measure
+    timesig = '4/4'
     for line in ritme_staff_lines:
-        if line.startswith('|Bar|') or line == '|Bar':
-            break
-        elif line.startswith(NWC_PREFIX_REST) and '|Dur:' in line:
-            has_pickup = True
-            break
+        if line.startswith('|TimeSig|Signature:'):
+            try:
+                timesig = line.split('Signature:')[1].split('|')[0]
+                break
+            except (IndexError, ValueError):
+                pass
+    pre_bar_dur = _pre_bar_duration_qn(ritme_staff_lines)
+    has_pickup = 0.0 < pre_bar_dur < _measure_duration_qn(timesig)
 
     repeat_count = None
     measures_after_repeat = 0
@@ -353,14 +373,17 @@ def extract_lbltrck_markers(filepath):
 
     staff_lines = bass_staff.lines
 
-    # Detect pickup: rest before first bar in Bass staff
-    has_pickup = False
+    # Detect pickup: content before first bar that doesn't fill a complete measure
+    timesig = '4/4'
     for line in staff_lines:
-        if line.startswith(NWC_PREFIX_BAR) or line == '|Bar':
-            break
-        elif line.startswith(NWC_PREFIX_REST) and '|Dur:' in line:
-            has_pickup = True
-            break
+        if line.startswith('|TimeSig|Signature:'):
+            try:
+                timesig = line.split('Signature:')[1].split('|')[0]
+                break
+            except (IndexError, ValueError):
+                pass
+    pre_bar_dur = _pre_bar_duration_qn(staff_lines)
+    has_pickup = 0.0 < pre_bar_dur < _measure_duration_qn(timesig)
 
     markers = []
     current_measure = 0
@@ -707,18 +730,17 @@ def get_duration(measurecount_and_starttime_per_lieddeel, tempo, timesig, beats_
 
 
 def get_pickup_beats(nwctxt_filepath):
-    """
-    Detect and calculate pickup beats (anacrusis) in a NoteWorthy file.
-    
-    A pickup exists when:
-    1. First Rest comes before first Bar
-    2. This rest has a duration of 1 quarter note.
-    
+    """Detect and return pickup beat duration (anacrusis) in a NoteWorthy file.
+
+    A pickup exists when the total duration of notes/rests before the first bar
+    is greater than zero but less than a full measure. Returns that duration in
+    quarter notes (which equals "beats" in simple meters like 4/4 or 3/4).
+
     Args:
         nwctxt_filepath: Path to .nwctxt file
-    
+
     Returns:
-        float: Number of pickup beats, or 0.0 if no pickup
+        float: Pickup duration in quarter notes, or 0.0 if no pickup
     """
     nwc = NwcFile(nwctxt_filepath)
     bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
@@ -726,69 +748,18 @@ def get_pickup_beats(nwctxt_filepath):
         return 0.0
     staff_lines = bass_staff.lines
 
-    # Find time signature to determine beat unit
-    timesig_denominator = 4  # default
+    timesig = '4/4'
     for line in staff_lines:
         if line.startswith('|TimeSig|Signature:'):
             try:
-                sig = line.split('Signature:')[1].split('|')[0]
-                timesig_denominator = int(sig.split('/')[1])
+                timesig = line.split('Signature:')[1].split('|')[0]
                 break
             except (IndexError, ValueError):
                 pass
 
-    # Check: First Rest before first Bar in Bass staff
-    first_rest_dur = None
-    found_bar_first = False
-
-    for line in staff_lines:
-        if line.startswith('|Bar|') or line == '|Bar':
-            found_bar_first = True
-            break
-        elif line.startswith('|Rest|Dur:'):
-            # Extract duration
-            try:
-                dur_part = line.split('|Dur:')[1].split('|')[0]
-                first_rest_dur = dur_part
-                break
-            except IndexError:
-                pass
-
-    if found_bar_first or first_rest_dur is None:
-        return 0.0
-
-    # Calculate beats from duration
-    # Map duration names to whole note fractions
-    duration_map = {
-        'Whole': 1.0,
-        'Half': 0.5,
-        '4th': 0.25,
-        '8th': 0.125,
-        '16th': 0.0625,
-        '32nd': 0.03125,
-        '64th': 0.015625
-    }
-
-    # Parse duration (might include modifiers like ,Dotted)
-    dur_base = first_rest_dur.split(',')[0]
-    dur_base = dur_base.replace("\n","", -1)  # remove any lineendings
-    note_value = duration_map.get(dur_base, 0.0)
-
-    # Handle dotted notes
-    if ',Dotted' in first_rest_dur or ',Dot' in first_rest_dur:
-        note_value *= 1.5
-    elif ',DblDotted' in first_rest_dur:
-        note_value *= 1.75
-
-    # Handle triplets
-    if ',Triplet' in first_rest_dur:
-        note_value *= (2.0 / 3.0)
-
-    # Calculate beats based on time signature
-    beat_unit_value = 1.0 / timesig_denominator
-    beats = note_value / beat_unit_value
-
-    return beats
+    pre_bar_dur = _pre_bar_duration_qn(staff_lines)
+    measure_dur = _measure_duration_qn(timesig)
+    return pre_bar_dur if 0.0 < pre_bar_dur < measure_dur else 0.0
 
 
 def extract_timing_segments(filepath, initial_tempo, initial_timesig):
@@ -813,14 +784,9 @@ def extract_timing_segments(filepath, initial_tempo, initial_timesig):
 
     staff_lines = bass_staff.lines
 
-    # Pre-scan: pickup = rest before first bar
-    has_pickup = False
-    for line in staff_lines:
-        if line.startswith('|Bar|') or line == '|Bar':
-            break
-        elif line.startswith(NWC_PREFIX_REST) and '|Dur:' in line:
-            has_pickup = True
-            break
+    # Pre-scan: pickup when content before first bar doesn't fill a complete measure
+    pre_bar_dur = _pre_bar_duration_qn(staff_lines)
+    has_pickup = 0.0 < pre_bar_dur < _measure_duration_qn(initial_timesig)
 
     past_pickup = not has_pickup
 
