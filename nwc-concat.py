@@ -228,7 +228,7 @@ def extract_chords_from_first_staff(filepath):
 
     bass_staff_lines = bass_staff.lines
 
-    chords = []
+    chords = []  # list of (label, measure_count) tuples
     current_chord = None
     current_measures = 0
     current_measure_has_dur = False
@@ -246,11 +246,8 @@ def extract_chords_from_first_staff(filepath):
                     text_stripped = text_content.strip()
                     if text_stripped.startswith('akk:'):
                         # Save previous chord if any
-                        if current_chord is not None:
-                            if current_measures > 1:
-                                chords.append(f"{current_chord}({current_measures})")
-                            else:
-                                chords.append(current_chord)
+                        if current_chord is not None and current_measures >= 1:
+                            chords.append((current_chord, current_measures))
 
                         # Extract new chord (everything after "akk:")
                         new_chord = text_stripped[4:].strip()
@@ -272,32 +269,18 @@ def extract_chords_from_first_staff(filepath):
 
     # Handle the last chord and last measure
     if current_chord is not None:
-        # Count last measure if it has duration
         if current_measure_has_dur:
             current_measures += 1
-
-        if current_measures > 1:
-            chords.append(f"{current_chord}({current_measures})")
-        elif current_measures == 1:
-            chords.append(current_chord)
-
-    # Calculate total measures from chords
-    total_from_chords = 0
-    for chord in chords:
-        if '(' in chord:
-            # Extract number from parentheses
-            try:
-                count = int(chord.split('(')[1].rstrip(')'))
-                total_from_chords += count
-            except (IndexError, ValueError):
-                total_from_chords += 1
-        else:
-            total_from_chords += 1
+        if current_measures >= 1:
+            chords.append((current_chord, current_measures))
 
     if not chords:
         return "-", 0, True
 
-    chord_string = ", ".join(chords)
+    total_from_chords = sum(count for _, count in chords)
+    chord_string = ", ".join(
+        f"{label}({count})" if count > 1 else label for label, count in chords
+    )
     return chord_string, total_from_chords, True
 
 
