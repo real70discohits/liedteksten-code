@@ -1,0 +1,20 @@
+{
+  // volgorde.
+  // Defines the order of sections to be concatenated
+
+  "songstructure": [  // COMPILE MET OPTIE --KEEP-TEMPI WANT MIDDENSTUK IS LANGZAMER
+    "intro", 
+    "couplet 1", 
+    "refrein", 
+    "overgang refr-couplet",
+    "couplet", 
+    "refrein", 
+    "middenstuk",
+    "couplet", 
+    "refrein", 
+    "uittro"
+    // "dummy"
+  ]
+
+  // Note: section names must exactly match the filenames
+}

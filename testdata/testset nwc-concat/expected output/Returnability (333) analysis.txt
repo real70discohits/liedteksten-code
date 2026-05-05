@@ -1,0 +1,186 @@
+*** NWC ANALYSE ***
+
+Analyse van: Returnability (333).nwctxt
+Locatie: C:\Persoonlijk\liedteksten\_build\Returnability (333)
+
+liedtitel: Returnability
+liednummer: 333
+totaal aantal maten: 173
+heeft begintel: ja
+aantal maten vooraf: 2
+
+maat	tekst
+-1	
+1	
+2	
+3	
+4	
+5	
+6	
+7	
+8	Y’ say you
+9	ain’t no thief
+10	But you
+11	keep the fund
+12	The
+13	gov gave you by
+14	ac ci
+15	dent
+16	
+17	Y’ say that
+18	she’s a whore
+19	But
+20	in your head
+21	You
+22	sure ly sleep with
+23	an y
+24	lad.
+25	
+26	
+27	We
+28	ain’t
+29	good or
+30	bad, my
+31	friend
+32	
+33	
+34	
+35	
+36	We’re
+37	op por tu nists
+38	till the
+39	end
+40	Un
+41	til the bill comes
+42	due
+43	
+44	hold on,
+45	
+46	hold on.
+47	
+48	
+49	
+50	
+51	When you
+52	roll a six
+53	
+54	You
+55	have your self to
+56	thank for
+57	it.
+58	
+59	
+60	Sin ging like a
+61	nun
+62	There’s no
+63	tar get like the
+64	in no
+65	cent.
+66	
+67	
+68	In a
+69	no ther world
+70	
+71	Things won’t be much
+72	dif fe
+73	rent.
+74	
+75	
+76	We
+77	ain’t
+78	good or
+79	bad, my
+80	friend
+81	
+82	
+83	
+84	
+85	We’re
+86	op por tu nists
+87	till the
+88	end
+89	Un
+90	til the bill comes
+91	
+92	
+93	We
+94	lead our selves do
+95	own
+96	
+97	
+98	
+99	
+100	
+101	Our
+102	mind is crushed by
+103	id le hopes
+104	
+105	
+106	And we
+107	all
+108	
+109	stand
+110	
+111	by
+112	
+113	
+114	And we
+115	all
+116	
+117	stand
+118	
+119	by.
+120	
+121	
+122	
+123	
+124	
+125	
+126	
+127	_ _ _
+128	
+129	_
+130	_ _ _ _
+131	_ _
+132	_
+133	
+134	
+135	_ _ _ _
+136	_
+137	_ _
+138	_ _ _ _
+139	_ _
+140	_
+141	
+142	
+143	_ _
+144	_ _ _
+145	
+146	_ _ _ _
+147	_ _
+148	_
+149	
+150	
+151	We
+152	ain’t
+153	good or
+154	bad, my
+155	friend
+156	
+157	
+158	
+159	
+160	We’re
+161	hy po crites un
+162	till the
+163	end
+164	Un
+165	til the bill comes
+166	
+167	
+168	
+169	
+170	
+171	
+172	
+173	
