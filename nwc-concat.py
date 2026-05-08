@@ -523,39 +523,6 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
         f.write(r'\vspace{0.5cm}' + '\n')
         f.write('\n')
 
-        # Lied delen section
-        f.write(r'\subsection*{Lied delen}' + '\n')
-        f.write('\n')
-        f.write(r'\begin{tabular}{l|c|p{8cm}}' + '\n')
-        f.write(r'\hline' + '\n')
-        f.write(r'\textbf{Naam} & \textbf{\#Maten} & \textbf{Akkoorden (\#mt)} \\' + '\n')
-        f.write(r'\hline' + '\n')
-
-        for lieddeel_name in unique_lieddelen:
-            # Get measure count (from first occurrence)
-            measures = None
-            for s, m, _ in measurecount_and_starttime_per_lieddeel:
-                if s == lieddeel_name:
-                    measures = m
-                    break
-
-            # Get chord info
-            chord_string, chord_count, is_valid = chords_per_lieddeel.get(
-                lieddeel_name, ("-", 0, True)
-            )
-
-            measure_str = str(measures) if measures is not None else "?"
-
-            # Check if chord count matches measure count
-            if chord_string != "-" and measures is not None and chord_count != measures:
-                chord_string += " [INVALID COUNT]"
-
-            f.write(f'{escape_latex(lieddeel_name)} & {measure_str} & {escape_latex(chord_string)} \\\\\n')
-
-        f.write(r'\hline' + '\n')
-        f.write(r'\end{tabular}' + '\n')
-        f.write('\n')
-
         # Compositie section
         f.write(r'\subsection*{Compositie}' + '\n')
         f.write('\n')
@@ -582,6 +549,40 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
 
             measure_str = str(measures) if measures is not None else "?"
             f.write(f'{i} & {escape_latex(section)} & {measure_str} & {escape_latex(chord_string)} \\\\\n')
+
+        f.write(r'\hline' + '\n')
+        f.write(r'\end{tabular}' + '\n')
+        f.write('\n')
+        f.write(r'\vspace{0.5cm}' + '\n')
+
+        # Lied delen section
+        f.write(r'\subsection*{Lied onderdelen}' + '\n')
+        f.write('\n')
+        f.write(r'\begin{tabular}{l|c|p{8cm}}' + '\n')
+        f.write(r'\hline' + '\n')
+        f.write(r'\textbf{Naam} & \textbf{\#Maten} & \textbf{Akkoorden (\#mt)} \\' + '\n')
+        f.write(r'\hline' + '\n')
+
+        for lieddeel_name in unique_lieddelen:
+            # Get measure count (from first occurrence)
+            measures = None
+            for s, m, _ in measurecount_and_starttime_per_lieddeel:
+                if s == lieddeel_name:
+                    measures = m
+                    break
+
+            # Get chord info
+            chord_string, chord_count, is_valid = chords_per_lieddeel.get(
+                lieddeel_name, ("-", 0, True)
+            )
+
+            measure_str = str(measures) if measures is not None else "?"
+
+            # Check if chord count matches measure count
+            if chord_string != "-" and measures is not None and chord_count != measures:
+                chord_string += " [INVALID COUNT]"
+
+            f.write(f'{escape_latex(lieddeel_name)} & {measure_str} & {escape_latex(chord_string)} \\\\\n')
 
         f.write(r'\hline' + '\n')
         f.write(r'\end{tabular}' + '\n')
