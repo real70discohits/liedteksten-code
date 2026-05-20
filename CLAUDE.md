@@ -42,11 +42,14 @@ it's understandable how happy I am with this automation.
 
 The typical workflow for creating/updating a song (visualized in `project/schema.pu`):
 
-1. **Create music notation** (Manual + init-liedsecties.py)
+1. **Create music notation** (Manual + init-liedsecties.py + propagate-staffs.py + pad-staffs.py)
    - Use NoteWorthy Composer GUI to create the intro .nwctxt file as a starting point
    - Store in git repository: `<input_folder>/<Song Title>/nwc/`
-   - Run `init-liedsecties.py` to create remaining section files as copies of the intro
+   - Run `init-liedsecties.py` to create remaining section files as copies of the intro (alternative to using the intro file, use a template file)
    - Create `volgorde.jsonc` to define section sequence
+   - (Optional) Run `propagate-staffs.py` to ensure every section file contains the same staffs in the same order
+   - Manually write out the Bass-line per section in NoteWorthy Composer (determines the definitive measure count per section)
+   - (Optional) Run `pad-staffs.py` to pad all non-Bass staffs with empty rest measures so their measure count and trailing structure match the Bass in each section
 
 2. **Run nwc-concat.py**
    - Creates merged .nwctxt file → **build folder**
@@ -171,6 +174,12 @@ python init-liedsecties.py "Song Title" --sectie-namen intro vers refrein --temp
 
 # Propagate staffs from template to all existing section files
 python propagate-staffs.py "Song Title"
+
+# Pad all non-Bass staffs in every section to match the Bass measure count
+# and trailing structure. Staffs listed in PAD_STAFFS_IGNORED_STAFFS
+# (Ritme, Drums) are skipped. Drum-group staffs get the DrumStaff_AUDIO
+# marker line around each added rest measure.
+python pad-staffs.py "Song Title"
 ```
 
 ### Process NWC Files
@@ -327,7 +336,8 @@ All must be in PATH or specified explicitly.
 ### Shared Modules
 
 - `constants.py`: Centralized string constants (prefixes, file extensions,
-- staff names)
+- staff names). Also defines `PAD_STAFFS_IGNORED_STAFFS` — the list of staff
+- names that `pad-staffs.py` must leave untouched (default: `Ritme`, `Drums`).
 - `pathconfig.py`: Path resolution and validation utilities
 - `nwc_utils.py`: NWC file parsing classes
 - `lt_configloader.py`: Configuration loading with dataclasses

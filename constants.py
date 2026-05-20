@@ -15,6 +15,12 @@ STAFF_NAME_RIDE_CYMBAL = "Ride"
 STAFF_NAME_TOM_1 = "Tom1"
 STAFF_NAME_TOM_2 = "Tom2"
 STAFF_NAME_FLOOR_TOM = "FloorTom"
+STAFF_NAME_DRUMS = "Drums"
+
+
+# Staff names that pad-staffs.py leaves alone (not padded to match the Bass).
+# Add staff names here to exclude them from measure-padding.
+PAD_STAFFS_IGNORED_STAFFS = [STAFF_NAME_RITME, STAFF_NAME_DRUMS]
 
 
 # File Extensions

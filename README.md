@@ -32,6 +32,13 @@ Dit is een Python-gebaseerde toolkit voor het beheren en genereren van bestanden
       - [Template-locatie](#template-locatie)
       - [Typische workflow](#typische-workflow)
       - [Vereisten](#vereisten-1)
+    - [pad-staffs.py](#pad-staffspy)
+      - [Syntax {#syntax-ps}](#syntax-syntax-ps)
+      - [Positionele Parameters {#positionele-parameters-ps}](#positionele-parameters-positionele-parameters-ps)
+      - [Wat het script doet {#wat-het-script-doet-ps}](#wat-het-script-doet-wat-het-script-doet-ps)
+      - [Voorbeelden {#voorbeelden-ps}](#voorbeelden-voorbeelden-ps)
+      - [Typische workflow {#typische-workflow-ps}](#typische-workflow-typische-workflow-ps)
+      - [Vereisten {#vereisten-ps}](#vereisten-vereisten-ps)
     - [lt-generate.py](#lt-generatepy)
       - [Syntax](#syntax-2)
       - [Positionele Parameters](#positionele-parameters-2)
@@ -80,6 +87,7 @@ Dit is een Python-gebaseerde toolkit voor het beheren en genereren van bestanden
 |--------|------|
 | **init-liedsecties.py** | Initialiseert .nwctxt sectiebestanden voor een lied door ze te kopiëren vanuit een template; bestaande bestanden worden overgeslagen |
 | **propagate-staffs.py** | Propageert staffs vanuit een template naar alle sectiebestanden van een lied: voegt ontbrekende staffs toe en zet alle staffs in de juiste volgorde |
+| **pad-staffs.py** | Vult in elk lieddeel alle staffs aan met lege rust-maten zodat hun maataantal en eindstructuur overeenkomt met de Bass-staff van dat lieddeel |
 | **nwc-concat.py** | Voegt NoteWorthy Composer (NWC) sectiebestanden samen tot één compleet bestand en genereert structuurinformatie, analyse en label tracks voor Audacity/Tenacity |
 | **nwc_analyze.py** | Analyseert NWC bestanden en koppelt liedteksten aan maatnummers (onderdeel van nwc-concat) |
 | **lt-generate.py** | Genereert PDF's van liedteksten in verschillende varianten (met/zonder akkoorden, maatnummers, tabs) vanuit LaTeX bronbestanden |
@@ -335,6 +343,77 @@ python nwc-concat.py "Vader Jacob"
 
 - `<liedtitel> volgorde.jsonc` in de nwc-subfolder van het lied
 - Template bestand (of het eerste sectiebestand) moet geldig zijn en staffs bevatten
+
+---
+
+### pad-staffs.py
+
+Vult in elk lieddeel alle staffs aan met lege rust-maten zodat ze hetzelfde aantal maten én dezelfde eindstructuur hebben als de Bass-staff van dat lieddeel.
+
+Typische volgorde in het maakproces: nadat je met `propagate-staffs.py` alle staffs hebt klaargezet (met 1 of 2 sjabloon-maten) en daarna de Bass-lijn handmatig hebt uitgeschreven, weet je per lieddeel hoeveel maten het bevat. `pad-staffs.py` synchroniseert dan in één klap alle overige staffs naar dat maataantal, zodat je er muziekinhoud in kunt schrijven zonder eerst zelf maten te moeten toevoegen.
+
+#### Syntax {#syntax-ps}
+
+```bash
+python pad-staffs.py <liedtitel>
+```
+
+#### Positionele Parameters {#positionele-parameters-ps}
+
+| Parameter | Beschrijving |
+|-----------|--------------|
+| `liedtitel` | Titel van het lied (verplicht). Moet overeenkomen met de mapnaam in de input folder |
+
+#### Wat het script doet {#wat-het-script-doet-ps}
+
+Het script doorloopt alle unieke sectiebestanden vermeld in `<liedtitel> volgorde.jsonc` en voor elk bestand:
+
+1. **Maattelling van de Bass**: het script telt het aantal maten in de Bass-staff (`|Bar` markers plus, indien aanwezig, een laatste dangling maat met `|Dur:`-content).
+
+2. **Maatsoort van de Bass**: de laatst voorkomende `|TimeSig|Signature:` in de Bass bepaalt welke rust-duration één lege maat vult (`Whole` voor 4/4, `Half,Dotted` voor 3/4 of 6/8, etc.). Voor onbekende maatsoorten wordt `Rest|Dur:Whole` als fallback gebruikt met een waarschuwing.
+
+3. **Aanvullen van overige staffs**: voor elke staff in het bestand (behalve de Bass zelf en staffs in `PAD_STAFFS_IGNORED_STAFFS`, zoals "Ritme" en "Drums") wordt het maataantal vergeleken met de Bass:
+   - Te weinig maten → er worden lege rust-maten achteraan toegevoegd tot de tellingen overeenkomen.
+   - Gelijk aantal → geen padding nodig.
+   - Te veel maten → niet aangepast, alleen een waarschuwing.
+
+4. **Drum-staffs**: staffs in de groep `"drums"` (gedetecteerd via `|Group:"drums"` op de `|AddStaff|` regel) krijgen rond elke nieuw toegevoegde rust-maat de marker-regel `|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y` als opening- én sluitingsmarkering, conform de NWC drum-staff conventie.
+
+5. **Eindstructuur uitlijnen**: als de Bass eindigt op een `|Bar` (gesloten laatste maat — herkenbaar aan `|Bar` direct gevolgd door `|AddStaff|...`), dan wordt aan elke andere staff ook een afsluitende `|Bar` toegevoegd. Hierdoor liggen de eindbarlines in NWC visueel op één lijn, wat helpt bij het controleren of de totale duur van alle staffs gelijk is.
+
+#### Voorbeelden {#voorbeelden-ps}
+
+```bash
+# Vul in alle lieddelen van "Vader Jacob" alle staffs aan tot Bass-maataantal
+python pad-staffs.py "Vader Jacob"
+```
+
+#### Typische workflow {#typische-workflow-ps}
+
+```bash
+# 1. Maak sectiebestanden aan (intro al handmatig in NWC GUI)
+python init-liedsecties.py "Vader Jacob" --sectie-namen vers refrein brug
+
+# 2. Zorg dat alle sectiebestanden dezelfde staffs hebben
+python propagate-staffs.py "Vader Jacob"
+
+# 3. Schrijf in NoteWorthy Composer de Bass-lijn uit per lieddeel
+#    (Bepaalt de definitieve maatlengte van elk lieddeel.)
+
+# 4. Vul de overige staffs aan met lege maten zodat ze even lang zijn als de Bass
+python pad-staffs.py "Vader Jacob"
+
+# 5. Werk de inhoud van de overige staffs verder uit in NWC
+
+# 6. Voeg samen en genereer structuur
+python nwc-concat.py "Vader Jacob"
+```
+
+#### Vereisten {#vereisten-ps}
+
+- `<liedtitel> volgorde.jsonc` in de nwc-subfolder van het lied
+- Een Bass-staff in elk genoemd sectiebestand (anders wordt dat bestand overgeslagen met een waarschuwing)
+- De `PAD_STAFFS_IGNORED_STAFFS` lijst in `constants.py` bepaalt welke staffs worden overgeslagen (standaard: `Ritme` en `Drums`)
 
 ---
 
@@ -659,7 +738,7 @@ Dit retourneert een dictionary met:
 # 1. Maak het intro-bestand in NoteWorthy Composer GUI
 #    Sla op in: <input_folder>/Vader Jacob/nwc/
 #    - Vader Jacob intro.nwctxt  (handmatig aanmaken als startpunt)
-#    Plus: Vader Jacob volgorde.jsonc
+#    Plus: Vader Jacob volgorde.jsonc (vereist!)
 
 # 1b. Maak de overige sectiebestanden aan als kopie van het intro-bestand
 python init-liedsecties.py "Vader Jacob" --sectie-namen vers refrein
@@ -669,6 +748,13 @@ python init-liedsecties.py "Vader Jacob" --sectie-namen vers refrein
 
 # 1c. (Optioneel) Zorg dat alle sectiebestanden dezelfde staffs hebben
 python propagate-staffs.py "Vader Jacob"
+
+# 1d. Schrijf de Bass-lijn per lieddeel uit in NoteWorthy Composer GUI
+#     (Dit bepaalt het definitieve aantal maten per lieddeel.)
+
+# 1e. (Optioneel) Vul alle overige staffs aan met lege maten zodat ze even
+#     lang zijn als de Bass-staff in dat lieddeel
+python pad-staffs.py "Vader Jacob"
 
 # 2. Voeg secties samen en genereer structuur
 python nwc-concat.py "Vader Jacob"
