@@ -170,6 +170,7 @@ python init-liedsecties.py "Song Title" --sectie-namen vers refrein
 python init-liedsecties.py "Song Title" --sectie-namen vers refrein "overgang couplet refrein"
 
 # Create all sections including intro, with explicit template from input folder
+# (intro automatically gets a |Rest|Dur:4th + |Bar prepended to every staff)
 python init-liedsecties.py "Song Title" --sectie-namen intro vers refrein --template "My Template"
 
 # Propagate staffs from template to all existing section files
@@ -339,6 +340,38 @@ are always stripped because the first section already provides them.
 - Tracks cumulative start times for each section
 - Handles pickup beats (anacrusis) at song start
 - Generates label track files for Tenacity/Audacity
+
+### Intro Kwartrust in init-liedsecties.py
+
+When `init-liedsecties.py` creates a section file whose name is `intro`
+(case-insensitive), it prepends `|Rest|Dur:4th` + `|Bar` to every staff,
+positioned after the staff headers (Clef, TimeSig, Key, Tempo, ...) and
+immediately before the first `|Dur:` line.
+
+The reason is purely audio-recording related: recording software often produces
+a short burst of noise at the start of a file that swallows the first beat.
+The extra kwartrust absorbs that noise phase so the actual music starts clean.
+A musician overdubbing on top of the existing track therefore does not miscount
+the first beat. This concern has nothing to do with notation or composition —
+the inserted measure is intentionally a rest, not a note.
+
+Implementation notes (`_prepend_intro_kwartrust` in `init-liedsecties.py`):
+
+- **Drum-group staffs** (`|Group:"drums"` on the `|AddStaff|` line) get the
+  `|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y` marker bracketing
+  both the new rest and the new bar, matching the convention `pad-staffs.py`
+  uses. When the line immediately before the first `|Dur:` is already an audio
+  marker, the insertion point shifts one line up so the new content gets its
+  own marker pair (no stray marker dangling above).
+- **Idempotent**: if a staff already starts with `|Rest|Dur:4th` directly
+  followed by `|Bar` (with intervening drum markers allowed), no change is
+  made for that staff. A second run on the same file is therefore a no-op.
+- **Only intro**: non-intro sections (vers, refrein, brug, ...) are copied
+  from the template unchanged. The template itself does not need to contain
+  a kwartrust+bar — one template is enough for all sections.
+- **User feedback**: the script prints
+  `➕ Kwartrust + maatstreep toegevoegd aan intro` under the `✅ Aangemaakt`
+  line when at least one staff was modified.
 
 ## External Dependencies
 

@@ -24,6 +24,7 @@ Dit is een Python-gebaseerde toolkit voor het beheren en genereren van bestanden
       - [Optionele Parameters {#optionele-parameters-il}](#optionele-parameters-optionele-parameters-il)
       - [Voorbeelden {#voorbeelden-il}](#voorbeelden-voorbeelden-il)
       - [Template-locatie {#template-locatie-il}](#template-locatie-template-locatie-il)
+      - [Intro-specifieke kwartrust {#intro-kwartrust-il}](#intro-specifieke-kwartrust-intro-kwartrust-il)
       - [Vereisten {#vereisten-il}](#vereisten-vereisten-il)
     - [propagate-staffs.py](#propagate-staffspy)
       - [Syntax](#syntax-1)
@@ -274,6 +275,27 @@ Er zijn twee manieren om het template te bepalen:
 
 **Let op**: als geen `--template` is opgegeven, mag 'intro' niet in `--sectie-namen` staan.
 Het intro-bestand kan niet tegelijk als template en als nieuw bestand fungeren.
+
+#### Intro-specifieke kwartrust {#intro-kwartrust-il}
+
+Voor een sectie met de naam `intro` (hoofdletterongevoelig) voegt het script in elke staff
+vooraan een `|Rest|Dur:4th` + `|Bar` toe, direct na de voortekens (Clef, TimeSig, Key, Tempo)
+en vóór het eerste `|Dur:` van de muziek. Reden: recording-software laat aan het begin van
+een audio-opname vaak een korte ruis horen waardoor de eerste tel verloren gaat. Deze extra
+kwartrust vangt die ruisfase op zodat de feitelijke muziek schoon begint. Hierdoor hoeft het
+template zelf géén kwartrust+maatstreep te bevatten — secties anders dan `intro` krijgen die
+ook niet, het template kan dus zonder aanpassing voor alle secties worden gebruikt.
+
+Bijzonderheden:
+
+- **Drum-staffs** (`|Group:"drums"` op de `|AddStaff|` regel): de nieuwe rest en bar worden
+  ingesloten door de marker `|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y`,
+  consistent met de NWC drum-conventie zoals ook door `pad-staffs.py` toegepast.
+- **Idempotent**: als de staff al begint met `|Rest|Dur:4th` direct gevolgd door `|Bar`
+  (eventueel met een tussenliggende drum-marker), wordt er niets toegevoegd. Een tweede
+  aanroep is dus een no-op.
+- Bij succes meldt het script `➕ Kwartrust + maatstreep toegevoegd aan intro` onder de
+  betreffende `✅ Aangemaakt`-regel.
 
 #### Vereisten {#vereisten-il}
 
