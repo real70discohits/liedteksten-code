@@ -14,6 +14,7 @@ Dit is een Python-gebaseerde toolkit voor het beheren en genereren van bestanden
       - [Syntax](#syntax)
       - [Positionele Parameters](#positionele-parameters)
       - [Optionele Parameters](#optionele-parameters)
+      - [Tempo en Maatsoort tijdens samenvoegen](#tempo-en-maatsoort-tijdens-samenvoegen)
       - [Voorbeelden](#voorbeelden)
       - [Gegenereerde Bestanden](#gegenereerde-bestanden)
       - [Vereisten](#vereisten)
@@ -164,6 +165,11 @@ python nwc-concat.py <liedtitel> [opties]
 | Parameter | Waarden | Standaard | Beschrijving |
 |-----------|---------|-----------|--------------|
 | `--keep-tempi` | (vlag) | Uit | Behoud tempo-indicaties in alle liedsecties. Standaard worden tempo-markeringen uit liedsecties na het eerste verwijderd, omdat alleen het eerste liedsectie het tempo bepaalt |
+
+#### Tempo en Maatsoort tijdens samenvoegen
+
+- **Tempo**: zoals hierboven beschreven worden tempo-markeringen uit lieddelen na het eerste standaard verwijderd; met `--keep-tempi` blijven ze behouden. Handig wanneer een lieddeel bewust een ander tempo heeft (bv. een langzamer `middenstuk`).
+- **Maatsoort (slim filter)**: een `|TimeSig|` regel uit een lieddeel na het eerste wordt alleen behouden als de maatsoort daadwerkelijk afwijkt van de op dat moment actieve maatsoort van die staff. Redundante duplicaten (elk lieddeel dat nog eens `4/4` declareert) worden weggelaten, maar echte maatsoortwisselingen tussen lieddelen — en mid-lieddeel wisselingen binnen één bestand — blijven bewaard. Dit slimme filter staat altijd aan; er is geen CLI-vlag voor.
 
 #### Voorbeelden
 

@@ -44,14 +44,49 @@ from constants import (NWC_PREFIX_ADDSTAFF, NWC_PREFIX_STAFF_PROPERTIES,
                         )
 
 
+def _parse_timesig_value(line):
+    """Extract the signature value (e.g. '4/4') from a |TimeSig| line, or None.
+
+    Defensive: returns None if the line is missing 'Signature:' or is malformed.
+    """
+    if 'Signature:' not in line:
+        return None
+    try:
+        return line.split('Signature:')[1].split('|')[0]
+    except (IndexError, ValueError):
+        return None
+
+
+def _last_timesig_in_staff(staff_lines):
+    """Return the value of the last |TimeSig|Signature:... in the staff, or None.
+
+    Used to seed the per-staff "current effective timesig" tracker after
+    processing the first file in a concatenation; if the first file already
+    contains a mid-staff timesig change, the tracker reflects the value in
+    effect at its end, not the header value.
+    """
+    last = None
+    for line in staff_lines:
+        if line.startswith(NWC_PREFIX_TIMESIG):
+            sig = _parse_timesig_value(line)
+            if sig is not None:
+                last = sig
+    return last
+
+
 def concatenate_nwctxt_files(file_list, output_file, keep_tempi=False):
     """Concatenate multiple .nwctxt files
-    
+
     Args:
         file_list: List of .nwctxt files to concatenate
         output_file: Output file path
         keep_tempi: If False (default), remove tempo indicators from files after the first.
                 If True, keep all tempo indicators.
+
+    Time signature handling: |TimeSig| lines from files after the first are
+    kept only when they differ from the currently active time signature in
+    that staff (smart filter). This drops redundant header-timesig lines
+    while preserving real timesig changes between or within sections.
     """
 
     # Parse the first file to get header and initial staff structure
@@ -61,6 +96,15 @@ def concatenate_nwctxt_files(file_list, output_file, keep_tempi=False):
     concatenated_staffs = []
     for staff_lines in first_staffs:
         concatenated_staffs.append(staff_lines)
+
+    # Track active timesig per staff, seeded from the first file's last
+    # |TimeSig| value (header or mid-staff). None if the staff lacks one.
+    current_timesigs = [_last_timesig_in_staff(s) for s in first_staffs]
+
+    # Header-only prefixes that are always stripped from subsequent files
+    # (the first file already provides them in the staff header).
+    header_strip_prefixes = (NWC_PREFIX_ADDSTAFF, NWC_PREFIX_STAFF_PROPERTIES,
+                            NWC_PREFIX_STAFF_INSTRUMENT, NWC_PREFIX_CLEF)
 
     # Process remaining files
     for filepath in file_list[1:]:
@@ -76,18 +120,24 @@ def concatenate_nwctxt_files(file_list, output_file, keep_tempi=False):
 
         # Concatenate each staff
         for i in range(min_staffs):
-            # Skip staff header lines (already have them from first file)
             staff_data = []
-            skip_prefixes = [NWC_PREFIX_ADDSTAFF, NWC_PREFIX_STAFF_PROPERTIES,
-                            NWC_PREFIX_STAFF_INSTRUMENT, NWC_PREFIX_CLEF, NWC_PREFIX_TIMESIG]
-
-            # Only skip tempo lines if keep_tempi is False (default behavior)
-            if not keep_tempi:
-                skip_prefixes.append(NWC_PREFIX_TEMPO)
-
             for line in staffs[i]:
-                if not any(line.startswith(prefix) for prefix in skip_prefixes):
-                    staff_data.append(line)
+                # Always strip the per-file staff-header lines.
+                if line.startswith(header_strip_prefixes):
+                    continue
+                # Tempo lines: stripped unless --keep-tempi (existing behavior).
+                if not keep_tempi and line.startswith(NWC_PREFIX_TEMPO):
+                    continue
+                # TimeSig lines: smart filter — keep only if it changes the
+                # active timesig for this staff (drops redundant duplicates,
+                # preserves real header- and mid-staff timesig changes).
+                if line.startswith(NWC_PREFIX_TIMESIG):
+                    sig = _parse_timesig_value(line)
+                    if sig is not None and sig == current_timesigs[i]:
+                        continue
+                    if sig is not None:
+                        current_timesigs[i] = sig
+                staff_data.append(line)
 
             # Add a double bar between sections for clarity
             if staff_data and not staff_data[0].startswith(NWC_PREFIX_BAR):

@@ -310,6 +310,26 @@ Key concepts:
 
 **Output:** Creates `{song_title} {staff_name}.flac` files in song-specific subfolder
 
+### Tempo and Time Signature Handling During Concatenation
+
+When `nwc-concat.py` merges section files into one `.nwctxt`, per-section
+header lines (`|AddStaff|`, `|StaffProperties|`, `|StaffInstrument|`, `|Clef|`)
+are always stripped because the first section already provides them.
+
+`|Tempo|` lines and `|TimeSig|` lines are handled differently:
+
+- **Tempo**: stripped from sections after the first by default, since the
+  first section's tempo applies to the whole song. Pass `--keep-tempi` to
+  preserve all tempo markings (useful when a section is intentionally
+  slower/faster, e.g. a `middenstuk`).
+- **TimeSig (smart filter)**: a `|TimeSig|` line in a non-first section is
+  kept only if its signature differs from the currently active time
+  signature for that staff. Redundant duplicates (every section's header
+  re-declaring `4/4`) are dropped; real changes (e.g. a section in `3/4`,
+  or a mid-staff `|TimeSig|` within a section) are preserved. No CLI flag —
+  this is always on. See `_parse_timesig_value` / `_last_timesig_in_staff`
+  helpers in `nwc-concat.py`.
+
 ### Duration Calculation
 
 `nwc-concat.py` calculates timing for label tracks:
