@@ -17,7 +17,7 @@ database    PDrive as pdrive
 
 autonumber
 u1 -> nwc : start GUI
-u1 -> repos: (manual) create multi .nwctxt's
+u1 -> repos: (manual) create multi .nwctxt's (helpers: init-liedsecties.py, propagate-staffs.py, pad-staffs.py)
 u1 -[#green]> nwconcpy : run script
 
 ' concat
