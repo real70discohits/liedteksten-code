@@ -9,6 +9,7 @@ Usage:
 import sys
 import re
 from pathlib import Path
+from console_utf8 import enable_utf8_console
 from pathconfig import load_and_resolve_paths
 from nwc_utils import NwcFile, calc_timing
 from constants import (STAFF_NAME_BASS, STAFF_NAME_ZANG, NWC_PREFIX_BAR,
@@ -461,6 +462,7 @@ def write_analysis_to_file(songtitle, nwctxt_file_path,  tempo=None, timesig=Non
 
 def main():
     """Main entry point."""
+    enable_utf8_console()
     if len(sys.argv) < 2:
         print("Usage: python nwc_analyze.py <song-title-or-path>")
         print("  Examples:")

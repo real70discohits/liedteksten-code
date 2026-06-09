@@ -20,6 +20,7 @@ import re
 import subprocess
 import argparse
 from pathlib import Path
+from console_utf8 import enable_utf8_console
 from lt_configloader import ConfigItem, ConfigLoader, get_config
 from pathconfig import load_and_resolve_paths, validate_file_exists
 
@@ -468,6 +469,7 @@ def main():
     """
     
 
+    enable_utf8_console()
     parser = argparse.ArgumentParser(description='Compile .tex files with custom output names')
     parser.add_argument('songtitles', nargs='*', help='Specific songtitles (.tex filenames but without extension) to compile (default: all)')
     parser.add_argument('--no-cleanup', action='store_true', help='Keep auxiliary files')

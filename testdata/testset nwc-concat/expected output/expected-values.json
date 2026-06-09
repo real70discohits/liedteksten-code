@@ -1,0 +1,92 @@
+{
+  "tempo": 184,
+  "timesig": "4/4",
+  "pickup_beats": 1.0,
+  "has_begintel": true,
+  "vooraf": 2,
+  "total_bars": 175,
+  "total_measures": 173,
+  "total_duration_seconds": 225.652,
+  "sequence": [
+    {
+      "name": "intro",
+      "measures": 8,
+      "start_time_seconds": 0.326
+    },
+    {
+      "name": "couplet 1",
+      "measures": 18,
+      "start_time_seconds": 13.37
+    },
+    {
+      "name": "refrein",
+      "measures": 15,
+      "start_time_seconds": 36.848
+    },
+    {
+      "name": "overgang refr-couplet",
+      "measures": 10,
+      "start_time_seconds": 56.413
+    },
+    {
+      "name": "couplet",
+      "measures": 24,
+      "start_time_seconds": 69.457
+    },
+    {
+      "name": "refrein",
+      "measures": 15,
+      "start_time_seconds": 100.761
+    },
+    {
+      "name": "middenstuk",
+      "measures": 36,
+      "start_time_seconds": 120.326
+    },
+    {
+      "name": "couplet",
+      "measures": 24,
+      "start_time_seconds": 169.528
+    },
+    {
+      "name": "refrein",
+      "measures": 15,
+      "start_time_seconds": 200.832
+    },
+    {
+      "name": "uittro",
+      "measures": 8,
+      "start_time_seconds": 220.398
+    }
+  ],
+  "chords_per_section": {
+    "intro": {
+      "chords": "A7sus2(8)",
+      "count": 8
+    },
+    "couplet 1": {
+      "chords": "A7sus2(5), Dmaj7(4), A7sus2(5), Dmaj7(4)",
+      "count": 18
+    },
+    "refrein": {
+      "chords": "Bm6(3), Em(4), Edim(add 11)(2), Em (add9+11)(2), Dmaj7(2), B(2)",
+      "count": 15
+    },
+    "overgang refr-couplet": {
+      "chords": "E6(2), A (schuif)(4), A7sus2(4)",
+      "count": 10
+    },
+    "couplet": {
+      "chords": "A7sus2(4), Dmaj7(4), A7sus2(4), Dmaj7(4), A7sus2(4), Dmaj7(4)",
+      "count": 24
+    },
+    "middenstuk": {
+      "chords": "Em7(4), A7(4), Em7(4), A7(4), Em7(4), A7(4), Em7(4), A7(4), A7sus2(4)",
+      "count": 36
+    },
+    "uittro": {
+      "chords": "Em6(2), A(4), D(2)",
+      "count": 8
+    }
+  }
+}

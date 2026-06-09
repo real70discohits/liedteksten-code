@@ -1,7 +1,7 @@
 *** NWC ANALYSE ***
 
 Analyse van: Returnability (333).nwctxt
-Locatie: C:\Persoonlijk\liedteksten\_build\Returnability (333)
+Locatie: <build folder>
 
 liedtitel: Returnability
 liednummer: 333

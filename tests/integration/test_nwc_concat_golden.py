@@ -7,6 +7,8 @@ the checked-in ``expected output/`` files.
 This is the regression net to run before/after refactoring nwc-concat.py.
 """
 
+import shutil
+
 import pytest
 
 
@@ -57,11 +59,30 @@ def test_script_succeeds(concat_run):
         (f"{SONG} labeltrack t_184.txt", "song_audio", None),
     ],
 )
-def test_artifact_matches_golden(concat_run, assert_matches_golden, filename, location, normalize):
+def test_artifact_matches_golden(
+    concat_run, assert_matches_golden, update_golden, filename, location, normalize
+):
     sb, result = concat_run
     assert result.returncode == 0, (
         f"nwc-concat failed before artefact comparison\n{result.stdout}\n{result.stderr}"
     )
     actual = getattr(sb, location) / filename
     expected = sb.expected / filename
+
+    if update_golden:
+        assert actual.exists(), f"Cannot update golden, output missing: {actual}"
+        expected.parent.mkdir(parents=True, exist_ok=True)
+        if normalize is None:
+            shutil.copyfile(actual, expected)
+        else:
+            # Store the normalized form so the committed golden is portable
+            # (e.g. without machine-specific absolute paths).
+            lines = actual.read_text(encoding="utf-8").splitlines()
+            expected.write_text(
+                "\n".join(normalize(line) for line in lines) + "\n",
+                encoding="utf-8",
+                newline="\n",
+            )
+        pytest.skip(f"--update-golden: refreshed {expected.name}")
+
     assert_matches_golden(actual, expected, normalize=normalize)

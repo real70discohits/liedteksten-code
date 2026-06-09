@@ -27,6 +27,7 @@ import sys
 import subprocess
 from pathlib import Path
 import argparse
+from console_utf8 import enable_utf8_console
 from pathconfig import load_and_resolve_paths
 from nwc_utils import NwcFile
 
@@ -176,6 +177,8 @@ def main():
 
     Loads path configuration and converts NWCTXT files to FLAC format.
     """
+    enable_utf8_console()
+
     # Load and resolve path configuration
     paths = load_and_resolve_paths("")
 

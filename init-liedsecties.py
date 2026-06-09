@@ -18,6 +18,7 @@ Usage:
 import argparse
 import sys
 from pathlib import Path
+from console_utf8 import enable_utf8_console
 
 from pathconfig import (load_and_resolve_paths, validate_file_exists,
                         validate_folder_exists, ensure_folder_writable)
@@ -157,6 +158,7 @@ def _apply_edits(content: str, sectie_naam: str) -> tuple[str, bool]:
 
 
 def main():
+    enable_utf8_console()
     parser = argparse.ArgumentParser(
         description=(
             'Initialiseert .nwctxt sectiebestanden voor een lied door ze te kopiëren '

@@ -28,6 +28,7 @@ import commentjson
 import sys
 from pathlib import Path
 import re
+from console_utf8 import enable_utf8_console
 from pathconfig import load_and_resolve_paths, validate_file_exists, validate_folder_exists, load_jsonc
 from nwc_analyze import write_analysis_to_file, count_vooraf_measures
 from nwc_utils import parse_nwctxt, NwcFile, parse_duration, calc_timing, TimingSegment
@@ -1091,6 +1092,7 @@ def main():
     Loads path configuration, validates folders, and concatenates
     NoteWorthy Composer files based on song structure.
     """
+    enable_utf8_console()
     parser = argparse.ArgumentParser(description='Concatenate NoteWorthy Composer files')
     parser.add_argument('songtitle', help='Title of the song')
     parser.add_argument('--keep-tempi', action='store_true',

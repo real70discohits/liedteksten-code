@@ -30,6 +30,7 @@ Notes:
 import argparse
 import sys
 from pathlib import Path
+from console_utf8 import enable_utf8_console
 
 from pathconfig import (load_and_resolve_paths, validate_file_exists,
                         validate_folder_exists, load_jsonc)
@@ -230,6 +231,7 @@ def _process_file(target_path: Path, template_staff_names: list[str],
 # ---------------------------------------------------------------------------
 
 def main():
+    enable_utf8_console()
     parser = argparse.ArgumentParser(
         description=(
             'Propagate staffs from a template to all .nwctxt section files of a song. '

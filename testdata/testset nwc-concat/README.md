@@ -21,10 +21,14 @@ Golden testset voor `nwc-concat.py`. Gebruikt door
 
 | Bestand | Vergelijking |
 |---|---|
-| `Returnability (333).nwctxt` | exact |
-| `Returnability (333) analysis.txt` | exact, behalve de `Locatie:`-regel (zie hieronder) |
-| `Returnability (333) structuur.tex` | exact |
-| `Returnability (333) labeltrack t_184.txt` | exact |
+| `Returnability (333).nwctxt` | exact (golden) |
+| `Returnability (333) analysis.txt` | exact (golden), behalve de `Locatie:`-regel (zie hieronder) |
+| `Returnability (333) structuur.tex` | exact (golden) |
+| `Returnability (333) labeltrack t_184.txt` | exact (golden) |
+| `expected-values.json` | afgeleide waarden (tempo, maatsoort, pickup, maten + starttijden per sectie, totalen, akkoorden) |
+
+Zie [tests/README.md](../../../tests/README.md) voor hoe je deze verwachtingen
+bijwerkt (`pytest --update-golden`).
 
 ## Bekende bijzonderheden
 

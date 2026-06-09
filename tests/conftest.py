@@ -32,6 +32,28 @@ if str(REPO_ROOT) not in sys.path:
 
 
 # --------------------------------------------------------------------------- #
+# --update-golden: rewrite expectations instead of asserting them
+# --------------------------------------------------------------------------- #
+def pytest_addoption(parser):
+    parser.addoption(
+        "--update-golden",
+        action="store_true",
+        default=False,
+        help=(
+            "Rewrite golden artefacts and expected-values.json from the current "
+            "output instead of comparing. Use after intentionally changing specs; "
+            "then review the git diff before committing."
+        ),
+    )
+
+
+@pytest.fixture
+def update_golden(request):
+    """True when the suite is run with --update-golden."""
+    return request.config.getoption("--update-golden")
+
+
+# --------------------------------------------------------------------------- #
 # Importing hyphenated scripts as modules (for unit tests)
 # --------------------------------------------------------------------------- #
 @pytest.fixture
@@ -135,11 +157,19 @@ def run_script(monkeypatch):
     cwd = repo root and captures stdout/stderr. Returns the CompletedProcess.
     """
 
-    def _run(script_filename, *args):
+    def _run(script_filename, *args, extra_env=None):
+        """Run a script as a subprocess.
+
+        The scripts are expected to make their own stdout UTF-8 safe (see
+        console_utf8.enable_utf8_console), so this deliberately does NOT force
+        an encoding - it captures whatever the script actually emits. Pass
+        ``extra_env`` to override environment variables (e.g. to force a
+        legacy cp1252 console for the UTF-8 regression test).
+        """
         cmd = [sys.executable, str(REPO_ROOT / script_filename), *args]
-        # Force UTF-8 stdio so the scripts' emoji output matches a normal
-        # terminal instead of crashing on Windows' cp1252 when captured.
-        env = {**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
+        env = {**os.environ}
+        if extra_env:
+            env.update(extra_env)
         return subprocess.run(
             cmd,
             cwd=str(REPO_ROOT),
