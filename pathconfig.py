@@ -5,9 +5,17 @@ from a JSON configuration file. It supports both relative and absolute paths.
 """
 
 import commentjson
+import os
 import sys
 from pathlib import Path
 from typing import Optional
+
+
+# Environment variable that overrides which paths config file is loaded.
+# Used by the test harness to redirect all paths to a throwaway sandbox,
+# but it is a general-purpose seam (e.g. for multiple path profiles) and
+# carries no test-specific semantics.
+ENV_PATHS_CONFIG = "LT_PATHS_CONFIG"
 
 
 class PathConfig:
@@ -61,12 +69,37 @@ def load_jsonc(filepath: Path) -> dict:
         return commentjson.load(f)
 
 
+def resolve_config_file(config_file: Optional[Path] = None) -> Path:
+    """Determine which paths config file to load.
+
+    Resolution order:
+    1. Explicit ``config_file`` argument.
+    2. ``LT_PATHS_CONFIG`` environment variable (test/sandbox override).
+    3. ``paths.jsonc`` in the same directory as this module (default).
+
+    Args:
+        config_file: Explicit path to a configuration file, or None.
+
+    Returns:
+        Path to the configuration file to load.
+    """
+    if config_file is not None:
+        return Path(config_file)
+
+    env_value = os.environ.get(ENV_PATHS_CONFIG)
+    if env_value:
+        return Path(env_value)
+
+    return Path(__file__).parent / "paths.jsonc"
+
+
 def load_path_config(config_file: Optional[Path] = None) -> PathConfig:
     """Load path configuration from JSONC file.
 
     Args:
-        config_file: Path to configuration file. If None, uses 'paths.jsonc'
-                     in the same directory as this module.
+        config_file: Path to configuration file. If None, falls back to the
+                     ``LT_PATHS_CONFIG`` environment variable and then to
+                     'paths.jsonc' in the same directory as this module.
 
     Returns:
         PathConfig object with loaded settings
@@ -77,9 +110,7 @@ def load_path_config(config_file: Optional[Path] = None) -> PathConfig:
         KeyError: If required configuration keys are missing
         SystemExit: If configuration validation fails
     """
-    if config_file is None:
-        # Use paths.jsonc in the same directory as this module
-        config_file = Path(__file__).parent / "paths.jsonc"
+    config_file = resolve_config_file(config_file)
 
     try:
         data = load_jsonc(config_file)
@@ -312,8 +343,9 @@ def load_and_resolve_paths(songtitle) -> ResolvedPaths:
             sys.exit(1)
         song_folder = paths.input_folder / songtitle
     """
-    config = load_path_config()
+    config_file = resolve_config_file()
+    config = load_path_config(config_file)
     config.build_folder = config.build_folder + '/' + songtitle
     config.distributie_folder = config.distributie_folder + '/' + songtitle
-    config_dir = Path(__file__).parent
+    config_dir = config_file.parent
     return ResolvedPaths(config, config_dir)
