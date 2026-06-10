@@ -8,6 +8,9 @@ Regressienet voor de lt-code scripts. Twee soorten tests:
 - **waarden-test** — roept de componentfuncties direct aan en toetst de
   *afgeleide waarden* (tempo, maatsoort, pickup, maten + starttijden per
   sectie, totalen, akkoorden) tegen `expected output/expected-values.json`.
+- **unittests** (`tests/unit/`) — snelle, geïsoleerde tests van pure functies
+  (`transpose`, `calc_timing`, `parse_duration`, timesig-/lyric-helpers, ...)
+  met kleine handgemaakte snippets, zonder bestanden of subprocessen.
 
 Alles draait geïsoleerd: een testset wordt naar een tijdelijke map gekopieerd
 en de scripts worden via de `LT_PATHS_CONFIG`-omgevingsvariabele daarheen
@@ -19,7 +22,7 @@ omgeleid. De git-werkmap wordt nooit aangeraakt tijdens een testrun.
 pip install -r requirements-dev.txt    # eenmalig
 python -m pytest                       # alles
 python -m pytest -m integration        # alleen end-to-end golden/waarden-tests
-python -m pytest -m unit               # alleen snelle unittests (indien aanwezig)
+python -m pytest -m unit               # alleen snelle unittests (< 1 s)
 python -m pytest tests/integration/test_nwc_concat_values.py   # één bestand
 ```
 

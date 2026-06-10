@@ -56,7 +56,7 @@ def update_golden(request):
 # --------------------------------------------------------------------------- #
 # Importing hyphenated scripts as modules (for unit tests)
 # --------------------------------------------------------------------------- #
-@pytest.fixture
+@pytest.fixture(scope="session")
 def load_script():
     """Return a function that imports a repo script by filename as a module.
 
