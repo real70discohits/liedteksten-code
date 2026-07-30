@@ -87,20 +87,22 @@ def parse_lyric_text(lyric_line):
     return syllables
 
 
-def count_bars_in_staff(staff_content):
-    """Count the number of |Bar markers in a staff."""
-    return staff_content.count(NWC_PREFIX_BAR)    # to do: if song starts with just a single note, don't count the first measure.
+def blindly_count_barmarkers_in_staff(staff_content):
+    """Count the number of |Bar markers in a staff. Doesn't reckon with incomplete measures."""
+    return staff_content.count(NWC_PREFIX_BAR)
 
 
 def detect_begintel(first_staff):
-    """Detect if there's a begintel (pickup measure).
+    """Detect if there's a begintel.
 
-    A begintel is typically a single note before the first bar.
+    A begintel is typically a single rest before the first bar. 
+    It has no musical meaning but is an adaptation to recording software that when playing the first note produces a distorted sound.
+    So it's not a pickup measure, pickup beat or anacrusis.
     """
-    # Look for a Note before the first Bar
+    # Look for a Rest before the first Bar
     before_first_bar = first_staff.split(NWC_PREFIX_BAR)[0]
 
-    # Check if there's a Note element
+    # Check if there's a Rest element
     if NWC_PREFIX_REST in before_first_bar:
         return True
     return False
@@ -138,26 +140,25 @@ def count_vooraf_measures(staff_content):
     return bars_before
 
 
-def multiple_notes_count_as_one(element):
+def multiple_notes_count_as_one(nwctxt_line):
     """Boolean function: detects slurs and ties, meaning that multiple notes 
     count as one (so only a single note for singing and lyrics).
 
-    An element is a single line in a noteworthy .nwctxt file, such
-    as "|Note|Dur:8th|Pos:-4|Opts:Stem=Up,Beam=First".
+    nwctxt_line example: "|Note|Dur:8th|Pos:-4|Opts:Stem=Up,Beam=First".
     """
-    pos = find_part_of_element(element, "Pos")
-    return element.count('Slur') > 0 or (pos is not None and pos.endswith('^'))
+    pos = find_section_in_line("Pos", nwctxt_line)
+    return nwctxt_line.count('Slur') > 0 or (pos is not None and pos.endswith('^'))
 
 
-def find_part_of_element(element, startswith):
-    """Returns the full part of an element when that part starts with the given string.
-    Example: find_part_of_element("|Note|Dur:8th|Pos:-3^|Opts:Stem=Up,Beam=End", "Pos") returns "Pos:-3^".
+def find_section_in_line(startswith, line):
+    """Returns the full section from a line when that section is found by name in the given string.
+    Example: find_section_in_line("|Note|Dur:8th|Pos:-3^|Opts:Stem=Up,Beam=End", "Pos") returns "Pos:-3^".
     """
-    parts = element.split('|')
+    sections = line.split('|')
     result = None
-    for item in parts:
-        if item.lower().startswith(startswith.lower()):  # Case-insensitive match
-            result = item
+    for section in sections:
+        if section.lower().startswith(startswith.lower()):  # Case-insensitive match
+            result = section
             break
     return result
 
@@ -225,13 +226,13 @@ def analyze_nwctxt(file_path):
         return None
 
     bass_content = bass_staff.get_content()
-    total_bars = count_bars_in_staff(bass_content)
+    total_bars = blindly_count_barmarkers_in_staff(bass_content)
 
     # Detect begintel
     has_begintel = detect_begintel(bass_content)
 
     # Adjust total if begintel exists
-    total_measures = total_bars if has_begintel else total_bars + 1
+    total_measures = total_bars if has_begintel else total_bars + 1    # BUG: this may include empty or incomplete measures
 
     # Count vooraf measures
     vooraf = count_vooraf_measures(bass_content)
@@ -286,7 +287,7 @@ def analyze_complete_song(file_path, tempo=None, timesig=None):
         - vooraf: Number of count-in measures before "liedstart"
         - total_measures: Corrected total (excluding begintel and vooraf)
         - total_duration: Duration in seconds (excluding vooraf, or None if tempo/timesig missing)
-        - measure_map: Dict mapping measure numbers to lyrics (renumbered: maat 1 = liedstart)
+        - measure_map: Dict mapping measure numbers to lyrics (renumbered: maat 1 = liedstart)    => good to know! The measure with the 'liedstart' label gets '1', so this should become my standard numbering.
 
         Returns None if analysis fails.
     """
@@ -301,6 +302,7 @@ def analyze_complete_song(file_path, tempo=None, timesig=None):
         return None
 
     # Extract tempo and timesig if not provided
+    # NOTE: because here tempo and timesig are just for general info about the song, we don't have to reckon with tempo/timesig changes.
     if tempo is None or timesig is None:
         nwc = NwcFile(file_path)
         bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
@@ -329,7 +331,7 @@ def analyze_complete_song(file_path, tempo=None, timesig=None):
                             pass
 
     # Calculate corrected total measures (excluding begintel and vooraf)
-    total_measures_corrected = basic_analysis['total_measures'] - basic_analysis['vooraf']
+    total_measures_corrected = basic_analysis['total_measures'] - basic_analysis['vooraf']    # BUG: note that basic_analysis[total_measures] doesn't reckon with empty or incomplete measures. This value is used for calculating songduration so that will generally render a too hogh value. 
 
     # Calculate total duration (excluding vooraf measures)
     total_duration = None
@@ -337,7 +339,7 @@ def analyze_complete_song(file_path, tempo=None, timesig=None):
         try:
             _, measure_duration, _, _ = calc_timing(tempo, timesig)
             # Duration = only the 'real' measures (excluding vooraf)
-            total_duration = total_measures_corrected * measure_duration
+            total_duration = total_measures_corrected * measure_duration    # BUG: see previous bug, that's why the result of this calculation can't be trusted either.
         except (ValueError, ZeroDivisionError):
             total_duration = None
 
@@ -359,7 +361,7 @@ def analyze_complete_song(file_path, tempo=None, timesig=None):
         'folder': basic_analysis['folder'],
         'tempo': tempo,
         'timesig': timesig,
-        'total_bars': count_bars_in_staff(NwcFile(file_path).get_staff_by_name(STAFF_NAME_BASS).get_content()),
+        'total_bars': blindly_count_barmarkers_in_staff(NwcFile(file_path).get_staff_by_name(STAFF_NAME_BASS).get_content()),
         'has_begintel': basic_analysis['has_begintel'],
         'vooraf': vooraf,
         'total_measures': total_measures_corrected,

@@ -59,18 +59,18 @@ def test_parse_lyric_text_preserves_underscore():
 @pytest.mark.unit
 def test_find_part_of_element():
     el = "|Note|Dur:8th|Pos:-3^|Opts:Stem=Up,Beam=End"
-    assert nwc_analyze.find_part_of_element(el, "Pos") == "Pos:-3^"
+    assert nwc_analyze.find_section_in_line("Pos", el) == "Pos:-3^"
 
 
 @pytest.mark.unit
 def test_find_part_of_element_case_insensitive():
     el = "|Note|Dur:8th|Pos:0"
-    assert nwc_analyze.find_part_of_element(el, "dur") == "Dur:8th"
+    assert nwc_analyze.find_section_in_line("dur", el) == "Dur:8th"
 
 
 @pytest.mark.unit
 def test_find_part_of_element_missing_returns_none():
-    assert nwc_analyze.find_part_of_element("|Note|Dur:8th", "Opts") is None
+    assert nwc_analyze.find_section_in_line("Opts", "|Note|Dur:8th") is None
 
 
 # --------------------------------------------------------------------------- #
@@ -95,7 +95,7 @@ def test_multiple_notes_count_as_one(element, expected):
 @pytest.mark.unit
 def test_count_bars_in_staff():
     content = "|Note|Dur:4th\n|Bar\n|Note|Dur:4th\n|Bar|Style:Double"
-    assert nwc_analyze.count_bars_in_staff(content) == 2
+    assert nwc_analyze.blindly_count_barmarkers_in_staff(content) == 2
 
 
 # --------------------------------------------------------------------------- #
