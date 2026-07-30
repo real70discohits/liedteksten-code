@@ -42,6 +42,7 @@ def test_calc_timing_3_4_at_60():
         ("|Note|Dur:16th|Pos:0", 0.25),
         ("|Note|Dur:4th,Dotted|Pos:0", 1.5),
         ("|Note|Dur:Half,DblDotted|Pos:0", 3.5),
+        ("|Note|Dur:4th,DblDotted|Pos:0", 1.75),
         ("|Note|Pos:0", 0.0),            # no Dur
         ("|Note|Dur:Sixteenth|Pos:0", 0.0),  # unknown duration name
     ],
