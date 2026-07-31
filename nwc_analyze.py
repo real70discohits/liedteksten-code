@@ -40,8 +40,6 @@ def find_song_number(nwctxt_path):
     return numbers[last_number_index] if last_number_index >= 0 else None
 
 
-
-
 def parse_lyric_text(lyric_line):
     """Parse Lyric1 text and split into syllables.
 

@@ -262,6 +262,7 @@ def get_measure_count_by_ritme_staff(filepath):
 
     return final_count if final_count > 0 else None
 
+
 def get_measure_count(filepath):   # BUG: this method should return a measure-count per timesig in order to be usefull for calculation of duration.
     """Extract measure count from Bass staff in .nwctxt file
 
@@ -390,7 +391,7 @@ def extract_chords_from_first_staff(filepath):
     return chord_string, total_from_chords, True
 
 
-def extract_tempo_and_timesig(filepath):
+def extract_initial_tempo_and_timesig(filepath):
     """Extract tempo and time signature from Bass staff of .nwctxt file
 
     Returns:
@@ -436,7 +437,6 @@ def extract_tempo_and_timesig(filepath):
             break
 
     return tempo, timesig
-
 
 
 def extract_lbltrck_markers(filepath):
@@ -601,6 +601,7 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
                 if measures is not None:
                     totalmeasures += measures
             total_duration_seconds = get_duration(measurecount_and_starttime_per_lieddeel, tempo, timesig, pickup_beats)
+            # BUG: although only in case of 'legacy', get_duration doesn't reckon with timing changes within lieddeel.
 
         # Format duration
         if total_duration_seconds is not None:
@@ -791,7 +792,7 @@ def update_liedtekst_tex_file(liedtitel, tempo, maatsoort, song_folder=None):
     return True
 
 
-def get_duration(measurecount_and_starttime_per_lieddeel, tempo, timesig, beats_up_front):
+def get_duration(measurecount_and_starttime_per_lieddeel, tempo, timesig, beats_up_front):  # BUG: doesn't reckon with timing changes within lieddeel. Alleen in gebruik door write_latex_file (structuur file).
     """Calculate total duration of the array of lieddelen with their measure count
     given tempo (bpm) and timesignature (3/4, 4/4 etc.).
     
@@ -819,7 +820,7 @@ def get_duration(measurecount_and_starttime_per_lieddeel, tempo, timesig, beats_
     return totalduration  + (beats_before * beat_duration)  
 
 
-def get_pickup_beats(nwctxt_filepath):
+def calc_begintel_duration(nwctxt_filepath):
     """Detect and return pickup beat duration (anacrusis) in a NoteWorthy file.
 
     A pickup exists when the total duration of notes/rests before the first bar
@@ -1077,7 +1078,7 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
             sys.exit(1)
 
         # Extract this lieddeel's own tempo/timesig; inherit from predecessor if absent
-        lieddeel_tempo, lieddeel_timesig = extract_tempo_and_timesig(str(lieddeel_nwctxt))
+        lieddeel_tempo, lieddeel_timesig = extract_initial_tempo_and_timesig(str(lieddeel_nwctxt))
         if lieddeel_tempo is None:
             lieddeel_tempo = prev_tempo
         if lieddeel_timesig is None:
@@ -1091,7 +1092,7 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
         if first_lieddeel_tempo is None:
             first_lieddeel_tempo = lieddeel_tempo
             first_lieddeel_timesig = lieddeel_timesig
-            pickup_beats = get_pickup_beats(lieddeel_nwctxt)
+            pickup_beats = calc_begintel_duration(lieddeel_nwctxt)
             current_start_time = pickup_beats * beat_duration
             print(f"ℹ️ NOTE: Detected {pickup_beats} beats up front.")
 
