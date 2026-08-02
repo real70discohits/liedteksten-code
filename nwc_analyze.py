@@ -106,6 +106,12 @@ def detect_begintel(first_staff):
     return False
 
 
+def count_vooraf_measures_by_filepath(filepath):
+    nwc = NwcFile(filepath)
+    bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
+    return count_vooraf_measures(bass_staff.get_content())
+
+
 def count_vooraf_measures(staff_content):
     """Count measures before the 'liedstart' marker.
 

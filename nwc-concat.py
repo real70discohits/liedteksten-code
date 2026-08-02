@@ -30,7 +30,7 @@ from pathlib import Path
 import re
 from console_utf8 import enable_utf8_console
 from pathconfig import load_and_resolve_paths, validate_file_exists, validate_folder_exists, load_jsonc
-from nwc_analyze import write_analysis_to_file, count_vooraf_measures
+from nwc_analyze import write_analysis_to_file, count_vooraf_measures, count_vooraf_measures_by_filepath
 from nwc_utils import parse_nwctxt, NwcFile, parse_duration, calc_timing, TimingSegment
 from constants import (NWC_PREFIX_ADDSTAFF, NWC_PREFIX_STAFF_PROPERTIES,
                         NWC_PREFIX_STAFF_INSTRUMENT, NWC_PREFIX_CLEF, NWC_PREFIX_REST,
@@ -178,7 +178,7 @@ def _pre_bar_duration_qn(staff_lines) -> float:
     return total
 
 
-def get_measure_count_by_ritme_staff(filepath):
+def get_measure_count_by_ritme_staff(filepath, include_vooraf_measures = True):
     """Extract measure count from Ritme staff in .nwctxt file
 
     Looks for a line like |Bar|Style:LocalRepeatClose|Repeat:4 in the Ritme staff
@@ -256,9 +256,10 @@ def get_measure_count_by_ritme_staff(filepath):
 
     # Subtract maten vooraf: full measures before 'liedstart' in the Bass staff
     # (count_vooraf_measures already excludes the pickup measure)
-    bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
-    if bass_staff:
-        final_count -= count_vooraf_measures(bass_staff.get_content())
+    if (not include_vooraf_measures):
+        bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
+        if bass_staff:
+            final_count -= count_vooraf_measures(bass_staff.get_content())
 
     return final_count if final_count > 0 else None
 
@@ -820,7 +821,7 @@ def get_duration(measurecount_and_starttime_per_lieddeel, tempo, timesig, beats_
     return totalduration  + (beats_before * beat_duration)  
 
 
-def calc_begintel_duration(nwctxt_filepath):
+def calc_begintel_duration_qn(nwctxt_filepath):
     """Detect and return pickup beat duration (anacrusis) in a NoteWorthy file.
 
     A pickup exists when the total duration of notes/rests before the first bar
@@ -836,7 +837,7 @@ def calc_begintel_duration(nwctxt_filepath):
     nwc = NwcFile(nwctxt_filepath)
     bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
     if not bass_staff:
-        return 0.0
+        return 0.000
     staff_lines = bass_staff.lines
 
     timesig = '4/4'
@@ -850,7 +851,7 @@ def calc_begintel_duration(nwctxt_filepath):
 
     pre_bar_dur = _pre_bar_duration_qn(staff_lines)
     measure_dur = _measure_duration_qn(timesig)
-    return pre_bar_dur if 0.0 < pre_bar_dur < measure_dur else 0.0
+    return pre_bar_dur if 0.000 < pre_bar_dur < measure_dur else 0.000
 
 
 def extract_timing_segments(filepath, initial_tempo, initial_timesig):
@@ -1061,9 +1062,12 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
 
     file_list = []
     measurecount_and_starttime_per_lieddeel = []
+    include_pickup_and_vooraf_measures = True       # make assumption explicit (include vooraf/piclup in calculating duration)
     chords_per_lieddeel = {}
     all_labels = []
-    pickup_beats = 0
+    pickup_beats_count = 0
+    vooraf_duration = 0.0
+    netto_song_duration = 0.000
 
     prev_tempo = _DEFAULT_TEMPO
     prev_timesig = _DEFAULT_TIMESIG
@@ -1092,15 +1096,22 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
         if first_lieddeel_tempo is None:
             first_lieddeel_tempo = lieddeel_tempo
             first_lieddeel_timesig = lieddeel_timesig
-            pickup_beats = calc_begintel_duration(lieddeel_nwctxt)
-            current_start_time = pickup_beats * beat_duration
-            print(f"ℹ️ NOTE: Detected {pickup_beats} beats up front.")
+            pickup_beats_count = calc_begintel_duration_qn(lieddeel_nwctxt)
+            # print(f"ℹ️ NOTE: Detected {pickup_beats_count} beats up front.")
+            measures_vooraf_count = count_vooraf_measures_by_filepath(str(lieddeel_nwctxt))
+            measures_vooraf_duration = measures_vooraf_count * measure_duration
+            pickup_duration = pickup_beats_count * beat_duration
+            vooraf_duration = pickup_duration + measures_vooraf_duration
+            if (include_pickup_and_vooraf_measures):
+                current_start_time = 0.000
+            else:
+                current_start_time = vooraf_duration
 
         # Build timing segments for intra-lieddeel tempo/timesig changes
         timing_segments = extract_timing_segments(str(lieddeel_nwctxt), lieddeel_tempo, lieddeel_timesig)
 
         file_list.append(str(lieddeel_nwctxt))
-        measure_count = get_measure_count_by_ritme_staff(str(lieddeel_nwctxt))
+        measure_count = get_measure_count_by_ritme_staff(str(lieddeel_nwctxt), include_pickup_and_vooraf_measures)
         lieddeel_starttime = current_start_time
         measurecount_and_starttime_per_lieddeel.append((lieddeel, measure_count, lieddeel_starttime))
 
@@ -1139,7 +1150,9 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
         measure_str = f" ({measure_count} measures)" if measure_count else ""
         print(f"Adding lieddeel: {lieddeel}{measure_str}")
 
-    return file_list, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, all_labels, first_lieddeel_tempo, first_lieddeel_timesig, pickup_beats
+    netto_song_duration = current_start_time - vooraf_duration  # current_start_time holds start+duration of the last processed lieddeel
+
+    return file_list, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, all_labels, first_lieddeel_tempo, first_lieddeel_timesig, pickup_beats_count, netto_song_duration
 
 
 def main():
@@ -1173,7 +1186,7 @@ def main():
 
     # Process all lieddelen
     (file_list, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, all_labels,
-    tempo, timesig, pickup_beats) = process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder)
+    tempo, timesig, pickup_beats, netto_song_duration) = process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder)
 
     # Concatenate files
     output_nwctxt = paths.build_folder / f"{songtitle}.nwctxt"
