@@ -483,7 +483,7 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
     # Get unique sections in order of first appearance
     unique_lieddelen = []
     seen = set()
-    for lieddeel_name, _, _ in measurecount_and_starttime_per_lieddeel:
+    for lieddeel_name, _, _, _ in measurecount_and_starttime_per_lieddeel:
         if lieddeel_name not in seen:
             unique_lieddelen.append(lieddeel_name)
             seen.add(lieddeel_name)
@@ -593,7 +593,7 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
         f.write(r'\hline' + '\n')
 
         totalmeasures = 0
-        for i, (section, measures, _) in enumerate(measurecount_and_starttime_per_lieddeel, 1):
+        for i, (section, measures, _, _) in enumerate(measurecount_and_starttime_per_lieddeel, 1):
             if measures is not None:
                 totalmeasures += measures
 
@@ -619,7 +619,7 @@ def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_start
         for lieddeel_name in unique_lieddelen:
             # Get measure count (from first occurrence)
             measures = None
-            for s, m, _ in measurecount_and_starttime_per_lieddeel:
+            for s, m, _, _ in measurecount_and_starttime_per_lieddeel:
                 if s == lieddeel_name:
                     measures = m
                     break
@@ -1053,7 +1053,7 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
             measures_vooraf_duration = measures_vooraf_count * measure_duration
             pickup_duration = pickup_beats_count * beat_duration
             vooraf_duration = pickup_duration + measures_vooraf_duration
-            measurecount_and_starttime_per_lieddeel.append(('vooraf', measures_vooraf_count, 0.0))
+            measurecount_and_starttime_per_lieddeel.append(('vooraf', measures_vooraf_count, 0.0, vooraf_duration))
             current_start_time = vooraf_duration
 
         # Build timing segments for intra-lieddeel tempo/timesig changes
@@ -1062,7 +1062,7 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
         file_list.append(str(lieddeel_nwctxt))
         measure_count = get_measure_count_by_ritme_staff(str(lieddeel_nwctxt), False)
         lieddeel_starttime = current_start_time
-        measurecount_and_starttime_per_lieddeel.append((lieddeel, measure_count, lieddeel_starttime))
+        # measurecount_and_starttime_per_lieddeel.append((lieddeel, measure_count, lieddeel_starttime))
 
         # Add lieddeel label to all_labels list
         all_labels.append((lieddeel, lieddeel_starttime))
@@ -1085,11 +1085,14 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
         # Advance cumulative time using timing segments for accuracy
         if current_start_time is not None:
             if timing_segments:
-                current_start_time += sum(seg.duration() for seg in timing_segments)
+                lieddeel_duration = sum(seg.duration() for seg in timing_segments)
+                current_start_time += lieddeel_duration
             elif measure_count is not None:
                 current_start_time += measure_count * measure_duration
             else:
                 current_start_time = None
+
+        measurecount_and_starttime_per_lieddeel.append((lieddeel, measure_count, lieddeel_starttime, lieddeel_duration))
 
         # Extract chord info only once per unique section
         if lieddeel not in chords_per_lieddeel:

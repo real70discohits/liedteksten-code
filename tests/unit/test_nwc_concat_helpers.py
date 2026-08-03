@@ -143,7 +143,8 @@ def test_provess_lieddelen1(concat):
     # OLD EXPECTATION, HAS DESIGN ERROR: expected_measurecount_and_starttime_per_lieddeel = [('intro', 8, 0.32608695652173914), ('couplet 1', 18, 13.369565217391305), ('refrein', 15, 36.84782608695652), ('overgang refr-couplet', 10, 56.413043478260875), ('couplet', 24, 69.45652173913044), ('refrein', 15, 100.76086956521739), ('middenstuk', 32, 120.32608695652173), ('couplet', 24, 164.31074223408675), ('refrein', 15, 195.6150900601737), ('uittro', 8, 215.18030745147806)]
     # NEW THOUGHT: m_cnt_and_starttime moet altijd de starttijden bevatten voor de labeltrack, want er is geen ander doel: dit includeert dus de vooraf-sectie.
     # Maar de maat-count heeft 2 doelen: de stats (dan zonder voorafsectie) en berekening starttijden (dan met). Voorstel: splits het intro op basis van het liedstart-label in 'vooraf' en 'intro'. 
-    expected_measurecount_and_starttime_per_lieddeel = [('vooraf', 2, 0.0), ('intro', 8, 2.9347826086956523), ('couplet 1', 18, 15.978260869565219), ('refrein', 15, 39.45652173913044), ('overgang refr-couplet', 10, 59.02173913043478), ('couplet', 24, 72.06521739130434), ('refrein', 15, 103.3695652173913), ('middenstuk', 32, 122.93478260869564), ('couplet', 24, 166.91943788626065), ('refrein', 15, 198.22378571234762), ('uittro', 8, 217.78900310365196)]
+    # expected_measurecount_and_starttime_per_lieddeel = [('vooraf', 2, 0.0, 2.9347826086956523), ('intro', 8, 2.9347826086956523), ('couplet 1', 18, 15.978260869565219), ('refrein', 15, 39.45652173913044), ('overgang refr-couplet', 10, 59.02173913043478), ('couplet', 24, 72.06521739130434), ('refrein', 15, 103.3695652173913), ('middenstuk', 32, 122.93478260869564), ('couplet', 24, 166.91943788626065), ('refrein', 15, 198.22378571234762), ('uittro', 8, 217.78900310365196)]
+    expected_measurecount_and_starttime_per_lieddeel = [('vooraf', 2, 0.0, 2.9347826086956523), ('intro', 8, 2.9347826086956523, 13.043478260869566), ('couplet 1', 18, 15.978260869565219, 23.47826086956522), ('refrein', 15, 39.45652173913044, 19.565217391304348), ('overgang refr-couplet', 10, 59.02173913043478, 13.043478260869566), ('couplet', 24, 72.06521739130434, 31.304347826086957), ('refrein', 15, 103.3695652173913, 19.565217391304348), ('middenstuk', 32, 122.93478260869564, 43.984655277565004), ('couplet', 24, 166.91943788626065, 31.304347826086957), ('refrein', 15, 198.22378571234762, 19.565217391304348), ('uittro', 8, 217.78900310365196, 10.434782608695652)]
     rng = len(expected_measurecount_and_starttime_per_lieddeel)
     for i in range(rng):
         assert result[1][i] == expected_measurecount_and_starttime_per_lieddeel[i]
@@ -162,4 +163,4 @@ def test_provess_lieddelen1(concat):
     assert result[4] == 184                 # initial tempo
     assert result[5] == '4/4'               # initial timesig
     assert result[6] == 1.0                 # nr of pickup beats
-    assert round(result[7], 0) == 222.0     # netto song duration, 3:42
+    assert round(result[7], 0) == 225.0     # netto song duration, 3:45
