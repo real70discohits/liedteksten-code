@@ -82,40 +82,40 @@ def test_pre_bar_duration_qn_stops_at_styled_bar3(concat):
 
 # --------------------------------------------------------------------------- #
 # time_at_measure
-# Return (elapsed_time, beat_duration, beat_base) at the start of a measure (0-based).
+# Return (elapsed_time, beat_duration, beat_base) at the start of the requested measure (0-based).
 # --------------------------------------------------------------------------- #
 @pytest.mark.unit
-def test_time_at_measure_one_beat_per_second(concat):
+def test_time_at_measure_one_beat_per_second_simple(concat):
     segments = [TimingSegment(tempo=60, timesig='4/4', measure_count=1)]
     measure_number = 1
     assert concat.time_at_measure(segments, measure_number) == (4.0, 1.0, 4)  # na 1 maat (measure 0) zijn verstreken: 4 sec
 
 @pytest.mark.unit
-def test_time_at_measure_zero_based(concat):
+def test_time_at_measure_zero_based_simple(concat):
     segments = [TimingSegment(tempo=60, timesig='4/4', measure_count=1)]
     measure_number = 0   # Note: maat 0, method is 0-based, dus expected elapsed time at start of measure is 0.
     assert concat.time_at_measure(segments, measure_number) == (0.0, 1.0, 4)  # dur: 4 sec
 
 @pytest.mark.unit
-def test_time_at_measure_double_tempo(concat):
+def test_time_at_measure_double_tempo_simple(concat):
     segments = [TimingSegment(tempo=120, timesig='4/4', measure_count=1)]
     measure_number = 1
     assert concat.time_at_measure(segments, measure_number) == (2.0, 0.5, 4)
 
 @pytest.mark.unit
-def test_time_at_measure_double_tempo_walz(concat):
+def test_time_at_measure_double_tempo_walz_simple(concat):
     segments = [TimingSegment(tempo=120, timesig='3/4', measure_count=1)]
     measure_number = 1
     assert concat.time_at_measure(segments, measure_number) == (1.5, 0.5, 4)   # dur 1.5 sec
 
-# @pytest.mark.unit
-def test_time_at_measure_double_tempo_long(concat):
+@pytest.mark.unit
+def test_time_at_measure_double_tempo_long_simple(concat):
     segments = [TimingSegment(tempo=120, timesig='4/4', measure_count=50)]
     measure_number = 48
     assert concat.time_at_measure(segments, measure_number) == (96.0, 0.5, 4)
 
 @pytest.mark.unit
-def test_time_at_measure_fast_and_long(concat):
+def test_time_at_measure_fast_and_long_simple(concat):
     segments = [TimingSegment(tempo=180, timesig='4/4', measure_count=50)]
     measure_number = 50  # Note: er zijn 50 maten, 0-based, dus 0-49. Maat 50 bestaat dus niet, maar deze method is daar niet van onder de indruk.
     result = concat.time_at_measure(segments, measure_number) 
@@ -123,12 +123,18 @@ def test_time_at_measure_fast_and_long(concat):
     assert round(result[1], 4) == 0.3333    # dwz één beat duurt 0.33s
 
 @pytest.mark.unit
-def test_time_at_measure_fast_but_at_start(concat):
+def test_time_at_measure_fast_but_at_start_simple(concat):
     segments = [TimingSegment(tempo=180, timesig='4/4', measure_count=50)]
     measure_number = 0
     result = concat.time_at_measure(segments, measure_number) 
     assert round(result[0], 4) == 0.0000    # dwz bij start maat 0 zijn 0 sec verstreken
     assert round(result[1], 4) == 0.3333    # dwz één beat duurt 0.33s
+
+@pytest.mark.unit
+def test_time_at_measure_one_beat_per_second_complex(concat):
+    segments = [TimingSegment(tempo=60, timesig='4/4', measure_count=2), TimingSegment(tempo=120, timesig='4/4', measure_count=2)]
+    measure_number = 4
+    assert concat.time_at_measure(segments, measure_number) == (12.0, 0.5, 4)  # ...
 
 
 # --------------------------------------------------------------------------- #
@@ -204,6 +210,8 @@ def test_provess_lieddelen1(concat):
     expected_chords_per_lieddeel = {'intro': ('A7sus2(8)', 8, True), 'couplet 1': ('A7sus2(5), Dmaj7(4), A7sus2(5), Dmaj7(4)', 18, True), 'refrein': ('Bm6(3), Em(4), Edim(add 11)(2), Em (add9+11)(2), Dmaj7(2), B(2)', 15, True), 'overgang refr-couplet': ('E6(2), A (schuif)(4), A7sus2(4)', 10, True), 'couplet': ('A7sus2(4), Dmaj7(4), A7sus2(4), Dmaj7(4), A7sus2(4), Dmaj7(4)', 24, True), 'middenstuk': ('Em7(4), A7(4), Em7(4), A7(4), Em7(4), A7(4), Em7(4), A7(4)', 32, True), 'uittro': ('Em6(2), A(4), D(2)', 8, True)}
     for key in {'intro', 'couplet 1', 'refrein', 'overgang refr-couplet', 'couplet', 'middenstuk', 'uittro'}:
         assert result[2][key][0] == expected_chords_per_lieddeel[key][0]
+        assert result[2][key][1] == expected_chords_per_lieddeel[key][1]
+        assert result[2][key][2] == expected_chords_per_lieddeel[key][2]
 
     # assert all_labels
     expected_all_labels = [('intro', 2.9347826086956523), ('Start zang', 15.32608695652174), ('couplet 1', 15.978260869565219), ('D', 22.5), ('A', 27.717391304347828), ('D', 34.23913043478261), ('refrein', 39.45652173913044), ('E', 43.369565217391305), ('Edim', 48.58695652173913), ('Em', 51.19565217391305), ('B', 56.413043478260875), ('overgang refr-couplet', 59.02173913043478), ('A', 61.630434782608695), ('couplet', 72.06521739130434), ('D', 77.28260869565217), ('A', 82.5), ('D', 87.71739130434783), ('A', 92.93478260869566), ('D', 98.15217391304347), ('refrein', 103.3695652173913), ('E', 107.28260869565217), ('Edim', 112.5), ('Em', 115.1086956521739), ('B', 120.32608695652173), ('middenstuk', 122.93478260869564), ('A', 128.45202398800598), ('E', 133.96926536731632), ('A', 139.48650674662667), ('E', 145.00374812593702), ('A', 150.52098950524737), ('E', 156.03823088455772), ('A', 161.55547226386807), ('couplet', 166.91943788626065), ('D', 172.13682919060847), ('A', 177.3542204949563), ('D', 182.57161179930412), ('A', 187.78900310365196), ('D', 193.00639440799978), ('refrein', 198.22378571234762), ('E', 202.1368291906085), ('Edim', 207.3542204949563), ('Em', 209.96291614713022), ('B', 215.18030745147806), ('uittro', 217.78900310365196), ('A', 220.39769875582587), ('D', 225.6150900601737)]
