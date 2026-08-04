@@ -386,7 +386,7 @@ def extract_initial_tempo_and_timesig(filepath):
 
 
 def extract_lbltrck_markers(filepath):
-    """Extract LBLTRCK markers with precise beat positions from Bass staff.
+    """Extract LBLTRCK markers with precise beat positions from Bass staff (measure nr 0-based!).
 
     Scans the Bass staff for Text elements with format 'LBLTRCK: label_text'
     and determines their exact position within measures.
@@ -906,7 +906,7 @@ def extract_timing_segments(filepath, initial_tempo, initial_timesig):
 
 
 def time_at_measure(segments, measure_number):
-    """Return (elapsed_time, beat_duration, beat_base) at the start of a measure (0-based).
+    """Return (elapsed_time, beat_duration, beat_base) at the start of a measure (0-based !!).
 
     Args:
         segments: List of TimingSegment from extract_timing_segments
@@ -1074,7 +1074,7 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
                 if timing_segments:
                     time_in_lieddeel, seg_beat_duration, seg_beat_base = time_at_measure(timing_segments, measure_number)
                 else:
-                    time_in_lieddeel = measure_number * measure_duration
+                    time_in_lieddeel = measure_number * measure_duration    # 0-based, so works Okay: first measure gets 0.
                     seg_beat_duration = beat_duration
                     seg_beat_base = beat_base
                 beats_within_measure = beat_pos_in_quarters * (4.0 / seg_beat_base)

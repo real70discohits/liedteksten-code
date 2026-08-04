@@ -2,7 +2,7 @@
 
 import pytest
 from pathlib import Path
-
+from nwc_utils import TimingSegment
 
 @pytest.fixture(scope="module")
 def concat(load_script):
@@ -78,6 +78,57 @@ def test_pre_bar_duration_qn_stops_at_styled_bar2(concat):
 def test_pre_bar_duration_qn_stops_at_styled_bar3(concat):
     lines = ["|Note|Dur:Half", "|Rest|Dur:32nd", "|Bar|Style:Double", "|Note|Dur:Whole"]
     assert concat._pre_bar_duration_qn(lines) == pytest.approx(2.125)
+
+
+# --------------------------------------------------------------------------- #
+# time_at_measure
+# Return (elapsed_time, beat_duration, beat_base) at the start of a measure (0-based).
+# --------------------------------------------------------------------------- #
+@pytest.mark.unit
+def test_time_at_measure_one_beat_per_second(concat):
+    segments = [TimingSegment(tempo=60, timesig='4/4', measure_count=1)]
+    measure_number = 1
+    assert concat.time_at_measure(segments, measure_number) == (4.0, 1.0, 4)  # na 1 maat (measure 0) zijn verstreken: 4 sec
+
+@pytest.mark.unit
+def test_time_at_measure_zero_based(concat):
+    segments = [TimingSegment(tempo=60, timesig='4/4', measure_count=1)]
+    measure_number = 0   # Note: maat 0, method is 0-based, dus expected elapsed time at start of measure is 0.
+    assert concat.time_at_measure(segments, measure_number) == (0.0, 1.0, 4)  # dur: 4 sec
+
+@pytest.mark.unit
+def test_time_at_measure_double_tempo(concat):
+    segments = [TimingSegment(tempo=120, timesig='4/4', measure_count=1)]
+    measure_number = 1
+    assert concat.time_at_measure(segments, measure_number) == (2.0, 0.5, 4)
+
+@pytest.mark.unit
+def test_time_at_measure_double_tempo_walz(concat):
+    segments = [TimingSegment(tempo=120, timesig='3/4', measure_count=1)]
+    measure_number = 1
+    assert concat.time_at_measure(segments, measure_number) == (1.5, 0.5, 4)   # dur 1.5 sec
+
+# @pytest.mark.unit
+def test_time_at_measure_double_tempo_long(concat):
+    segments = [TimingSegment(tempo=120, timesig='4/4', measure_count=50)]
+    measure_number = 48
+    assert concat.time_at_measure(segments, measure_number) == (96.0, 0.5, 4)
+
+@pytest.mark.unit
+def test_time_at_measure_fast_and_long(concat):
+    segments = [TimingSegment(tempo=180, timesig='4/4', measure_count=50)]
+    measure_number = 50  # Note: er zijn 50 maten, 0-based, dus 0-49. Maat 50 bestaat dus niet, maar deze method is daar niet van onder de indruk.
+    result = concat.time_at_measure(segments, measure_number) 
+    assert round(result[0], 4) == 66.6667   # dwz bij start maat 50 zijn 66.6sec verstreken
+    assert round(result[1], 4) == 0.3333    # dwz één beat duurt 0.33s
+
+@pytest.mark.unit
+def test_time_at_measure_fast_but_at_start(concat):
+    segments = [TimingSegment(tempo=180, timesig='4/4', measure_count=50)]
+    measure_number = 0
+    result = concat.time_at_measure(segments, measure_number) 
+    assert round(result[0], 4) == 0.0000    # dwz bij start maat 0 zijn 0 sec verstreken
+    assert round(result[1], 4) == 0.3333    # dwz één beat duurt 0.33s
 
 
 # --------------------------------------------------------------------------- #
