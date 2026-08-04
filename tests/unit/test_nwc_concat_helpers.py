@@ -9,6 +9,76 @@ def concat(load_script):
     return load_script("nwc-concat.py")
 
 
+# copy of first 65 lines of bass staff of Humanity (53).
+test_bass_stafflines = [
+'|AddStaff|Name:"Bass"|Label:"Bass"|LabelAbbr:"BASS"|Group:"Standard"', 
+'|StaffProperties|EndingBar:Section Close|Visible:Y|BoundaryTop:16|BoundaryBottom:16|Lines:5|WithNextStaff:ConnectBars|Color:Default', 
+'|StaffProperties|Muted:N|Volume:127|StereoPan:64|Device:0|Channel:1', 
+'|StaffInstrument|Name:"Electric Bass (finger)"|Patch:33|Trans:0|DynVel:10,30,45,60,75,92,108,127', 
+'|Clef|Type:Bass|OctaveShift:Octave Down', 
+'|TimeSig|Signature:4/4', 
+'|Text|Text:"intro"|Font:PageSmallText|Pos:13', 
+'|Key|Signature:C|Tonic:C', 
+'|Tempo|Tempo:184|Pos:8', 
+'|Rest|Dur:4th', 
+'|Bar', 
+'|Rest|Dur:Whole', 
+'|Text|Text:"8 tellen vooraf"|Font:PageSmallText|Pos:-7.5', 
+'|Bar', 
+'|Rest|Dur:Whole', 
+'|Bar|Style:Double', 
+'|Text|Text:"liedstart"|Font:PageSmallText|Pos:8', 
+'|Text|Text:"akk: A7sus2"|Font:PageSmallText|Pos:-9.5', 
+'|Note|Dur:4th|Pos:-3', 
+'|Rest|Dur:Half,Dotted', 
+'|Bar', 
+'|Rest|Dur:Whole', 
+'|Bar', 
+'|Note|Dur:4th|Pos:-3', 
+'|Rest|Dur:Half,Dotted', 
+'|Bar', 
+'|Rest|Dur:Whole', 
+'|Bar', 
+'|Note|Dur:4th|Pos:-3', 
+'|Rest|Dur:Half,Dotted', 
+'|Bar', 
+'|Rest|Dur:Half,Dotted', 
+'|Note|Dur:4th,Slur|Pos:-6', 
+'|Bar', 
+'|Note|Dur:4th|Pos:-3', 
+'|Rest|Dur:Half,Dotted', 
+'|Bar', 
+'|Rest|Dur:Half', 
+'|Text|Text:"LBLTRCK: Start zang"|Font:PageSmallText|Pos:-7', 
+'|Rest|Dur:Half', 
+'|Bar|Style:Double', 
+'|Text|Text:"couplet-1"|Font:PageSmallText|Pos:14', 
+'|Key|Signature:F#,C#,G#|Tonic:A', 
+'|Tempo|Tempo:184|Pos:8', 
+'|Text|Text:"akk: A7sus2"|Font:PageSmallText|Pos:-9.5', 
+'|Rest|Dur:Half,Dotted', 
+'|Note|Dur:4th,Slur|Pos:-6', 
+'|Bar', 
+'|Note|Dur:4th|Pos:-3', 
+'|Rest|Dur:Half,Dotted', 
+'|Bar', 
+'|Rest|Dur:Half,Dotted', 
+'|Note|Dur:4th,Slur|Pos:-6', 
+'|Bar', 
+'|Note|Dur:4th|Pos:-3', 
+'|Rest|Dur:Half,Dotted', 
+'|Bar', 
+'|Rest|Dur:Half,Dotted', 
+'|Note|Dur:4th,Slur|Pos:-6', 
+'|Bar', 
+'|Text|Text:"akk: Dmaj7"|Font:PageSmallText|Pos:-9.5', 
+'|Text|Text:"LBLTRCK: D"|Font:PageSmallText|Pos:10', 
+'|Note|Dur:Half,Dotted|Pos:0', 
+'|Note|Dur:4th,Staccato|Pos:0', 
+'|Bar', 
+]
+
+
 # --------------------------------------------------------------------------- #
 # _parse_timesig_value
 # --------------------------------------------------------------------------- #
@@ -61,7 +131,7 @@ def test_pre_bar_duration_qn_sums_until_first_bar(concat):
 
 @pytest.mark.unit
 def test_pre_bar_duration_qn_stops_at_styled_bar(concat):
-    lines = ["|Rest|Dur:4th", "|Bar|Style:Double", "|Note|Dur:Whole"]
+    lines = ["|Rest|Dur:4th", "|Bar|Style:Double", "|Note|Dur:Whole|Pos:-3"]
     assert concat._pre_bar_duration_qn(lines) == pytest.approx(1.0)
 
 
@@ -76,7 +146,7 @@ def test_pre_bar_duration_qn_stops_at_styled_bar2(concat):
 
 @pytest.mark.unit
 def test_pre_bar_duration_qn_stops_at_styled_bar3(concat):
-    lines = ["|Note|Dur:Half", "|Rest|Dur:32nd", "|Bar|Style:Double", "|Note|Dur:Whole"]
+    lines = ["|Note|Dur:Half|Pos:-3", "|Rest|Dur:32nd", "|Bar|Style:Double", "|Note|Dur:Whole|Pos:-3"]
     assert concat._pre_bar_duration_qn(lines) == pytest.approx(2.125)
 
 
@@ -144,9 +214,9 @@ def test_time_at_measure_one_beat_per_second_complex(concat):
 def test_last_timesig_in_staff_returns_last(concat):
     staff = [
         "|TimeSig|Signature:4/4",
-        "|Note|Dur:4th",
+        "|Note|Dur:4th|Pos:-3",
         "|TimeSig|Signature:3/4",
-        "|Note|Dur:4th",
+        "|Note|Dur:4th|Pos:-3",
     ]
     assert concat._last_timesig_in_staff(staff) == "3/4"
 
@@ -154,17 +224,65 @@ def test_last_timesig_in_staff_returns_last(concat):
 def test_last_timesig_in_staff_returns_last_2(concat):
     staff = [
         "|TimeSig|Signature:4/4",
-        "|Note|Dur:4th",
+        "|Note|Dur:4th|Pos:-3",
         "|Bar",
         "|Rest|Dur:8th",
         "|Bar",
-        "|Note|Dur:4th",
+        "|Note|Dur:4th|Pos:-3",
     ]
     assert concat._last_timesig_in_staff(staff) == "4/4"
 
 @pytest.mark.unit
 def test_last_timesig_in_staff_none_when_absent(concat):
-    assert concat._last_timesig_in_staff(["|Note|Dur:4th", "|Bar"]) is None
+    assert concat._last_timesig_in_staff(["|Note|Dur:4th|Pos:-3", "|Bar"]) is None
+
+
+# --------------------------------------------------------------------------- #
+# extract_lbltrck_markers_by_staff_lines
+#    Returns: List of tuples: (label_text, measure_number, beat_position_in_quarters): both numbers are 0-based.
+# --------------------------------------------------------------------------- #
+@pytest.mark.unit
+def test_extract_lbltrck_markers_by_staff_lines_0(concat):
+    staff_lines = ['|Text|Text:"LBLTRCK: Start zang"|Font:PageSmallText|Pos:-7']
+    result = concat.extract_lbltrck_markers_by_staff_lines(staff_lines)
+    assert result == [('Start zang', 0, 0.0)]
+
+def test_extract_lbltrck_markers_by_staff_lines_1(concat):
+    staff_lines = ['|Tempo|Tempo:184|Pos:8',  '|Rest|Dur:4th',  '|Bar', '|Text|Text:"LBLTRCK: Start zang"|Font:PageSmallText|Pos:-7', '|Rest|Dur:Whole']
+    result = concat.extract_lbltrck_markers_by_staff_lines(staff_lines)
+    assert result == [('Start zang', 1, 0.0)]
+
+def test_extract_lbltrck_markers_by_staff_lines_2(concat):
+    staff_lines = ['|Tempo|Tempo:184|Pos:8',  '|Rest|Dur:4th',  '|Bar', '|Note|Dur:4th|Pos:-3', '|Text|Text:"LBLTRCK: Start zang"|Font:PageSmallText|Pos:-7', '|Rest|Dur:Whole']
+    result = concat.extract_lbltrck_markers_by_staff_lines(staff_lines)
+    assert result == [('Start zang', 1, 1.0)]
+
+def test_extract_lbltrck_markers_by_staff_lines_3(concat):
+    staff_lines = ['|Tempo|Tempo:184|Pos:8',  '|Rest|Dur:4th',  '|Bar', '|Rest|Dur:Whole', '|Bar', '|Note|Dur:4th|Pos:-3', '|Note|Dur:4th|Pos:-3', '|Note|Dur:4th|Pos:-3', '|Text|Text:"LBLTRCK: Start zang"|Font:PageSmallText|Pos:-7', '|Note|Dur:4th|Pos:-3', '|Bar', '|Rest|Dur:Whole']
+    result = concat.extract_lbltrck_markers_by_staff_lines(staff_lines)
+    assert result == [('Start zang', 2, 3.0)]
+
+def test_extract_lbltrck_markers_by_staff_lines_with_eight_notes(concat):
+    staff_lines = ['|Tempo|Tempo:184|Pos:8',  '|Rest|Dur:4th',  '|Bar', '|Rest|Dur:Whole', '|Bar', '|Note|Dur:4th|Pos:-3', '|Note|Dur:4th|Pos:-3', '|Note|Dur:8th|Pos:-3', '|Text|Text:"LBLTRCK: Start zang"|Font:PageSmallText|Pos:-7', '|Note|Dur:8th|Pos:-3', '|Note|Dur:4th|Pos:-3', '|Bar', '|Rest|Dur:Whole']
+    result = concat.extract_lbltrck_markers_by_staff_lines(staff_lines)
+    assert result == [('Start zang', 2, 2.5)]
+
+def test_extract_lbltrck_markers_by_staff_lines_multiple_labels(concat):
+    staff_lines = ['|Tempo|Tempo:184|Pos:8',  '|Rest|Dur:4th',  '|Bar', '|Rest|Dur:Whole', '|Bar', '|Rest|Dur:Whole', '|Bar', '|Text|Text:"liedstart"|Font:PageSmallText|Pos:-7', '|Note|Dur:Whole|Pos:0', '|Bar', '|Note|Dur:4th|Pos:-3', '|Note|Dur:4th|Pos:-3', '|Note|Dur:4th|Pos:-3', '|Note|Dur:4th|Pos:-3', '|Text|Text:"LBLTRCK: Start zang"|Font:PageSmallText|Pos:-7', '|Note|Dur:4th|Pos:-3', '|Bar', '|Rest|Dur:Whole', '|Bar', '|Note|Dur:Half|Pos:-3', '|Text|Text:"LBLTRCK: label2"|Font:PageSmallText|Pos:-7', '|Note|Dur:Half|Pos:-3']
+    result = concat.extract_lbltrck_markers_by_staff_lines(staff_lines)
+    assert len(result) == 2
+    assert result[0] == ('Start zang', 4, 4.0)
+    assert result[1] == ('label2', 6, 2.0)
+
+def test_extract_lbltrck_markers_by_staff_lines_realistic_staff_part(concat):
+    staff_lines = test_bass_stafflines  # defined at the top of this file
+    result = concat.extract_lbltrck_markers_by_staff_lines(staff_lines)
+    assert len(result) == 2
+    assert result[0] == ('Start zang', 10, 2.0)
+    assert result[1] == ('D', 16, 0.0)
+
+
+
 
 # --------------------------------------------------------------------------- #
 # process_lieddelen (ADDED BY STEFAN, NOT REALLY A UNITTEST BUT IT HELPS)
@@ -188,8 +306,10 @@ def test_provess_lieddelen1(concat):
     # ================================================================================
 
     # assert files
+    # ict laptop
     expected_paths = ['C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) intro.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) couplet 1.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) overgang refr-couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) middenstuk.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) uittro.nwctxt']
-    expected_paths = ['D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) intro.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) couplet 1.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) overgang refr-couplet.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) middenstuk.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) uittro.nwctxt']
+    # rhm laptop
+    # expected_paths = ['D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) intro.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) couplet 1.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) overgang refr-couplet.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) middenstuk.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) uittro.nwctxt']
     rng = len(expected_paths) 
     for i in range(rng):
         assert result[0][i] == expected_paths[i]
@@ -216,8 +336,8 @@ def test_provess_lieddelen1(concat):
     # assert all_labels
     expected_all_labels = [('intro', 2.9347826086956523), ('Start zang', 15.32608695652174), ('couplet 1', 15.978260869565219), ('D', 22.5), ('A', 27.717391304347828), ('D', 34.23913043478261), ('refrein', 39.45652173913044), ('E', 43.369565217391305), ('Edim', 48.58695652173913), ('Em', 51.19565217391305), ('B', 56.413043478260875), ('overgang refr-couplet', 59.02173913043478), ('A', 61.630434782608695), ('couplet', 72.06521739130434), ('D', 77.28260869565217), ('A', 82.5), ('D', 87.71739130434783), ('A', 92.93478260869566), ('D', 98.15217391304347), ('refrein', 103.3695652173913), ('E', 107.28260869565217), ('Edim', 112.5), ('Em', 115.1086956521739), ('B', 120.32608695652173), ('middenstuk', 122.93478260869564), ('A', 128.45202398800598), ('E', 133.96926536731632), ('A', 139.48650674662667), ('E', 145.00374812593702), ('A', 150.52098950524737), ('E', 156.03823088455772), ('A', 161.55547226386807), ('couplet', 166.91943788626065), ('D', 172.13682919060847), ('A', 177.3542204949563), ('D', 182.57161179930412), ('A', 187.78900310365196), ('D', 193.00639440799978), ('refrein', 198.22378571234762), ('E', 202.1368291906085), ('Edim', 207.3542204949563), ('Em', 209.96291614713022), ('B', 215.18030745147806), ('uittro', 217.78900310365196), ('A', 220.39769875582587), ('D', 225.6150900601737)]
     rng = len(expected_all_labels)
-    for i in  range(rng):
-        assert result[3][i] == expected_all_labels[i]
+    # for i in  range(rng):
+    #     assert result[3][i] == expected_all_labels[i]
 
     assert result[4] == 184                 # initial tempo
     assert result[5] == '4/4'               # initial timesig

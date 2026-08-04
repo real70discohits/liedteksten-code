@@ -385,29 +385,21 @@ def extract_initial_tempo_and_timesig(filepath):
     return tempo, timesig
 
 
-def extract_lbltrck_markers(filepath):
+def extract_lbltrck_markers_by_staff_lines(staff_lines):
     """Extract LBLTRCK markers with precise beat positions from Bass staff (measure nr 0-based!).
-
-    Scans the Bass staff for Text elements with format 'LBLTRCK: label_text'
-    and determines their exact position within measures.
-
-    Args:
-        filepath: Path to .nwctxt file
-
-    Returns:
-        List of tuples: (label_text, measure_number, beat_position_in_quarters)
-        - measure_number is 0-based (0 = first measure)
-        - beat_position_in_quarters is position within measure in quarter notes
-        Empty list if no markers found or Bass staff not found
+    
+        Scans the Bass staff for Text elements with format 'LBLTRCK: label_text'
+        and determines their exact position within measures.
+    
+        Args:
+            filepath: Path to .nwctxt file
+    
+        Returns:
+            List of tuples: (label_text, measure_number, beat_position_in_quarters)
+            - measure_number is 0-based (0 = first measure)
+            - beat_position_in_quarters is position within measure in quarter notes
+            Empty list if no markers found or Bass staff not found
     """
-    nwc = NwcFile(filepath)
-
-    bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
-    if not bass_staff:
-        return []
-
-    staff_lines = bass_staff.lines
-
     # Detect pickup: content before first bar that doesn't fill a complete measure
     timesig = '4/4'
     for line in staff_lines:
@@ -450,6 +442,7 @@ def extract_lbltrck_markers(filepath):
             if current_measure_has_dur:
                 if not past_pickup:
                     past_pickup = True
+                    current_measure = 1
                 else:
                     current_measure += 1
                 current_beat_pos = 0.0
@@ -462,6 +455,20 @@ def extract_lbltrck_markers(filepath):
             current_beat_pos += duration
 
     return markers
+
+
+def extract_lbltrck_markers(filepath):
+    
+    nwc = NwcFile(filepath)
+
+    bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
+    if not bass_staff:
+        return []
+
+    staff_lines = bass_staff.lines
+
+    result = extract_lbltrck_markers_by_staff_lines(staff_lines)
+    return result
 
 
 def write_latex_file(tex_file, songtitle, tempo, timesig, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, pickup_beats, complete_analysis=None):
@@ -1019,9 +1026,6 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
     first_lieddeel_timesig = None
     current_start_time = None  # set after first lieddeel's pickup is known
 
-    # todo: split intro into vooraf en intro
-    # todo: add duration of pickup and voorafmaten to front of labeltrack
-
     i = 0
 
     for lieddeel in volgorde_lieddelen:
@@ -1061,18 +1065,30 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
 
         file_list.append(str(lieddeel_nwctxt))
         measure_count = get_measure_count_by_ritme_staff(str(lieddeel_nwctxt), False)
+        # For first lieddeel, subtract vooraf-measures
+        # if (i == 0):
+        #     measure_count -= measures_vooraf_count
         lieddeel_starttime = current_start_time
-        # measurecount_and_starttime_per_lieddeel.append((lieddeel, measure_count, lieddeel_starttime))
 
         # Add lieddeel label to all_labels list
         all_labels.append((lieddeel, lieddeel_starttime))
 
         # Extract LBLTRCK markers with per-measure tempo/timesig precision
         lbltrck_markers = extract_lbltrck_markers(str(lieddeel_nwctxt))
+
+        # bij eerste sectie dan maten_vooraf aftrekken (of anders de starttime op 0.0 zetten)
+        # dit doen we door lbltrck opnieuw te genereren, want immutable.
+        lbls = lbltrck_markers      # copy
+        lbltrck_markers = []        # reset original
+        if i==0:
+            for lbl in lbls:
+                lbltrck = (lbl[0], lbl[1] - measures_vooraf_count, lbl[2])
+                lbltrck_markers.append(lbltrck) 
+
         if lbltrck_markers and lieddeel_starttime is not None:
             for label_text, measure_number, beat_pos_in_quarters in lbltrck_markers:
                 if timing_segments:
-                    time_in_lieddeel, seg_beat_duration, seg_beat_base = time_at_measure(timing_segments, measure_number)
+                    time_in_lieddeel, seg_beat_duration, seg_beat_base = time_at_measure(timing_segments, measure_number)     # BUG: Hier moet iets niet goed zitten: liedstart is OK, time_within_measure ook, dus time_in_lieddeel is ws fout.
                 else:
                     time_in_lieddeel = measure_number * measure_duration    # 0-based, so works Okay: first measure gets 0.
                     seg_beat_duration = beat_duration
