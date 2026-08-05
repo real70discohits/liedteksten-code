@@ -722,7 +722,7 @@ def update_liedtekst_tex_file(liedtitel, tempo, maatsoort, song_folder=None):
     # Replace tempo
     new_content = re.sub(
         r'(\\newcommand\{\\tempo\}\{)[^}]*(\})',
-        rf'\g<1>{tempo}\g<2>',
+        rf'\g<1>{tempo[0]}\g<2>',
         new_content
     )
 
