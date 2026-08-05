@@ -31,7 +31,7 @@ import re
 from console_utf8 import enable_utf8_console
 from pathconfig import load_and_resolve_paths, validate_file_exists, validate_folder_exists, load_jsonc
 from nwc_analyze import write_analysis_to_file, count_vooraf_measures, count_vooraf_measures_by_filepath
-from nwc_utils import parse_nwctxt, NwcFile, parse_duration, calc_timing, TimingSegment
+from nwc_utils import parse_nwctxt, NwcFile, parse_duration, calc_timing, TimingSegment, extract_tempo_from_rawdata
 from constants import (NWC_PREFIX_ADDSTAFF, NWC_PREFIX_STAFF_PROPERTIES,
                         NWC_PREFIX_STAFF_INSTRUMENT, NWC_PREFIX_CLEF, NWC_PREFIX_REST,
                         NWC_PREFIX_TIMESIG, NWC_PREFIX_TEMPO, NWC_PREFIX_BAR,
@@ -359,14 +359,7 @@ def extract_initial_tempo_and_timesig(filepath):
     for line in staff_lines:
         # Look for tempo (only first occurrence)
         if tempo is None and line.startswith(NWC_PREFIX_TEMPO) and 'Tempo:' in line:
-            try:
-                # Extract tempo value after "Tempo:"
-                tempo_part = line.split('Tempo:')[1]
-                # Get the number before the next pipe or end of string
-                tempo_str = tempo_part.split('|')[0]
-                tempo = int(tempo_str)
-            except (IndexError, ValueError):
-                pass
+            tempo = extract_tempo_from_rawdata(line)
 
         # Look for time signature (only first occurrence)
         if timesig is None and line.startswith(f'{NWC_PREFIX_TIMESIG}Signature:'):
@@ -814,7 +807,7 @@ def extract_timing_segments(filepath, initial_tempo, initial_timesig):
 
     Args:
         filepath: Path to .nwctxt file
-        initial_tempo: Tempo to assume at the start (inherited or default)
+        initial_tempo: Tempo to assume at the start (inherited or default): tuple(bpm, beat_base_note) both int.
         initial_timesig: Time signature to assume at the start (inherited or default)
 
     Returns:
@@ -848,7 +841,7 @@ def extract_timing_segments(filepath, initial_tempo, initial_timesig):
         nonlocal current_seg_measures, current_tempo, current_timesig
         nonlocal pending_tempo, pending_timesig, has_pending_change
         if current_seg_measures > 0:
-            segments.append(TimingSegment(current_tempo, current_timesig, current_seg_measures))
+            segments.append(TimingSegment(current_tempo[0], current_tempo[1], current_timesig, current_seg_measures))
         if pending_tempo is not None:
             current_tempo = pending_tempo
         if pending_timesig is not None:
@@ -871,7 +864,7 @@ def extract_timing_segments(filepath, initial_tempo, initial_timesig):
     for line in staff_lines:
         if line.startswith(NWC_PREFIX_TEMPO) and 'Tempo:' in line:
             try:
-                new_tempo = int(line.split('Tempo:')[1].split('|')[0])
+                new_tempo = extract_tempo_from_rawdata(line)
                 if new_tempo != current_tempo:
                     pending_tempo = new_tempo
                     has_pending_change = True
@@ -907,7 +900,7 @@ def extract_timing_segments(filepath, initial_tempo, initial_timesig):
         current_seg_measures += 1
 
     if current_seg_measures > 0:
-        segments.append(TimingSegment(current_tempo, current_timesig, current_seg_measures))
+        segments.append(TimingSegment(current_tempo[0], current_tempo[1], current_timesig, current_seg_measures))
 
     return segments
 
@@ -925,8 +918,9 @@ def time_at_measure(segments, measure_number):
     elapsed = 0.0
     measures_seen = 0
     for seg in segments:
-        _, measure_duration, _, beat_base = calc_timing(seg.tempo, seg.timesig)
-        beat_duration = 60.0 / seg.tempo
+        _, measure_duration, _, _ = calc_timing((seg.tempo_bpm, seg.tempo_beat_base_note), seg.timesig)
+        beat_duration = 60.0 / seg.tempo_bpm
+        beat_base = seg.tempo_beat_base_note
         if measures_seen + seg.measure_count > measure_number:
             elapsed += (measure_number - measures_seen) * measure_duration
             return elapsed, beat_duration, beat_base
@@ -935,8 +929,8 @@ def time_at_measure(segments, measure_number):
     # Fallback: beyond all segments
     if segments:
         last = segments[-1]
-        _, _, _, beat_base = calc_timing(last.tempo, last.timesig)
-        return elapsed, 60.0 / last.tempo, beat_base
+        _, _, _, beat_base = calc_timing((last.tempo_bpm, last.tempo_beat_base_note), last.timesig)
+        return elapsed, 60.0 / last.tempo_bpm, beat_base
     return elapsed, 60.0 / 120, 4
 
 
@@ -1009,7 +1003,7 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
         tuple: (file_list, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, all_labels, tempo, timesig, pickup_beats)
         all_labels is a list of tuples: (label_text, time_in_seconds)
     """
-    _DEFAULT_TEMPO = 120
+    _DEFAULT_TEMPO = (120, 4)       # (bpm, beat_base_note)
     _DEFAULT_TIMESIG = '4/4'
 
     file_list = []

@@ -156,37 +156,37 @@ def test_pre_bar_duration_qn_stops_at_styled_bar3(concat):
 # --------------------------------------------------------------------------- #
 @pytest.mark.unit
 def test_time_at_measure_one_beat_per_second_simple(concat):
-    segments = [TimingSegment(tempo=60, timesig='4/4', measure_count=1)]
+    segments = [TimingSegment(tempo_bpm=60, tempo_beat_base_note=4, timesig='4/4', measure_count=1)]
     measure_number = 1
     assert concat.time_at_measure(segments, measure_number) == (4.0, 1.0, 4)  # na 1 maat (measure 0) zijn verstreken: 4 sec
 
 @pytest.mark.unit
 def test_time_at_measure_zero_based_simple(concat):
-    segments = [TimingSegment(tempo=60, timesig='4/4', measure_count=1)]
+    segments = [TimingSegment(tempo_bpm=60, tempo_beat_base_note=4, timesig='4/4', measure_count=1)]
     measure_number = 0   # Note: maat 0, method is 0-based, dus expected elapsed time at start of measure is 0.
     assert concat.time_at_measure(segments, measure_number) == (0.0, 1.0, 4)  # dur: 4 sec
 
 @pytest.mark.unit
 def test_time_at_measure_double_tempo_simple(concat):
-    segments = [TimingSegment(tempo=120, timesig='4/4', measure_count=1)]
+    segments = [TimingSegment(tempo_bpm=120, tempo_beat_base_note=4, timesig='4/4', measure_count=1)]
     measure_number = 1
     assert concat.time_at_measure(segments, measure_number) == (2.0, 0.5, 4)
 
 @pytest.mark.unit
 def test_time_at_measure_double_tempo_walz_simple(concat):
-    segments = [TimingSegment(tempo=120, timesig='3/4', measure_count=1)]
+    segments = [TimingSegment(tempo_bpm=120, tempo_beat_base_note=4, timesig='3/4', measure_count=1)]
     measure_number = 1
     assert concat.time_at_measure(segments, measure_number) == (1.5, 0.5, 4)   # dur 1.5 sec
 
 @pytest.mark.unit
 def test_time_at_measure_double_tempo_long_simple(concat):
-    segments = [TimingSegment(tempo=120, timesig='4/4', measure_count=50)]
+    segments = [TimingSegment(tempo_bpm=120, tempo_beat_base_note=4, timesig='4/4', measure_count=50)]
     measure_number = 48
     assert concat.time_at_measure(segments, measure_number) == (96.0, 0.5, 4)
 
 @pytest.mark.unit
 def test_time_at_measure_fast_and_long_simple(concat):
-    segments = [TimingSegment(tempo=180, timesig='4/4', measure_count=50)]
+    segments = [TimingSegment(tempo_bpm=180, tempo_beat_base_note=4, timesig='4/4', measure_count=50)]
     measure_number = 50  # Note: er zijn 50 maten, 0-based, dus 0-49. Maat 50 bestaat dus niet, maar deze method is daar niet van onder de indruk.
     result = concat.time_at_measure(segments, measure_number) 
     assert round(result[0], 4) == 66.6667   # dwz bij start maat 50 zijn 66.6sec verstreken
@@ -194,7 +194,7 @@ def test_time_at_measure_fast_and_long_simple(concat):
 
 @pytest.mark.unit
 def test_time_at_measure_fast_but_at_start_simple(concat):
-    segments = [TimingSegment(tempo=180, timesig='4/4', measure_count=50)]
+    segments = [TimingSegment(tempo_bpm=180, tempo_beat_base_note=4, timesig='4/4', measure_count=50)]
     measure_number = 0
     result = concat.time_at_measure(segments, measure_number) 
     assert round(result[0], 4) == 0.0000    # dwz bij start maat 0 zijn 0 sec verstreken
@@ -202,13 +202,13 @@ def test_time_at_measure_fast_but_at_start_simple(concat):
 
 @pytest.mark.unit
 def test_time_at_measure_one_beat_per_second_complex(concat):
-    segments = [TimingSegment(tempo=60, timesig='4/4', measure_count=2), TimingSegment(tempo=120, timesig='4/4', measure_count=2)]
+    segments = [TimingSegment(tempo_bpm=60, tempo_beat_base_note=4, timesig='4/4', measure_count=2), TimingSegment(tempo_bpm=120, tempo_beat_base_note=4, timesig='4/4', measure_count=2)]
     measure_number = 4
     assert concat.time_at_measure(segments, measure_number) == (12.0, 0.5, 4)  # ...
 
 @pytest.mark.unit                                                       # Reminder: Returns (elapsed_time, beat_duration, beat_base)
 def test_time_at_measure_one_beat_per_second_6over8(concat):
-    segments = [TimingSegment(tempo=60, timesig='6/8', measure_count=1)]
+    segments = [TimingSegment(tempo_bpm=60, tempo_beat_base_note=8, timesig='6/8', measure_count=1)]
     measure_number = 1
     # Overdenking:
     # Mijn eerste gedachte: assert concat.time_at_measure(segments, measure_number) == (3.0, 0.5, 8)  
@@ -239,12 +239,9 @@ def test_time_at_measure_one_beat_per_second_6over8(concat):
     # Een andere optie is om gewoon altijd kwartnoot als basis te gebruiken: handige
     # conventie versus minder flexibel. Maar in mijn ervaring is het altijd voldoende 
     # om de bpm in qn aan te geven, dus laat ik gaan voor de handige conventie.
-    #
-    # CONCLUSIE: de volgende conventie aanhouden in nwc en in code: beat_base van tempo is altijd kwartnoot.
-    # TODO: code time_at_measure aanpassen zodat altijd 4th als beatbase wordt gebruikt > het blijkt dat de
-    #       code wijziging moet gebeuren in calc_timing. Maar is het dan wel zo'n goed idee?
-    # TODO: LLD (46) tempo indicator wijzigen van 8th naar 4th.
-    assert concat.time_at_measure(segments, measure_number) == (3.0, 0.5, 8)  
+    # Toch heb ik een beter gevoel bij de correcte benadering. 
+    # CONCLUSIE: tempo is voortaan een tuple van bpm en beat_note.
+    assert concat.time_at_measure(segments, measure_number) == (6.0, 1.0, 8)  
 
 # --------------------------------------------------------------------------- #
 # _last_timesig_in_staff
@@ -327,7 +324,7 @@ def test_extract_lbltrck_markers_by_staff_lines_realistic_staff_part(concat):
 # process_lieddelen (ADDED BY STEFAN, NOT REALLY A UNITTEST BUT IT HELPS)
 # --------------------------------------------------------------------------- #
 @pytest.mark.unit
-def test_provess_lieddelen1(concat):
+def test_process_lieddelen(concat):
     title = "Humanity (53)"
     nwc_folder = Path(__file__).parent.parent.parent.parent / "testdata/lieddelen"
     volgorde_lieddelen = ['intro', 'couplet 1', 'refrein', 'overgang refr-couplet', 'couplet', 'refrein', 'middenstuk', 'couplet', 'refrein', 'uittro']
@@ -378,7 +375,7 @@ def test_provess_lieddelen1(concat):
     # for i in  range(rng):
     #     assert result[3][i] == expected_all_labels[i]
 
-    assert result[4] == 184                 # initial tempo
+    assert result[4] == (184, 4)                 # initial tempo
     assert result[5] == '4/4'               # initial timesig
     assert result[6] == 1.0                 # nr of pickup beats
     assert round(result[7], 0) == 225.0     # netto song duration, 3:45

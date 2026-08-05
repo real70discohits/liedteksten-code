@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 from console_utf8 import enable_utf8_console
 from pathconfig import load_and_resolve_paths
-from nwc_utils import NwcFile, calc_timing
+from nwc_utils import NwcFile, calc_timing, extract_tempo_from_rawdata 
 from constants import (STAFF_NAME_BASS, STAFF_NAME_ZANG, NWC_PREFIX_BAR,
                        NWC_PREFIX_NOTE, NWC_PREFIX_REST, NWC_PREFIX_TEXT,
                        NWC_MARKER_LIEDSTART)
@@ -284,7 +284,7 @@ def analyze_complete_song(file_path, tempo: tuple[int, int] | None =None, timesi
         - title: Song title
         - file: Filename
         - folder: Parent folder path
-        - tempo: Tempo in BPM (int or None)
+        - tempo: Tempo as tuple of BPM (int) and beat_base_note (int)
         - timesig: Time signature string (e.g. "4/4" or None)
         - total_bars: Raw bar count from file
         - has_begintel: Boolean - true if pickup measure exists
@@ -316,17 +316,7 @@ def analyze_complete_song(file_path, tempo: tuple[int, int] | None =None, timesi
             if tempo is None:
                 for line in bass_lines:
                     if line.startswith('|Tempo|') and 'Tempo:' in line:     #  "|Tempo|Base:Eighth|Tempo:363|Pos:7"
-                        try:
-                            tempo_bpm_part = line.split('Tempo:')[1]        # "363|Pos:7"
-                            tempo_bpm_str = tempo_bpm_part.split('|')[0]    # "363"
-                            tempo_base_part = line.split('Base:')[1]        # "Eighth|Tempo:363|Pos:7"
-                            tempo_base_str = tempo_base_part.split('|')[0]  # "Eight"
-                            t = int(tempo_bpm_str)
-                            b = note_value_string_to_int(tempo_base_str)
-                            tempo = (t, b)
-                            break
-                        except (IndexError, ValueError):
-                            pass
+                        tempo = extract_tempo_from_rawdata(line)
 
             if timesig is None:
                 for line in bass_lines:
@@ -377,34 +367,6 @@ def analyze_complete_song(file_path, tempo: tuple[int, int] | None =None, timesi
         'measure_map': measure_map_renumbered,
     }
 
-
-def note_value_string_to_int(note_value_string) -> int:
-    match note_value_string:
-        case "Whole":
-            return 1
-        case "Half":
-            return 2
-        case "Eigth":
-            return 8
-        case "Sixteenth":
-            return 16
-        case _:
-            return 4
-        
-
-def note_value_int_to_string(note_value_int) -> str:    
-    match note_value_int:
-        case 1:
-            return "Whole"
-        case 2:
-            return "Half"
-        case 8:
-            return "Eight"
-        case 16:
-            return "Sixteenth"
-        case _:
-            return ""
-        
 
 def format_output(analysis, song_number=None):
     """Format analysis results as text output."""

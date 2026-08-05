@@ -56,7 +56,7 @@ def test_parse_duration(line, expected):
 # --------------------------------------------------------------------------- #
 @pytest.mark.unit
 def test_timing_segment_duration():
-    seg = TimingSegment(tempo=120, timesig="4/4", measure_count=4)
+    seg = TimingSegment(tempo_bpm=120, tempo_beat_base_note=4, timesig="4/4", measure_count=4)
     assert seg.duration() == pytest.approx(8.0)   # 4 measures * 2.0 s
 
 

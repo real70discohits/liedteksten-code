@@ -230,9 +230,14 @@ def calc_timing(tempo: tuple[int, int], timesig: str):
     bpm = tempo[0]
     tempo_beat_base_note = tempo[1]
     beat_duration = 60.0 / bpm
-    s_beats_per_measure, _, s_beat_base = timesig.partition('/')
+
+    s_beats_per_measure, _, _ = timesig.partition('/')
     beats_per_measure = int(s_beats_per_measure)
-    # beat_base = int(s_beat_base)
+
+    # NOTE: we ignore the beat_base from the timesig, because it has no real
+    # connection to time: it's the beat_base of the tempo that has it, so
+    #  that always rules.
+        
     measure_duration = beats_per_measure * beat_duration
     return beat_duration, measure_duration, beats_per_measure, tempo_beat_base_note
 
@@ -246,7 +251,8 @@ class TimingSegment:
     measure_count: int
 
     def duration(self) -> float:
-        _, measure_duration, _, _ = calc_timing((self.tempo_bpm, self.tempo_beat_base_note), self.timesig)
+        tempo = (self.tempo_bpm, self.tempo_beat_base_note)
+        _, measure_duration, _, _ = calc_timing(tempo, self.timesig)
         return self.measure_count * measure_duration
 
 
@@ -320,3 +326,62 @@ def parse_nwctxt(filepath: str | Path) -> Tuple[List[str], List[List[str]]]:
     nwc = NwcFile(filepath)
     staff_sections = [staff.lines for staff in nwc.staffs]
     return nwc.header_lines, staff_sections
+
+
+def extract_tempo_from_rawdata(line_with_tempo):   
+    """Extract tempo (tupe of bpm and beat_base_note) from an nwctxt line.
+    Example input line: "|Tempo|Base:Eighth|Tempo:363|Pos:7"
+    Example output tuple: (363, 8)
+    """
+    if line_with_tempo.startswith('|Tempo|') and 'Tempo:' in line_with_tempo:     
+        try:
+            tempo_bpm_part = line_with_tempo.split('Tempo:')[1]        # "363|Pos:7"
+            tempo_bpm_str = tempo_bpm_part.split('|')[0]               # "363"
+            tempo_base_parts = line_with_tempo.split('Base:')           # => base is not always set: should default it to 4!
+
+            if len(tempo_base_parts) == 2:  # found, e.g. "|Tempo|Base:Eighth|Tempo:363|Pos:7" gives ["|Tempo|Base:", "Eighth|Tempo:363|Pos:7"]
+                tempo_base_part = tempo_base_parts[1]             # "Eighth|Tempo:363|Pos:7"  
+                tempo_base_str = tempo_base_part.split('|')[0]    # "Eighth"
+            else: 
+                tempo_base_str = "Fourth"       # default
+
+            t = int(tempo_bpm_str)
+            b = note_value_string_to_int(tempo_base_str)
+            tempo = (t, b)
+            return tempo
+        except (IndexError, ValueError):
+            return None
+    else:
+        return None
+
+
+def note_value_string_to_int(note_value_string) -> int:
+    match note_value_string:
+        case "Whole":
+            return 1
+        case "Half":
+            return 2
+        case "Fourth":
+            return 4
+        case "Eighth":
+            return 8
+        case "Sixteenth":
+            return 16
+        case _:
+            return 4
+        
+
+def note_value_int_to_string(note_value_int) -> str:    
+    match note_value_int:
+        case 1:
+            return "Whole"
+        case 2:
+            return "Half"
+        case 4:
+            return "Fourth"
+        case 8:
+            return "Eighth"
+        case 16:
+            return "Sixteenth"
+        case _:
+            return ""
