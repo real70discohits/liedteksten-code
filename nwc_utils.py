@@ -210,7 +210,7 @@ class NwcFile:
         return f"NwcFile(path='{self.filepath}', staffs={len(self.staffs)})"
 
 
-def calc_timing(tempo: int, timesig: str):
+def calc_timing(tempo: tuple[int, int], timesig: str):
     """Calculate timing parameters from tempo and time signature.
 
     NOTE: measure_duration is incorrect for compound meters like 6/8, where the
@@ -227,23 +227,26 @@ def calc_timing(tempo: int, timesig: str):
         - beats_per_measure: numerator of time signature
         - beat_base: denominator of time signature
     """
-    beat_duration = 60.0 / tempo
+    bpm = tempo[0]
+    tempo_beat_base_note = tempo[1]
+    beat_duration = 60.0 / bpm
     s_beats_per_measure, _, s_beat_base = timesig.partition('/')
     beats_per_measure = int(s_beats_per_measure)
-    beat_base = int(s_beat_base)
+    # beat_base = int(s_beat_base)
     measure_duration = beats_per_measure * beat_duration
-    return beat_duration, measure_duration, beats_per_measure, beat_base
+    return beat_duration, measure_duration, beats_per_measure, tempo_beat_base_note
 
 
 @dataclass
 class TimingSegment:
     """A consecutive run of measures sharing the same tempo and time signature."""
-    tempo: int
+    tempo_bpm: int
+    tempo_beat_base_note: int
     timesig: str
     measure_count: int
 
     def duration(self) -> float:
-        _, measure_duration, _, _ = calc_timing(self.tempo, self.timesig)
+        _, measure_duration, _, _ = calc_timing((self.tempo_bpm, self.tempo_beat_base_note), self.timesig)
         return self.measure_count * measure_duration
 
 
