@@ -680,8 +680,8 @@ def update_liedtekst_tex_file(liedtitel, tempo, maatsoort, song_folder=None):
         bool: True if successful, False otherwise
     """
     # Validatie tempo
-    if not isinstance(tempo, int) or tempo < 10:
-        print(f"❌ Error: Tempo must be an integer >= 10, got: {tempo}")
+    if not isinstance(tempo[0], int) or tempo[0] < 10:
+        print(f"❌ Error: Tempo_bpm must be an integer >= 10, got: {tempo[0]}")
         return False
 
     # Validatie maatsoort
