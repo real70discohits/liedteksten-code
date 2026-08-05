@@ -206,6 +206,45 @@ def test_time_at_measure_one_beat_per_second_complex(concat):
     measure_number = 4
     assert concat.time_at_measure(segments, measure_number) == (12.0, 0.5, 4)  # ...
 
+@pytest.mark.unit                                                       # Reminder: Returns (elapsed_time, beat_duration, beat_base)
+def test_time_at_measure_one_beat_per_second_6over8(concat):
+    segments = [TimingSegment(tempo=60, timesig='6/8', measure_count=1)]
+    measure_number = 1
+    # Overdenking:
+    # Mijn eerste gedachte: assert concat.time_at_measure(segments, measure_number) == (3.0, 0.5, 8)  
+    #   beat_base = 8 (maar dat zegt niks, want tempo (bpm) interpreteren we hoe dan ook in kwartnoten!)
+    #   beat_duration: omdat we tempo in kwartnoten interpreteren en een qn bij t=60 1 sec duurt, duurt een 8e in dat geval 0.5 sec.
+    #   elapsed time = leiden we af uit 6 * beat_duration, dus 6 x 0.5 = 3sec.
+    # Maar stel je interpreteert tempo niet in kwartnoten, maar werkelijk in beat_base, dus 8sten:
+    #   beat_duration: t=60 en beat_base 8 wil zeggen 60 8e noten per minuut, dus een 8e noot duurt een sec, heel traag dus. (beat_duration = 1.0)
+    #   elapsed_time is dan ook 6 sec!
+    # Stel dat je het netjes wilt doen, en inderdaad beat_base wilt gebruiken voor je tempo interpretatie, en stel dat je 
+    #   in een stuk wilt schakelen van 4/4 naar 6/8, waarbij de beats twee keer zo snel worden: dan bij 4/4 met 120 wordt het 6/8 met 240.
+    #   time_at_measure doet het netjes, dus:
+    # assert concat.time_at_measure(segments, measure_number) == (6.0, 1.0, 8)  
+    # BUG:  op basis van bovenstaande declareer ik bij dezen een bug: een tempo betekent 
+    #       'beats-per-minute' en heeft een int als waarde voor het aantal beats, maar daar
+    #       moet de waarde van de beat, de beat_base of beat_note_unit (de koppeling aan
+    #       noottype (kwart-, achtste-)) bij komen dus het moet een tuple worden: 
+    #             tempo = (beats_per_minute, beat_note_unit) 
+    #       voorbeeld 1: tempo (120, 4) dwz 120 beats per minuut, 1 beat is 1 kwartnoot, dus 120 kwartnoten p/min dus 1 qn duurt 0.5s.
+    #       voorbeeld 2: tempo (180, 8) dwz 180 beats per minuut, 1 beat is 1 achtste, dus 180 achtsten p/min dus 1 8n duurt 60/180 = 0.33333s.
+    #
+    # Huidige situatie:
+    # In nwc wordt rekening gehouden met de beat_note_base, maar ik heb het niet vaak
+    # bewust gebruikt en altijd op de default laten staan: kwartnoot, behalve in LLD
+    # (46) waar het tempo staat op (8th, 363), dus eigenlijk 180 in kwartnoten. Een optie is
+    # om dat uit de .nwctxt uit te lezen:
+    # Voorbeeld: "|Tempo|Base:Eighth|Tempo:363|Pos:7"  (uit LLD).
+    # Een andere optie is om gewoon altijd kwartnoot als basis te gebruiken: handige
+    # conventie versus minder flexibel. Maar in mijn ervaring is het altijd voldoende 
+    # om de bpm in qn aan te geven, dus laat ik gaan voor de handige conventie.
+    #
+    # CONCLUSIE: de volgende conventie aanhouden in nwc en in code: beat_base van tempo is altijd kwartnoot.
+    # TODO: code time_at_measure aanpassen zodat altijd 4th als beatbase wordt gebruikt > het blijkt dat de
+    #       code wijziging moet gebeuren in calc_timing. Maar is het dan wel zo'n goed idee?
+    # TODO: LLD (46) tempo indicator wijzigen van 8th naar 4th.
+    assert concat.time_at_measure(segments, measure_number) == (3.0, 0.5, 8)  
 
 # --------------------------------------------------------------------------- #
 # _last_timesig_in_staff

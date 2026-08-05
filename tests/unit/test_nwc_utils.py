@@ -12,7 +12,7 @@ from nwc_utils import NwcStaff, NwcFile, TimingSegment
 # --------------------------------------------------------------------------- #
 @pytest.mark.unit
 def test_calc_timing_4_4_at_120():
-    beat, measure, beats_per_measure, beat_base = nwc_utils.calc_timing(120, "4/4")
+    beat, measure, beats_per_measure, beat_base = nwc_utils.calc_timing((120, 4), "4/4")
     assert beat == pytest.approx(0.5)
     assert measure == pytest.approx(2.0)
     assert beats_per_measure == 4
@@ -21,7 +21,7 @@ def test_calc_timing_4_4_at_120():
 
 @pytest.mark.unit
 def test_calc_timing_3_4_at_60():
-    beat, measure, beats_per_measure, beat_base = nwc_utils.calc_timing(60, "3/4")
+    beat, measure, beats_per_measure, beat_base = nwc_utils.calc_timing((60, 4), "3/4")
     assert beat == pytest.approx(1.0)
     assert measure == pytest.approx(3.0)
     assert beats_per_measure == 3

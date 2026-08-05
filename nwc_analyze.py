@@ -268,7 +268,7 @@ def analyze_nwctxt(file_path):
     }
 
 
-def analyze_complete_song(file_path, tempo=None, timesig=None):
+def analyze_complete_song(file_path, tempo: tuple[int, int] | None =None, timesig=None):
     """Complete analysis of a merged .nwctxt file with corrected totals.
 
     This function provides a single source of truth for all song metadata,
@@ -315,11 +315,15 @@ def analyze_complete_song(file_path, tempo=None, timesig=None):
 
             if tempo is None:
                 for line in bass_lines:
-                    if line.startswith('|Tempo|') and 'Tempo:' in line:
+                    if line.startswith('|Tempo|') and 'Tempo:' in line:     #  "|Tempo|Base:Eighth|Tempo:363|Pos:7"
                         try:
-                            tempo_part = line.split('Tempo:')[1]
-                            tempo_str = tempo_part.split('|')[0]
-                            tempo = int(tempo_str)
+                            tempo_bpm_part = line.split('Tempo:')[1]        # "363|Pos:7"
+                            tempo_bpm_str = tempo_bpm_part.split('|')[0]    # "363"
+                            tempo_base_part = line.split('Base:')[1]        # "Eighth|Tempo:363|Pos:7"
+                            tempo_base_str = tempo_base_part.split('|')[0]  # "Eight"
+                            t = int(tempo_bpm_str)
+                            b = note_value_string_to_int(tempo_base_str)
+                            tempo = (t, b)
                             break
                         except (IndexError, ValueError):
                             pass
@@ -373,6 +377,34 @@ def analyze_complete_song(file_path, tempo=None, timesig=None):
         'measure_map': measure_map_renumbered,
     }
 
+
+def note_value_string_to_int(note_value_string) -> int:
+    match note_value_string:
+        case "Whole":
+            return 1
+        case "Half":
+            return 2
+        case "Eigth":
+            return 8
+        case "Sixteenth":
+            return 16
+        case _:
+            return 4
+        
+
+def note_value_int_to_string(note_value_int) -> str:    
+    match note_value_int:
+        case 1:
+            return "Whole"
+        case 2:
+            return "Half"
+        case 8:
+            return "Eight"
+        case 16:
+            return "Sixteenth"
+        case _:
+            return ""
+        
 
 def format_output(analysis, song_number=None):
     """Format analysis results as text output."""
