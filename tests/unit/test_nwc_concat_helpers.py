@@ -27,6 +27,7 @@ test_bass_stafflines = [
 '|Bar', 
 '|Rest|Dur:Whole', 
 '|Bar|Style:Double', 
+'|Text|Text:"LBLTRCK: LiedStart"|Font:PageSmallText|Pos:12',
 '|Text|Text:"liedstart"|Font:PageSmallText|Pos:8', 
 '|Text|Text:"akk: A7sus2"|Font:PageSmallText|Pos:-9.5', 
 '|Note|Dur:4th|Pos:-3', 
@@ -204,7 +205,7 @@ def test_time_at_measure_fast_but_at_start_simple(concat):
 def test_time_at_measure_one_beat_per_second_complex(concat):
     segments = [TimingSegment(tempo_bpm=60, tempo_beat_base_note=4, timesig='4/4', measure_count=2), TimingSegment(tempo_bpm=120, tempo_beat_base_note=4, timesig='4/4', measure_count=2)]
     measure_number = 4
-    assert concat.time_at_measure(segments, measure_number) == (12.0, 0.5, 4)  # ...
+    assert concat.time_at_measure(segments, measure_number) == (12.0, 0.5, 4)
 
 @pytest.mark.unit                                                       # Reminder: Returns (elapsed_time, beat_duration, beat_base)
 def test_time_at_measure_one_beat_per_second_6over8(concat):
@@ -242,6 +243,22 @@ def test_time_at_measure_one_beat_per_second_6over8(concat):
     # Toch heb ik een beter gevoel bij de correcte benadering. 
     # CONCLUSIE: tempo is voortaan een tuple van bpm en beat_note.
     assert concat.time_at_measure(segments, measure_number) == (6.0, 1.0, 8)  
+
+@pytest.mark.unit
+def test_time_at_measure_humanity_liedstart(concat):
+    segments = [TimingSegment(tempo_bpm=184, tempo_beat_base_note=4, timesig='4/4', measure_count=10)]
+    measure_number = 2
+    assert concat.time_at_measure(segments, measure_number) == (2.608695652173913, 0.32608695652173914, 4)
+
+@pytest.mark.unit
+def test_time_at_measure_humanity_startzang(concat):
+    tempo_beat_base_note = 4
+    segments = [TimingSegment(tempo_bpm=184, tempo_beat_base_note=tempo_beat_base_note, timesig='4/4', measure_count=10)]
+    measure_number = 9
+    expected_beat_duration = 0.32608695652173914
+    expected_time = (measure_number * tempo_beat_base_note) * expected_beat_duration      # 11.73913043478261
+    assert concat.time_at_measure(segments, measure_number) == (expected_time, expected_beat_duration, 4)
+
 
 # --------------------------------------------------------------------------- #
 # _last_timesig_in_staff
@@ -313,9 +330,10 @@ def test_extract_lbltrck_markers_by_staff_lines_multiple_labels(concat):
 def test_extract_lbltrck_markers_by_staff_lines_realistic_staff_part(concat):
     staff_lines = test_bass_stafflines  # defined at the top of this file
     result = concat.extract_lbltrck_markers_by_staff_lines(staff_lines)
-    assert len(result) == 2
-    assert result[0] == ('Start zang', 10, 2.0)
-    assert result[1] == ('D', 16, 0.0)
+    assert len(result) == 3
+    assert result[0] == ('LiedStart', 3, 0.0)
+    assert result[1] == ('Start zang', 10, 2.0)
+    assert result[2] == ('D', 16, 0.0)
 
 
 
