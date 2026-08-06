@@ -168,6 +168,12 @@ def test_time_at_measure_zero_based_simple(concat):
     assert concat.time_at_measure(segments, measure_number) == (0.0, 1.0, 4)  # dur: 4 sec
 
 @pytest.mark.unit
+def test_time_at_measure_zero_based_simple_negative(concat):
+    segments = [TimingSegment(tempo_bpm=60, tempo_beat_base_note=4, timesig='4/4', measure_count=11)]
+    measure_number = -1   # Note: maat 0, method is 0-based, dus expected elapsed time at start of measure is 0.
+    assert concat.time_at_measure(segments, measure_number) == (-4.0, 1.0, 4)  # dur: 4 sec
+
+@pytest.mark.unit
 def test_time_at_measure_double_tempo_simple(concat):
     segments = [TimingSegment(tempo_bpm=120, tempo_beat_base_note=4, timesig='4/4', measure_count=1)]
     measure_number = 1
@@ -363,7 +369,7 @@ def test_process_lieddelen(concat):
     # ict laptop
     expected_paths = ['C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) intro.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) couplet 1.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) overgang refr-couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) middenstuk.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) uittro.nwctxt']
     # rhm laptop
-    # expected_paths = ['D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) intro.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) couplet 1.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) overgang refr-couplet.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) middenstuk.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) uittro.nwctxt']
+    expected_paths = ['D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) intro.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) couplet 1.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) overgang refr-couplet.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) middenstuk.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) uittro.nwctxt']
     rng = len(expected_paths) 
     for i in range(rng):
         assert result[0][i] == expected_paths[i]

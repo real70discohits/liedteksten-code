@@ -1080,11 +1080,11 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
                 lbltrck_markers.append(lbltrck) 
 
         if lbltrck_markers and lieddeel_starttime is not None:
-            for label_text, measure_number, beat_pos_in_quarters in lbltrck_markers:
+            for label_text, measure_count, beat_pos_in_quarters in lbltrck_markers:
                 if timing_segments:
-                    time_in_lieddeel, seg_beat_duration, seg_beat_base = time_at_measure(timing_segments, measure_number)     # BUG: Hier moet iets niet goed zitten: liedstart is OK, time_within_measure ook, dus time_in_lieddeel is ws fout.
+                    time_in_lieddeel, seg_beat_duration, seg_beat_base = time_at_measure(timing_segments, measure_count - 1)     # BUG fixed: measure-count moet er 1 af. Nog precies uitleggen waarom.
                 else:
-                    time_in_lieddeel = measure_number * measure_duration    # 0-based, so works Okay: first measure gets 0.
+                    time_in_lieddeel = measure_count * measure_duration    # 0-based, so works Okay: first measure gets 0.
                     seg_beat_duration = beat_duration
                     seg_beat_base = beat_base
                 beats_within_measure = beat_pos_in_quarters * (4.0 / seg_beat_base)
