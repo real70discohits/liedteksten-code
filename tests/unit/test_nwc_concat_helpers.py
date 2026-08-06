@@ -159,43 +159,43 @@ def test_pre_bar_duration_qn_stops_at_styled_bar3(concat):
 def test_time_at_measure_one_beat_per_second_simple(concat):
     segments = [TimingSegment(tempo_bpm=60, tempo_beat_base_note=4, timesig='4/4', measure_count=1)]
     measure_number = 1
-    assert concat.time_at_measure(segments, measure_number) == (4.0, 1.0, 4)  # na 1 maat (measure 0) zijn verstreken: 4 sec
+    assert concat.state_at_measure(segments, measure_number) == (4.0, 1.0, 4)  # na 1 maat (measure 0) zijn verstreken: 4 sec
 
 @pytest.mark.unit
 def test_time_at_measure_zero_based_simple(concat):
     segments = [TimingSegment(tempo_bpm=60, tempo_beat_base_note=4, timesig='4/4', measure_count=1)]
     measure_number = 0   # Note: maat 0, method is 0-based, dus expected elapsed time at start of measure is 0.
-    assert concat.time_at_measure(segments, measure_number) == (0.0, 1.0, 4)  # dur: 4 sec
+    assert concat.state_at_measure(segments, measure_number) == (0.0, 1.0, 4)  # dur: 4 sec
 
 @pytest.mark.unit
 def test_time_at_measure_zero_based_simple_negative(concat):
     segments = [TimingSegment(tempo_bpm=60, tempo_beat_base_note=4, timesig='4/4', measure_count=11)]
     measure_number = -1   # Note: maat 0, method is 0-based, dus expected elapsed time at start of measure is 0.
-    assert concat.time_at_measure(segments, measure_number) == (-4.0, 1.0, 4)  # dur: 4 sec
+    assert concat.state_at_measure(segments, measure_number) == (-4.0, 1.0, 4)  # dur: 4 sec
 
 @pytest.mark.unit
 def test_time_at_measure_double_tempo_simple(concat):
     segments = [TimingSegment(tempo_bpm=120, tempo_beat_base_note=4, timesig='4/4', measure_count=1)]
     measure_number = 1
-    assert concat.time_at_measure(segments, measure_number) == (2.0, 0.5, 4)
+    assert concat.state_at_measure(segments, measure_number) == (2.0, 0.5, 4)
 
 @pytest.mark.unit
 def test_time_at_measure_double_tempo_walz_simple(concat):
     segments = [TimingSegment(tempo_bpm=120, tempo_beat_base_note=4, timesig='3/4', measure_count=1)]
     measure_number = 1
-    assert concat.time_at_measure(segments, measure_number) == (1.5, 0.5, 4)   # dur 1.5 sec
+    assert concat.state_at_measure(segments, measure_number) == (1.5, 0.5, 4)   # dur 1.5 sec
 
 @pytest.mark.unit
 def test_time_at_measure_double_tempo_long_simple(concat):
     segments = [TimingSegment(tempo_bpm=120, tempo_beat_base_note=4, timesig='4/4', measure_count=50)]
     measure_number = 48
-    assert concat.time_at_measure(segments, measure_number) == (96.0, 0.5, 4)
+    assert concat.state_at_measure(segments, measure_number) == (96.0, 0.5, 4)
 
 @pytest.mark.unit
 def test_time_at_measure_fast_and_long_simple(concat):
     segments = [TimingSegment(tempo_bpm=180, tempo_beat_base_note=4, timesig='4/4', measure_count=50)]
     measure_number = 50  # Note: er zijn 50 maten, 0-based, dus 0-49. Maat 50 bestaat dus niet, maar deze method is daar niet van onder de indruk.
-    result = concat.time_at_measure(segments, measure_number) 
+    result = concat.state_at_measure(segments, measure_number) 
     assert round(result[0], 4) == 66.6667   # dwz bij start maat 50 zijn 66.6sec verstreken
     assert round(result[1], 4) == 0.3333    # dwz één beat duurt 0.33s
 
@@ -203,22 +203,28 @@ def test_time_at_measure_fast_and_long_simple(concat):
 def test_time_at_measure_fast_but_at_start_simple(concat):
     segments = [TimingSegment(tempo_bpm=180, tempo_beat_base_note=4, timesig='4/4', measure_count=50)]
     measure_number = 0
-    result = concat.time_at_measure(segments, measure_number) 
+    result = concat.state_at_measure(segments, measure_number) 
     assert round(result[0], 4) == 0.0000    # dwz bij start maat 0 zijn 0 sec verstreken
     assert round(result[1], 4) == 0.3333    # dwz één beat duurt 0.33s
+
+@pytest.mark.unit
+def test_time_at_measure_one_beat_per_second_complex2(concat):
+    segments = [TimingSegment(tempo_bpm=60, tempo_beat_base_note=4, timesig='4/4', measure_count=4), TimingSegment(tempo_bpm=120, tempo_beat_base_note=4, timesig='4/4', measure_count=2)]
+    measure_number = 4
+    assert concat.state_at_measure(segments, measure_number) == (16.0, 0.5, 4)
 
 @pytest.mark.unit
 def test_time_at_measure_one_beat_per_second_complex(concat):
     segments = [TimingSegment(tempo_bpm=60, tempo_beat_base_note=4, timesig='4/4', measure_count=2), TimingSegment(tempo_bpm=120, tempo_beat_base_note=4, timesig='4/4', measure_count=2)]
     measure_number = 4
-    assert concat.time_at_measure(segments, measure_number) == (12.0, 0.5, 4)
+    assert concat.state_at_measure(segments, measure_number) == (12.0, 0.5, 4)
 
 @pytest.mark.unit                                                       # Reminder: Returns (elapsed_time, beat_duration, beat_base)
 def test_time_at_measure_one_beat_per_second_6over8(concat):
     segments = [TimingSegment(tempo_bpm=60, tempo_beat_base_note=8, timesig='6/8', measure_count=1)]
     measure_number = 1
     # Overdenking:
-    # Mijn eerste gedachte: assert concat.time_at_measure(segments, measure_number) == (3.0, 0.5, 8)  
+    # Mijn eerste gedachte: assert concat.state_at_measure(segments, measure_number) == (3.0, 0.5, 8)  
     #   beat_base = 8 (maar dat zegt niks, want tempo (bpm) interpreteren we hoe dan ook in kwartnoten!)
     #   beat_duration: omdat we tempo in kwartnoten interpreteren en een qn bij t=60 1 sec duurt, duurt een 8e in dat geval 0.5 sec.
     #   elapsed time = leiden we af uit 6 * beat_duration, dus 6 x 0.5 = 3sec.
@@ -228,7 +234,7 @@ def test_time_at_measure_one_beat_per_second_6over8(concat):
     # Stel dat je het netjes wilt doen, en inderdaad beat_base wilt gebruiken voor je tempo interpretatie, en stel dat je 
     #   in een stuk wilt schakelen van 4/4 naar 6/8, waarbij de beats twee keer zo snel worden: dan bij 4/4 met 120 wordt het 6/8 met 240.
     #   time_at_measure doet het netjes, dus:
-    # assert concat.time_at_measure(segments, measure_number) == (6.0, 1.0, 8)  
+    # assert concat.state_at_measure(segments, measure_number) == (6.0, 1.0, 8)  
     # BUG:  op basis van bovenstaande declareer ik bij dezen een bug: een tempo betekent 
     #       'beats-per-minute' en heeft een int als waarde voor het aantal beats, maar daar
     #       moet de waarde van de beat, de beat_base of beat_note_unit (de koppeling aan
@@ -248,13 +254,13 @@ def test_time_at_measure_one_beat_per_second_6over8(concat):
     # om de bpm in qn aan te geven, dus laat ik gaan voor de handige conventie.
     # Toch heb ik een beter gevoel bij de correcte benadering. 
     # CONCLUSIE: tempo is voortaan een tuple van bpm en beat_note.
-    assert concat.time_at_measure(segments, measure_number) == (6.0, 1.0, 8)  
+    assert concat.state_at_measure(segments, measure_number) == (6.0, 1.0, 8)  
 
 @pytest.mark.unit
 def test_time_at_measure_humanity_liedstart(concat):
     segments = [TimingSegment(tempo_bpm=184, tempo_beat_base_note=4, timesig='4/4', measure_count=10)]
     measure_number = 2
-    assert concat.time_at_measure(segments, measure_number) == (2.608695652173913, 0.32608695652173914, 4)
+    assert concat.state_at_measure(segments, measure_number) == (2.608695652173913, 0.32608695652173914, 4)
 
 @pytest.mark.unit
 def test_time_at_measure_humanity_startzang(concat):
@@ -263,7 +269,7 @@ def test_time_at_measure_humanity_startzang(concat):
     measure_number = 9
     expected_beat_duration = 0.32608695652173914
     expected_time = (measure_number * tempo_beat_base_note) * expected_beat_duration      # 11.73913043478261
-    assert concat.time_at_measure(segments, measure_number) == (expected_time, expected_beat_duration, 4)
+    assert concat.state_at_measure(segments, measure_number) == (expected_time, expected_beat_duration, 4)
 
 
 # --------------------------------------------------------------------------- #
@@ -350,7 +356,7 @@ def test_extract_lbltrck_markers_by_staff_lines_realistic_staff_part(concat):
 @pytest.mark.unit
 def test_process_lieddelen(concat):
     title = "Humanity (53)"
-    nwc_folder = Path(__file__).parent.parent.parent.parent / "testdata/lieddelen"
+    nwc_folder = Path(__file__).parent.parent.parent.parent / "_testdata/lieddelen"
     volgorde_lieddelen = ['intro', 'couplet 1', 'refrein', 'overgang refr-couplet', 'couplet', 'refrein', 'middenstuk', 'couplet', 'refrein', 'uittro']
     result = concat.process_lieddelen(title, volgorde_lieddelen, nwc_folder)           # expected duration 3:43 verified (excl maten vooraf, which take 3 additional secs)
 
@@ -367,9 +373,9 @@ def test_process_lieddelen(concat):
 
     # assert files
     # ict laptop
-    expected_paths = ['C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) intro.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) couplet 1.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) overgang refr-couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) middenstuk.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'C:\\Persoonlijk\\liedteksten\\testdata\\lieddelen\\Humanity (53) uittro.nwctxt']
+    expected_paths = ['C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) intro.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) couplet 1.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) overgang refr-couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) middenstuk.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) uittro.nwctxt']
     # rhm laptop
-    expected_paths = ['D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) intro.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) couplet 1.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) overgang refr-couplet.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) middenstuk.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\testdata\\lieddelen\\Humanity (53) uittro.nwctxt']
+    # expected_paths = ['D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) intro.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) couplet 1.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) overgang refr-couplet.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) middenstuk.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) uittro.nwctxt']
     rng = len(expected_paths) 
     for i in range(rng):
         assert result[0][i] == expected_paths[i]

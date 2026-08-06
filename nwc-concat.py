@@ -905,8 +905,8 @@ def extract_timing_segments(filepath, initial_tempo, initial_timesig):
     return segments
 
 
-def time_at_measure(segments, measure_number):
-    """Return (elapsed_time, beat_duration, beat_base) at the start of a measure (0-based !!).
+def state_at_measure(segments, measure_number):
+    """Return (elapsed_time, beat_duration, beat_base) at the start of a measure (Note1: 0-based! Note2: beat_dur and beat_base are just the actual ones at the start of the requested measure: not necessarily of the whole piece!)
 
     Args:
         segments: List of TimingSegment from extract_timing_segments
@@ -1082,7 +1082,7 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
         if lbltrck_markers and lieddeel_starttime is not None:
             for label_text, measure_count, beat_pos_in_quarters in lbltrck_markers:
                 if timing_segments:
-                    time_in_lieddeel, seg_beat_duration, seg_beat_base = time_at_measure(timing_segments, measure_count - 1)     # BUG fixed: measure-count moet er 1 af. Nog precies uitleggen waarom.
+                    time_in_lieddeel, seg_beat_duration, seg_beat_base = state_at_measure(timing_segments, measure_count - 1)     # BUG fixed: measure-count moet er 1 af. Nog precies uitleggen waarom.
                 else:
                     time_in_lieddeel = measure_count * measure_duration    # 0-based, so works Okay: first measure gets 0.
                     seg_beat_duration = beat_duration
