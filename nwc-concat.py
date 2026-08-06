@@ -1058,7 +1058,7 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
         timing_segments = extract_timing_segments(str(lieddeel_nwctxt), lieddeel_tempo, lieddeel_timesig)
 
         file_list.append(str(lieddeel_nwctxt))
-        measure_count = get_measure_count_by_ritme_staff(str(lieddeel_nwctxt), False)
+        measure_nr = get_measure_count_by_ritme_staff(str(lieddeel_nwctxt), False)
         # For first lieddeel, subtract vooraf-measures
         # if (i == 0):
         #     measure_count -= measures_vooraf_count
@@ -1080,11 +1080,13 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
                 lbltrck_markers.append(lbltrck) 
 
         if lbltrck_markers and lieddeel_starttime is not None:
-            for label_text, measure_count, beat_pos_in_quarters in lbltrck_markers:
+            for label_text, measure_nr, beat_pos_in_quarters in lbltrck_markers:
                 if timing_segments:
-                    time_in_lieddeel, seg_beat_duration, seg_beat_base = state_at_measure(timing_segments, measure_count - 1)     # BUG fixed: measure-count moet er 1 af. Nog precies uitleggen waarom.
+                    time_in_lieddeel, seg_beat_duration, seg_beat_base = state_at_measure(timing_segments, measure_nr - 1)     
+                    # Note 1: measure_nr comes from the lbltrck_markers, and points at the measure where the label is: but because we need the full duration of the measures preceding that measure, we must subtract 1.
+                    # Note 2: the seg_beat_base and seg_beat_duration are needed to compute the duration WITHIN the measure UNTIL the label: they may not apply to any measure preceding it.
                 else:
-                    time_in_lieddeel = measure_count * measure_duration    # 0-based, so works Okay: first measure gets 0.
+                    time_in_lieddeel = measure_nr * measure_duration    # 0-based, so works Okay: first measure gets 0.
                     seg_beat_duration = beat_duration
                     seg_beat_base = beat_base
                 beats_within_measure = beat_pos_in_quarters * (4.0 / seg_beat_base)
@@ -1096,20 +1098,23 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
         if current_start_time is not None:
             if timing_segments:
                 lieddeel_duration = sum(seg.duration() for seg in timing_segments)
+                if (i==0):
+                    lieddeel_duration -= vooraf_duration    # current_start_time was set to voorafduration, but is calculated in the above line so we must subtract it
+                    lieddeel_duration += beat_duration      # but it didn't include the pickupnote
                 current_start_time += lieddeel_duration
-            elif measure_count is not None:
-                current_start_time += measure_count * measure_duration
+            elif measure_nr is not None:
+                current_start_time += measure_nr * measure_duration
             else:
                 current_start_time = None
 
-        measurecount_and_starttime_per_lieddeel.append((lieddeel, measure_count, lieddeel_starttime, lieddeel_duration))
+        measurecount_and_starttime_per_lieddeel.append((lieddeel, measure_nr, lieddeel_starttime, lieddeel_duration))
 
         # Extract chord info only once per unique section
         if lieddeel not in chords_per_lieddeel:
             chord_string, chord_count, is_valid = extract_chords_from_first_staff(str(lieddeel_nwctxt))
             chords_per_lieddeel[lieddeel] = (chord_string, chord_count, is_valid)
 
-        measure_str = f" ({measure_count} measures)" if measure_count else ""
+        measure_str = f" ({measure_nr} measures)" if measure_nr else ""
         print(f"Adding lieddeel: {lieddeel}{measure_str}")
         i += 1
 
