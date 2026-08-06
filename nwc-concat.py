@@ -1051,14 +1051,14 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
             measures_vooraf_duration = measures_vooraf_count * measure_duration
             pickup_duration = pickup_beats_count * beat_duration
             vooraf_duration = pickup_duration + measures_vooraf_duration
-            measurecount_and_starttime_per_lieddeel.append(('vooraf', measures_vooraf_count, 0.0, vooraf_duration))
+            # measurecount_and_starttime_per_lieddeel.append(('vooraf', measures_vooraf_count, 0.0, vooraf_duration))
             current_start_time = vooraf_duration
 
         # Build timing segments for intra-lieddeel tempo/timesig changes
         timing_segments = extract_timing_segments(str(lieddeel_nwctxt), lieddeel_tempo, lieddeel_timesig)
 
         file_list.append(str(lieddeel_nwctxt))
-        measure_nr = get_measure_count_by_ritme_staff(str(lieddeel_nwctxt), False)
+        measure_count = get_measure_count_by_ritme_staff(str(lieddeel_nwctxt), False)
         lieddeel_starttime = current_start_time
 
         # Add lieddeel label to all_labels list
@@ -1099,19 +1099,19 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
                     lieddeel_duration -= vooraf_duration    # current_start_time was set to voorafduration, but is calculated in the above line so we must subtract it
                     lieddeel_duration += beat_duration      # but it didn't include the pickupnote
                 current_start_time += lieddeel_duration
-            elif measure_nr is not None:
-                current_start_time += measure_nr * measure_duration
+            elif measure_count is not None:
+                current_start_time += measure_count * measure_duration
             else:
                 current_start_time = None
 
-        measurecount_and_starttime_per_lieddeel.append((lieddeel, measure_nr, lieddeel_starttime, lieddeel_duration))
+        measurecount_and_starttime_per_lieddeel.append((lieddeel, measure_count, lieddeel_starttime, lieddeel_duration))
 
         # Extract chord info only once per unique section
         if lieddeel not in chords_per_lieddeel:
             chord_string, chord_count, is_valid = extract_chords_from_first_staff(str(lieddeel_nwctxt))
             chords_per_lieddeel[lieddeel] = (chord_string, chord_count, is_valid)
 
-        measure_str = f" ({measure_nr} measures)" if measure_nr else ""
+        measure_str = f" ({measure_count} measures)" if measure_count else ""
         print(f"Adding lieddeel: {lieddeel}{measure_str}")
         i += 1
 
@@ -1153,10 +1153,6 @@ def main():
     (file_list, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, all_labels,
     tempo, timesig, pickup_beats, netto_song_duration) = process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder)
 
-    # todo: write netto_song_duration into complete_analysis.
-
-    
-
     # Concatenate files
     output_nwctxt = paths.build_folder / f"{songtitle}.nwctxt"
     print(f"\nConcatenating {len(file_list)} lieddelen...")
@@ -1170,9 +1166,12 @@ def main():
         print("⚠️ Warning: Analysis failed, continuing with limited data")
         complete_analysis = {
             'total_measures': 0,
-            'total_duration': None,
+            'total_duration': round(netto_song_duration),
             'vooraf': 0,
         }
+    else:
+        complete_analysis['total_duration'] = round(netto_song_duration)
+    
 
     # Generate complete LaTeX structure file using analysis data
     tex_file = paths.build_folder / f"{songtitle} structuur.tex"
