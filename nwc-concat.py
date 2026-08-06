@@ -1059,9 +1059,6 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
 
         file_list.append(str(lieddeel_nwctxt))
         measure_nr = get_measure_count_by_ritme_staff(str(lieddeel_nwctxt), False)
-        # For first lieddeel, subtract vooraf-measures
-        # if (i == 0):
-        #     measure_count -= measures_vooraf_count
         lieddeel_starttime = current_start_time
 
         # Add lieddeel label to all_labels list
@@ -1072,9 +1069,9 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
 
         # bij eerste sectie dan maten_vooraf aftrekken (of anders de starttime op 0.0 zetten)
         # dit doen we door lbltrck opnieuw te genereren, want immutable.
-        lbls = lbltrck_markers      # copy
-        lbltrck_markers = []        # reset original
         if i==0:
+            lbls = lbltrck_markers      # copy
+            lbltrck_markers = []        # reset original
             for lbl in lbls:
                 lbltrck = (lbl[0], lbl[1] - measures_vooraf_count, lbl[2])
                 lbltrck_markers.append(lbltrck) 
