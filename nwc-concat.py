@@ -1079,10 +1079,13 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
         if lbltrck_markers and lieddeel_starttime is not None:
             for label_text, measure_nr, beat_pos_in_quarters in lbltrck_markers:
                 if timing_segments:
-                    time_in_lieddeel, seg_beat_duration, seg_beat_base = state_at_measure(timing_segments, measure_nr - 1)     
-                    # Note 1: measure_nr comes from the lbltrck_markers, and points at the measure where the label is: but because we need the full duration of the measures preceding that measure, we must subtract 1.
-                    # Note 2: the seg_beat_base and seg_beat_duration are needed to compute the duration WITHIN the measure UNTIL the label: they may not apply to any measure preceding it.
-                else:
+                    if i==0:
+                        time_in_lieddeel, seg_beat_duration, seg_beat_base = state_at_measure(timing_segments, measure_nr - 1)     
+                        # Note 1: measure_nr comes from the lbltrck_markers, and points at the measure where the label is: but because we need the full duration of the measures preceding that measure, we must subtract 1.
+                        # Note 2: the seg_beat_base and seg_beat_duration are needed to compute the duration WITHIN the measure UNTIL the label: they may not apply to any measure preceding it.
+                    else:
+                        time_in_lieddeel, seg_beat_duration, seg_beat_base = state_at_measure(timing_segments, measure_nr)     # BUG fixed: dit is een ugly fix, ik weet niet waarom dit werkt. Later nog uitzoeken.
+                else:                                                                                                          #  Het is een fix voor dat alle labeltracks, behalve die van lieddeel-titels, een maat te kort duurden in de labeltrack.
                     time_in_lieddeel = measure_nr * measure_duration    # 0-based, so works Okay: first measure gets 0.
                     seg_beat_duration = beat_duration
                     seg_beat_base = beat_base
