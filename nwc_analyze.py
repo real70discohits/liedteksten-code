@@ -109,7 +109,12 @@ def detect_begintel(first_staff):
 def count_vooraf_measures_by_filepath(filepath):
     nwc = NwcFile(filepath)
     bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
-    return count_vooraf_measures(bass_staff.get_content())
+    try:
+        content = bass_staff.get_content()
+    except(AttributeError):
+        print("❌ Error: no staff has name 'Bass'?")
+        raise 
+    return count_vooraf_measures(content)
 
 
 def count_vooraf_measures(staff_content):
