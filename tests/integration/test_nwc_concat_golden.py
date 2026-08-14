@@ -56,7 +56,7 @@ def test_script_succeeds(concat_run):
         (f"{SONG}.nwctxt", "song_build", None),
         (f"{SONG} analysis.txt", "song_build", _mask_locatie),
         (f"{SONG} structuur.tex", "song_build", None),
-        (f"{SONG} labeltrack t_184.txt", "song_audio", None),
+        (f"{SONG} labeltrack t_(184, 4).txt", "song_audio", None),
     ],
 )
 def test_artifact_matches_golden(

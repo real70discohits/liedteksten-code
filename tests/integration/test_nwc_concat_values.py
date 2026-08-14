@@ -43,6 +43,7 @@ def compute_derived_values(mod, nwc_folder, songtitle, tmp_path, keep_tempi):
         tempo,
         timesig,
         pickup_beats,
+        nett_song_duration
     ) = mod.process_lieddelen(songtitle, volgorde, nwc_folder)
 
     merged = tmp_path / f"{songtitle}.nwctxt"
@@ -60,7 +61,7 @@ def compute_derived_values(mod, nwc_folder, songtitle, tmp_path, keep_tempi):
         "total_duration_seconds": _round(analysis["total_duration"]),
         "sequence": [
             {"name": name, "measures": measures, "start_time_seconds": _round(start)}
-            for (name, measures, start) in measurecount_and_starttime
+            for (name, measures, start, _) in measurecount_and_starttime
         ],
         "chords_per_section": {
             name: {"chords": chord_string, "count": chord_count}
@@ -92,4 +93,9 @@ def test_derived_values(sandbox, load_script, tmp_path, update_golden):
         f"{VALUES_FILENAME} not found. Generate it once with: pytest --update-golden"
     )
     expected = json.loads(values_path.read_text(encoding="utf-8"))
+
+    # convert some arrays to tuples, because the source is in json which doesn't know tuples and just stores as arrrays.
+    if 'tempo' in expected:
+        expected['tempo'] = tuple(expected['tempo'])
+
     assert actual == expected
