@@ -178,6 +178,56 @@ def _pre_bar_duration_qn(staff_lines) -> float:
     return total
 
 
+def get_measure_count_by_bass_staff(filepath, include_vooraf_measures = True):
+    nwc = NwcFile(filepath)
+    
+    bass_staff = nwc.get_staff_by_name(STAFF_NAME_BASS)
+    if not bass_staff:
+        return None
+
+    # Get Ritme staff content for the repeat marker
+    bass_staff_lines = bass_staff.lines
+
+    # Detect pickup: content before first bar that doesn't fill a complete measure
+    timesig = '4/4'
+    for line in bass_staff_lines:
+        if line.startswith('|TimeSig|Signature:'):
+            try:
+                timesig = line.split('Signature:')[1].split('|')[0]
+                break
+            except (IndexError, ValueError):
+                pass
+    pre_bar_dur = _pre_bar_duration_qn(bass_staff_lines)
+    has_pickup = 0.0 < pre_bar_dur < _measure_duration_qn(timesig)
+
+    total_measures = 0
+    current_measure_has_dur = False
+    past_pickup = not has_pickup    # keep track whether the eventual pickup beat has been 'passed' while processing line by line
+
+    for line in bass_staff_lines:
+        # Check for Bar marker
+        if line.startswith('|Bar|') or line == '|Bar':
+            if current_measure_has_dur:
+                if not past_pickup:
+                    past_pickup = True   # now passing pickupbeat, so we ignore this measure
+                else:
+                    total_measures += 1
+            current_measure_has_dur = False
+        elif '|Dur:' in line:
+            current_measure_has_dur = True      # Currently: any duration suffices
+
+    # Count the last measure if it has duration
+    if current_measure_has_dur:
+        total_measures += 1
+
+    # Subtract maten vooraf: full measures before 'liedstart' in the Bass staff
+    # (count_vooraf_measures already excludes the pickup measure)
+    if (not include_vooraf_measures):
+        total_measures -= count_vooraf_measures(bass_staff.get_content())
+
+    return total_measures if total_measures > 0 else None
+
+
 def get_measure_count_by_ritme_staff(filepath, include_vooraf_measures = True):
     """Extract measure count from Ritme staff in .nwctxt file
 
@@ -422,7 +472,7 @@ def extract_lbltrck_markers_by_staff_lines(staff_lines):
                     text_content = line[text_start:text_end]
                     # Check if it starts with "LBLTRCK:"
                     text_stripped = text_content.strip()
-                    if text_stripped.startswith('LBLTRCK:'):
+                    if text_stripped.upper().startswith('LBLTRCK:'):
                         # Extract label text (everything after "LBLTRCK:")
                         label_text = text_stripped[8:].strip()
                         if label_text:  # Only add non-empty labels
@@ -1059,6 +1109,8 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
 
         file_list.append(str(lieddeel_nwctxt))
         measure_count = get_measure_count_by_ritme_staff(str(lieddeel_nwctxt), False)
+        if measure_count is None:
+            measure_count = get_measure_count_by_bass_staff(str(lieddeel_nwctxt), False)
         lieddeel_starttime = current_start_time
 
         # Add lieddeel label to all_labels list
@@ -1100,7 +1152,8 @@ def process_lieddelen(songtitle, volgorde_lieddelen, nwc_folder):
                 lieddeel_duration = sum(seg.duration() for seg in timing_segments)
                 if (i==0):
                     lieddeel_duration -= vooraf_duration    # current_start_time was set to voorafduration, but is calculated in the above line so we must subtract it
-                    lieddeel_duration += beat_duration      # but it didn't include the pickupnote
+                    if pickup_beats_count != 0:
+                        lieddeel_duration += pickup_beats_count * beat_duration      # but it didn't include the pickupnote
                 current_start_time += lieddeel_duration
             elif measure_count is not None:
                 current_start_time += measure_count * measure_duration

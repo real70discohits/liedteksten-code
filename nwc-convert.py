@@ -348,7 +348,7 @@ Examples:
         # 3. Generate output paths with staff name
         midi_path = song_output_dir / f"{song_title} {staff.name}.mid"
         wav_path = song_output_dir / f"{song_title} {staff.name}.wav"
-        flac_path = song_output_dir / f"{song_title} {staff.name}.ogg"
+        flac_path = song_output_dir / f"{song_title} {staff.name}.flac"
 
         # 4. Run conversion pipeline (3 steps)
         # STEP 1: NWC → MIDI
