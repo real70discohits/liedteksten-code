@@ -423,25 +423,22 @@ def test_process_lieddelen_sab(concat):
     volgorde_lieddelen = ["intro", "couplet", "couplet", "intermezzo1", "couplet", "intermezzo2", "nanana-gitaarsolo", "couplet", "couplet"]
     result = concat.process_lieddelen(title, volgorde_lieddelen, nwc_folder)
 
-    # # assert files
-    # # ict laptop
+    # assert files
+    # ict laptop
     # expected_paths = ['C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) intro.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) intermezzo1.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) intermezzo2.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) nanana-gitaarsolo.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt']
-    # # rhm laptop
-    # expected_paths = ['D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) intro.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) couplet 1.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) overgang refr-couplet.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) middenstuk.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) uittro.nwctxt']
+    # rhm laptop
     expected_paths = ['D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Shes Such A Beauty (6) intro.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Shes Such A Beauty (6) intermezzo1.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Shes Such A Beauty (6) intermezzo2.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Shes Such A Beauty (6) nanana-gitaarsolo.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt']
     rng = len(expected_paths) 
     for i in range(rng):
         assert result[0][i] == expected_paths[i]
 
     # assert measurecount_and_starttime_per_lieddeel
-    # expected_measurecount_and_starttime_per_lieddeel = [('intro', 8, 2.9347826086956523, 10.434782608695652), ('couplet 1', 18, 13.369565217391305, 23.47826086956522), ('refrein', 15, 36.84782608695652, 19.565217391304348), ('overgang refr-couplet', 10, 56.413043478260875, 13.043478260869566), ('couplet', 24, 69.45652173913044, 31.304347826086957), ('refrein', 15, 100.76086956521739, 19.565217391304348), ('middenstuk', 32, 120.32608695652173, 43.984655277565004), ('couplet', 24, 164.31074223408675, 31.304347826086957), ('refrein', 15, 195.6150900601737, 19.565217391304348), ('uittro', 8, 215.18030745147806, 10.434782608695652)]
     expected_measurecount_and_starttime_per_lieddeel = [('intro', 2, 3.375, 3.0), ('couplet', 8, 6.375, 12.0), ('couplet', 8, 18.375, 12.0), ('intermezzo1', 10, 30.375, 15.0), ('couplet', 8, 45.375, 12.0), ('intermezzo2', 12, 57.375, 18.0), ('nanana-gitaarsolo', 22, 75.375, 33.0), ('couplet', 8, 108.375, 12.0), ('couplet', 8, 120.375, 12.0)]
     rng = len(expected_measurecount_and_starttime_per_lieddeel)
     for i in range(rng):
         assert result[1][i] == expected_measurecount_and_starttime_per_lieddeel[i]
 
     # assert chords_per_lieddeel 
-    # expected_chords_per_lieddeel = {'intro': ('A7sus2(8)', 8, True), 'couplet 1': ('A7sus2(5), Dmaj7(4), A7sus2(5), Dmaj7(4)', 18, True), 'refrein': ('Bm6(3), Em(4), Edim(add 11)(2), Em (add9+11)(2), Dmaj7(2), B(2)', 15, True), 'overgang refr-couplet': ('E6(2), A (schuif)(4), A7sus2(4)', 10, True), 'couplet': ('A7sus2(4), Dmaj7(4), A7sus2(4), Dmaj7(4), A7sus2(4), Dmaj7(4)', 24, True), 'middenstuk': ('Em7(4), A7(4), Em7(4), A7(4), Em7(4), A7(4), Em7(4), A7(4)', 32, True), 'uittro': ('Em6(2), A(4), D(2)', 8, True)}
     expected_chords_per_lieddeel = {'intro': ('-', 0, True), 'couplet': ('B, F#, B, F#, E(2), B(2)', 8, True), 'intermezzo1': ('D(2), G(4), G(2), F#(2)', 10, True), 'intermezzo2': ('D(2), A(4), A(2), G, F#, E(2)', 12, True), 'nanana-gitaarsolo': ('B(8), G(2), D(6), G(2), F#(2), E(2)', 22, True)}
 
     for key in {'intro', 'couplet', 'intermezzo1', 'intermezzo2', 'nanana-gitaarsolo'}:
@@ -450,7 +447,6 @@ def test_process_lieddelen_sab(concat):
         assert result[2][key][2] == expected_chords_per_lieddeel[key][2]
 
     # assert all_labels
-    # expected_all_labels = [('intro', 2.9347826086956523), ('LiedStart', 2.9347826086956523), ('Start zang', 12.717391304347826), ('couplet 1', 13.369565217391305), ('D', 19.891304347826086), ('A', 25.108695652173914), ('D', 31.630434782608695), ('refrein', 36.84782608695652), ('E', 40.76086956521739), ('Edim', 45.97826086956522), ('Em', 48.58695652173913), ('B', 53.80434782608695), ('overgang refr-couplet', 56.413043478260875), ('A', 59.02173913043479), ('couplet', 69.45652173913044), ('D', 74.67391304347827), ('A', 79.8913043478261), ('D', 85.10869565217392), ('A', 90.32608695652175), ('D', 95.54347826086956), ('refrein', 100.76086956521739), ('E', 104.67391304347827), ('Edim', 109.8913043478261), ('Em', 112.5), ('B', 117.71739130434783), ('middenstuk', 120.32608695652173), ('A', 125.84332833583208), ('E', 131.36056971514242), ('A', 136.87781109445277), ('E', 142.39505247376312), ('A', 147.91229385307346), ('E', 153.4295352323838), ('A', 158.94677661169413), ('couplet', 164.31074223408675), ('D', 169.52813353843456), ('A', 174.7455248427824), ('D', 179.96291614713022), ('A', 185.18030745147806), ('D', 190.39769875582587), ('refrein', 195.6150900601737), ('E', 199.5281335384346), ('Edim', 204.7455248427824), ('Em', 207.35422049495634), ('B', 212.57161179930415), ('uittro', 215.18030745147806), ('A', 217.78900310365196), ('D', 223.0063944079998)]
     expected_all_labels = [('intro', 3.375), ('couplet', 6.375), ('couplet', 18.375), ('intermezzo1', 30.375), ('couplet', 45.375), ('intermezzo2', 57.375), ('nanana-gitaarsolo', 75.375), ('couplet', 108.375), ('couplet', 120.375)]
     rng = len(expected_all_labels)
     for i in  range(rng):
@@ -458,5 +454,5 @@ def test_process_lieddelen_sab(concat):
 
     assert result[4] == (160, 4)            # initial tempo
     assert result[5] == '4/4'               # initial timesig
-    assert result[6] == 1.0                 # nr of pickup beats
-    assert round(result[7], 0) == 129.0     # netto song duration, 3:43
+    assert result[6] == 1.0                 # nr of pickup beats 
+    assert round(result[7], 0) == 129.0     # netto song duration, 2:09 verified ✔️

@@ -50,6 +50,21 @@ NWC_PREFIX_LYRIC1 = "|Lyric1|"
 NWC_END_MARKER = "!NoteWorthyComposer-End"
 NWC_MARKER_LIEDSTART = "liedstart"
 
+# NWC beatbase names
+NWC_BEAT_BASE_EIGHTH = "Eighth"       # example: |Tempo|Base:Eighth|Tempo:320|Pos:8
+NWC_BEAT_BASE_QUARTER = "Quarter"     # not in file because this is the default
+NWC_BEAT_BASE_QUARTER_DOTTED = "Quarter Dotted"    
+NWC_BEAT_BASE_HALF = "Half"
+
+# NWC note/rest duration names
+NWC_DUR_WHOLE = "Whole"
+NWC_DUR_HALF = "Half"
+NWC_DUR_QUARTER = "4th"
+NWC_DUR_EIGHTH = "8th"
+NWC_DUR_SIXTEENTH = "16th"
+NWC_DUR_THIRTYSECOND = "32nd"
+
+
 # Configuration Files
 CONFIG_PATHS = "paths.jsonc"
 CONFIG_LT = "lt-config.jsonc"
