@@ -433,30 +433,30 @@ def test_process_lieddelen_sab(concat):
     for i in range(rng):
         assert result[0][i] == expected_paths[i]
 
-    # # assert measurecount_and_starttime_per_lieddeel
+    # assert measurecount_and_starttime_per_lieddeel
     # expected_measurecount_and_starttime_per_lieddeel = [('intro', 8, 2.9347826086956523, 10.434782608695652), ('couplet 1', 18, 13.369565217391305, 23.47826086956522), ('refrein', 15, 36.84782608695652, 19.565217391304348), ('overgang refr-couplet', 10, 56.413043478260875, 13.043478260869566), ('couplet', 24, 69.45652173913044, 31.304347826086957), ('refrein', 15, 100.76086956521739, 19.565217391304348), ('middenstuk', 32, 120.32608695652173, 43.984655277565004), ('couplet', 24, 164.31074223408675, 31.304347826086957), ('refrein', 15, 195.6150900601737, 19.565217391304348), ('uittro', 8, 215.18030745147806, 10.434782608695652)]
-    # rng = len(expected_measurecount_and_starttime_per_lieddeel)
-    # for i in range(rng):
-    #     assert result[1][i] == expected_measurecount_and_starttime_per_lieddeel[i]
+    expected_measurecount_and_starttime_per_lieddeel = [('intro', 2, 3.375, 3.0), ('couplet', 8, 6.375, 12.0), ('couplet', 8, 18.375, 12.0), ('intermezzo1', 10, 30.375, 15.0), ('couplet', 8, 45.375, 12.0), ('intermezzo2', 12, 57.375, 18.0), ('nanana-gitaarsolo', 22, 75.375, 33.0), ('couplet', 8, 108.375, 12.0), ('couplet', 8, 120.375, 12.0)]
+    rng = len(expected_measurecount_and_starttime_per_lieddeel)
+    for i in range(rng):
+        assert result[1][i] == expected_measurecount_and_starttime_per_lieddeel[i]
 
-    # # assert chords_per_lieddeel 
+    # assert chords_per_lieddeel 
     # expected_chords_per_lieddeel = {'intro': ('A7sus2(8)', 8, True), 'couplet 1': ('A7sus2(5), Dmaj7(4), A7sus2(5), Dmaj7(4)', 18, True), 'refrein': ('Bm6(3), Em(4), Edim(add 11)(2), Em (add9+11)(2), Dmaj7(2), B(2)', 15, True), 'overgang refr-couplet': ('E6(2), A (schuif)(4), A7sus2(4)', 10, True), 'couplet': ('A7sus2(4), Dmaj7(4), A7sus2(4), Dmaj7(4), A7sus2(4), Dmaj7(4)', 24, True), 'middenstuk': ('Em7(4), A7(4), Em7(4), A7(4), Em7(4), A7(4), Em7(4), A7(4)', 32, True), 'uittro': ('Em6(2), A(4), D(2)', 8, True)}
-    # for key in {'intro', 'couplet 1', 'refrein', 'overgang refr-couplet', 'couplet', 'middenstuk', 'uittro'}:
-    #     assert result[2][key][0] == expected_chords_per_lieddeel[key][0]
-    #     assert result[2][key][1] == expected_chords_per_lieddeel[key][1]
-    #     assert result[2][key][2] == expected_chords_per_lieddeel[key][2]
+    expected_chords_per_lieddeel = {'intro': ('-', 0, True), 'couplet': ('B, F#, B, F#, E(2), B(2)', 8, True), 'intermezzo1': ('D(2), G(4), G(2), F#(2)', 10, True), 'intermezzo2': ('D(2), A(4), A(2), G, F#, E(2)', 12, True), 'nanana-gitaarsolo': ('B(8), G(2), D(6), G(2), F#(2), E(2)', 22, True)}
 
-    # # assert all_labels
-    # # expected_all_labels = [('intro', 2.9347826086956523), ('Start zang', 15.32608695652174), ('couplet 1', 15.978260869565219), ('D', 22.5), ('A', 27.717391304347828), ('D', 34.23913043478261), ('refrein', 39.45652173913044), ('E', 43.369565217391305), ('Edim', 48.58695652173913), ('Em', 51.19565217391305), ('B', 56.413043478260875), ('overgang refr-couplet', 59.02173913043478), ('A', 61.630434782608695), ('couplet', 72.06521739130434), ('D', 77.28260869565217), ('A', 82.5), ('D', 87.71739130434783), ('A', 92.93478260869566), ('D', 98.15217391304347), ('refrein', 103.3695652173913), ('E', 107.28260869565217), ('Edim', 112.5), ('Em', 115.1086956521739), ('B', 120.32608695652173), ('middenstuk', 122.93478260869564), ('A', 128.45202398800598), ('E', 133.96926536731632), ('A', 139.48650674662667), ('E', 145.00374812593702), ('A', 150.52098950524737), ('E', 156.03823088455772), ('A', 161.55547226386807), ('couplet', 166.91943788626065), ('D', 172.13682919060847), ('A', 177.3542204949563), ('D', 182.57161179930412), ('A', 187.78900310365196), ('D', 193.00639440799978), ('refrein', 198.22378571234762), ('E', 202.1368291906085), ('Edim', 207.3542204949563), ('Em', 209.96291614713022), ('B', 215.18030745147806), ('uittro', 217.78900310365196), ('A', 220.39769875582587), ('D', 225.6150900601737)]
-    # # expected_all_labels = [('intro', 2.9347826086956523), ('Start zang', 12.717391304347826), ('couplet 1', 13.369565217391305), ('refrein', 36.84782608695652), ('overgang refr-couplet', 56.413043478260875), ('couplet', 69.45652173913044), ('refrein', 100.76086956521739), ('middenstuk', 120.32608695652173), ('couplet', 164.31074223408675), ('refrein', 195.6150900601737), ('uittro', 215.18030745147806)]
-    # # expected_all_labels = [('intro', 2.9347826086956523), ('LiedStart', 2.9347826086956523), ('Start zang', 12.717391304347826), ('couplet 1', 13.369565217391305), ('refrein', 36.84782608695652), ('overgang refr-couplet', 56.413043478260875), ('couplet', 69.45652173913044), ('refrein', 100.76086956521739), ('middenstuk', 120.32608695652173), ('couplet', 164.31074223408675), ('refrein', 195.6150900601737), ('uittro', 215.18030745147806)]
-    # # expected_all_labels = [('intro', 2.9347826086956523), ('LiedStart', 2.9347826086956523), ('Start zang', 12.717391304347826), ('couplet 1', 13.369565217391305), ('D', 18.586956521739133), ('A', 23.804347826086957), ('D', 30.32608695652174), ('refrein', 36.84782608695652), ('E', 39.45652173913044), ('Edim', 44.673913043478265), ('Em', 47.28260869565217), ('B', 52.5), ('overgang refr-couplet', 56.413043478260875), ('A', 57.71739130434783), ('couplet', 69.45652173913044), ('D', 73.36956521739131), ('A', 78.58695652173913), ('D', 83.80434782608695), ('A', 89.02173913043478), ('D', 94.23913043478261), ('refrein', 100.76086956521739), ('E', 103.3695652173913), ('Edim', 108.58695652173913), ('Em', 111.19565217391305), ('B', 116.41304347826087), ('middenstuk', 120.32608695652173), ('A', 124.4640179910045), ('E', 129.98125937031483), ('A', 135.49850074962518), ('E', 141.01574212893553), ('A', 146.53298350824588), ('E', 152.05022488755623), ('A', 157.56746626686657), ('couplet', 164.31074223408675), ('D', 168.22378571234762), ('A', 173.44117701669543), ('D', 178.65856832104328), ('A', 183.8759596253911), ('D', 189.09335092973893), ('refrein', 195.6150900601737), ('E', 198.22378571234762), ('Edim', 203.44117701669546), ('Em', 206.04987266886937), ('B', 211.26726397321718), ('uittro', 215.18030745147806), ('A', 216.48465527756503), ('D', 221.70204658191284)]
+    for key in {'intro', 'couplet', 'intermezzo1', 'intermezzo2', 'nanana-gitaarsolo'}:
+        assert result[2][key][0] == expected_chords_per_lieddeel[key][0]
+        assert result[2][key][1] == expected_chords_per_lieddeel[key][1]
+        assert result[2][key][2] == expected_chords_per_lieddeel[key][2]
+
+    # assert all_labels
     # expected_all_labels = [('intro', 2.9347826086956523), ('LiedStart', 2.9347826086956523), ('Start zang', 12.717391304347826), ('couplet 1', 13.369565217391305), ('D', 19.891304347826086), ('A', 25.108695652173914), ('D', 31.630434782608695), ('refrein', 36.84782608695652), ('E', 40.76086956521739), ('Edim', 45.97826086956522), ('Em', 48.58695652173913), ('B', 53.80434782608695), ('overgang refr-couplet', 56.413043478260875), ('A', 59.02173913043479), ('couplet', 69.45652173913044), ('D', 74.67391304347827), ('A', 79.8913043478261), ('D', 85.10869565217392), ('A', 90.32608695652175), ('D', 95.54347826086956), ('refrein', 100.76086956521739), ('E', 104.67391304347827), ('Edim', 109.8913043478261), ('Em', 112.5), ('B', 117.71739130434783), ('middenstuk', 120.32608695652173), ('A', 125.84332833583208), ('E', 131.36056971514242), ('A', 136.87781109445277), ('E', 142.39505247376312), ('A', 147.91229385307346), ('E', 153.4295352323838), ('A', 158.94677661169413), ('couplet', 164.31074223408675), ('D', 169.52813353843456), ('A', 174.7455248427824), ('D', 179.96291614713022), ('A', 185.18030745147806), ('D', 190.39769875582587), ('refrein', 195.6150900601737), ('E', 199.5281335384346), ('Edim', 204.7455248427824), ('Em', 207.35422049495634), ('B', 212.57161179930415), ('uittro', 215.18030745147806), ('A', 217.78900310365196), ('D', 223.0063944079998)]
-    # rng = len(expected_all_labels)
-    # for i in  range(rng):
-    #     assert result[3][i] == expected_all_labels[i]
+    expected_all_labels = [('intro', 3.375), ('couplet', 6.375), ('couplet', 18.375), ('intermezzo1', 30.375), ('couplet', 45.375), ('intermezzo2', 57.375), ('nanana-gitaarsolo', 75.375), ('couplet', 108.375), ('couplet', 120.375)]
+    rng = len(expected_all_labels)
+    for i in  range(rng):
+        assert result[3][i] == expected_all_labels[i]
 
-    # assert result[4] == (184, 4)            # initial tempo
-    # assert result[5] == '4/4'               # initial timesig
-    # assert result[6] == 1.0                 # nr of pickup beats
-    # assert round(result[7], 0) == 223.0     # netto song duration, 3:43
+    assert result[4] == (160, 4)            # initial tempo
+    assert result[5] == '4/4'               # initial timesig
+    assert result[6] == 1.0                 # nr of pickup beats
+    assert round(result[7], 0) == 129.0     # netto song duration, 3:43
