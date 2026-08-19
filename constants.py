@@ -64,6 +64,15 @@ NWC_DUR_EIGHTH = "8th"
 NWC_DUR_SIXTEENTH = "16th"
 NWC_DUR_THIRTYSECOND = "32nd"
 
+# NWC duration → quarter-note value lookup
+NWC_DURATION_MAP = {
+    NWC_DUR_WHOLE: 4.0,
+    NWC_DUR_HALF: 2.0,
+    NWC_DUR_QUARTER: 1.0,
+    NWC_DUR_EIGHTH: 0.5,
+    NWC_DUR_SIXTEENTH: 0.25,
+    NWC_DUR_THIRTYSECOND: 0.125,
+}
 
 # Configuration Files
 CONFIG_PATHS = "paths.jsonc"

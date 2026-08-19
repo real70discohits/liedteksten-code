@@ -12,6 +12,7 @@ from constants import (
     NWC_PREFIX_ADDSTAFF, NWC_END_MARKER,
     NWC_BEAT_BASE_EIGHTH, NWC_BEAT_BASE_QUARTER,
     NWC_BEAT_BASE_QUARTER_DOTTED, NWC_BEAT_BASE_HALF,
+    NWC_DURATION_MAP,
 )
 
 
@@ -280,24 +281,11 @@ def parse_duration(line: str) -> float:
         else:
             dur_value = line[dur_start:dur_end].strip()
 
-        duration_map = {
-            'Whole': 4.0,
-            'Half': 2.0,
-            '4th': 1.0,
-            '8th': 0.5,
-            '16th': 0.25,
-            '32nd': 0.125,
-        }
-
         dur_base = dur_value.split(',')[0].strip()
         is_dotted = ',Dotted' in line
         is_dbl_dotted = ',DblDotted' in line
 
-        base_duration = 0.0
-        for key, value in duration_map.items():
-            if dur_base == key:
-                base_duration = value
-                break
+        base_duration = NWC_DURATION_MAP.get(dur_base, 0.0)
 
         if base_duration == 0.0:
             return 0.0
