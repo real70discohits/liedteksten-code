@@ -8,7 +8,11 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple
-from constants import NWC_PREFIX_ADDSTAFF, NWC_END_MARKER
+from constants import (
+    NWC_PREFIX_ADDSTAFF, NWC_END_MARKER,
+    NWC_BEAT_BASE_EIGHTH, NWC_BEAT_BASE_QUARTER,
+    NWC_BEAT_BASE_QUARTER_DOTTED, NWC_BEAT_BASE_HALF,
+)
 
 
 class NwcStaff:
@@ -237,7 +241,7 @@ def calc_timing(tempo: tuple[int, int], timesig: str):
     # NOTE: we ignore the beat_base from the timesig, because it has no real
     # connection to time: it's the beat_base of the tempo that has it, so
     #  that always rules.
-        
+
     measure_duration = beats_per_measure * beat_duration
     return beat_duration, measure_duration, beats_per_measure, tempo_beat_base_note
 
@@ -328,25 +332,25 @@ def parse_nwctxt(filepath: str | Path) -> Tuple[List[str], List[List[str]]]:
     return nwc.header_lines, staff_sections
 
 
-def extract_tempo_from_rawdata(line_with_tempo):   
-    """Extract tempo (tupe of bpm and beat_base_note) from an nwctxt line.
+def extract_tempo_from_rawdata(line_with_tempo):
+    """Extract tempo (tuple of bpm and beat_base_note) from an nwctxt line.
     Example input line: "|Tempo|Base:Eighth|Tempo:363|Pos:7"
     Example output tuple: (363, 8)
     """
-    if line_with_tempo.startswith('|Tempo|') and 'Tempo:' in line_with_tempo:     
+    if line_with_tempo.startswith('|Tempo|') and 'Tempo:' in line_with_tempo:
         try:
             tempo_bpm_part = line_with_tempo.split('Tempo:')[1]        # "363|Pos:7"
             tempo_bpm_str = tempo_bpm_part.split('|')[0]               # "363"
-            tempo_base_parts = line_with_tempo.split('Base:')           # => base is not always set: should default it to 4!
+            tempo_base_parts = line_with_tempo.split('Base:')
 
             if len(tempo_base_parts) == 2:  # found, e.g. "|Tempo|Base:Eighth|Tempo:363|Pos:7" gives ["|Tempo|Base:", "Eighth|Tempo:363|Pos:7"]
-                tempo_base_part = tempo_base_parts[1]             # "Eighth|Tempo:363|Pos:7"  
+                tempo_base_part = tempo_base_parts[1]             # "Eighth|Tempo:363|Pos:7"
                 tempo_base_str = tempo_base_part.split('|')[0]    # "Eighth"
-            else: 
-                tempo_base_str = "Fourth"       # default
+            else:
+                tempo_base_str = NWC_BEAT_BASE_QUARTER      # default — NWC uses "Quarter" as the default beat base
 
             t = int(tempo_bpm_str)
-            b = note_value_string_to_int(tempo_base_str)
+            b = _BEAT_BASE_STRING_TO_INT[tempo_base_str]     # old code: note_value_string_to_int(tempo_base_str)
             tempo = (t, b)
             return tempo
         except (IndexError, ValueError):
@@ -355,33 +359,12 @@ def extract_tempo_from_rawdata(line_with_tempo):
         return None
 
 
-def note_value_string_to_int(note_value_string) -> int:
-    match note_value_string:
-        case "Whole":
-            return 1
-        case "Half":
-            return 2
-        case "Fourth":
-            return 4
-        case "Eighth":
-            return 8
-        case "Sixteenth":
-            return 16
-        case _:
-            return 4
-        
+# Lookup table mapping beat-base string constants to their integer note values.
+_BEAT_BASE_STRING_TO_INT = {
+    NWC_BEAT_BASE_HALF: 2,
+    NWC_BEAT_BASE_QUARTER: 4,
+    NWC_BEAT_BASE_EIGHTH: 8,
+}
 
-def note_value_int_to_string(note_value_int) -> str:    
-    match note_value_int:
-        case 1:
-            return "Whole"
-        case 2:
-            return "Half"
-        case 4:
-            return "Fourth"
-        case 8:
-            return "Eighth"
-        case 16:
-            return "Sixteenth"
-        case _:
-            return ""
+# Reverse lookup: integer note value → beat-base string constant.
+_BEAT_BASE_INT_TO_STRING = {v: k for k, v in _BEAT_BASE_STRING_TO_INT.items()}

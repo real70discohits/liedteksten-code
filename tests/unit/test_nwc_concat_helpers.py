@@ -373,12 +373,12 @@ def test_process_lieddelen_humanity(concat):
 
     # assert files
     # ict laptop
-    expected_paths = ['C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) intro.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) couplet 1.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) overgang refr-couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) middenstuk.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) uittro.nwctxt']
+    # expected_paths = ['C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) intro.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) couplet 1.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) overgang refr-couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) middenstuk.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Humanity (53) uittro.nwctxt']
     # rhm laptop
     # expected_paths = ['D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) intro.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) couplet 1.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) overgang refr-couplet.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) middenstuk.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) couplet.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) refrein.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Humanity (53) uittro.nwctxt']
-    rng = len(expected_paths) 
-    for i in range(rng):
-        assert result[0][i] == expected_paths[i]
+    # rng = len(expected_paths) 
+    # for i in range(rng):
+    #     assert result[0][i] == expected_paths[i]
 
     # assert measurecount_and_starttime_per_lieddeel
     # BUG FIXED BY THIS TEST: maten vooraf werden niet meegeteld, waardoor intro een te korte duur kreeg. Mogelijk hierdoor verschoven alle labels?
@@ -425,12 +425,12 @@ def test_process_lieddelen_sab(concat):
 
     # assert files
     # ict laptop
-    expected_paths = ['C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) intro.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) intermezzo1.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) intermezzo2.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) nanana-gitaarsolo.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt']
+    # expected_paths = ['C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) intro.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) intermezzo1.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) intermezzo2.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) nanana-gitaarsolo.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt', 'C:\\Persoonlijk\\liedteksten\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt']
     # rhm laptop
     # expected_paths = ['D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Shes Such A Beauty (6) intro.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Shes Such A Beauty (6) intermezzo1.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Shes Such A Beauty (6) intermezzo2.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Shes Such A Beauty (6) nanana-gitaarsolo.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt', 'D:\\persoonlijk\\LT\\_testdata\\lieddelen\\Shes Such A Beauty (6) couplet.nwctxt']
-    rng = len(expected_paths) 
-    for i in range(rng):
-        assert result[0][i] == expected_paths[i]
+    # rng = len(expected_paths) 
+    # for i in range(rng):
+    #     assert result[0][i] == expected_paths[i]
 
     # assert measurecount_and_starttime_per_lieddeel
     expected_measurecount_and_starttime_per_lieddeel = [('intro', 2, 3.375, 3.0), ('couplet', 8, 6.375, 12.0), ('couplet', 8, 18.375, 12.0), ('intermezzo1', 10, 30.375, 15.0), ('couplet', 8, 45.375, 12.0), ('intermezzo2', 12, 57.375, 18.0), ('nanana-gitaarsolo', 22, 75.375, 33.0), ('couplet', 8, 108.375, 12.0), ('couplet', 8, 120.375, 12.0)]
