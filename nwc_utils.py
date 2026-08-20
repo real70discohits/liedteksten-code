@@ -119,7 +119,7 @@ class NwcFile:
         current_staff = []
         in_header = True
 
-        for line in lines:
+        for line in lines:  # note: keep the order intact of processing lines from start to end, otherwise get_staff_by_index returns unpredictable results.
             line = line.rstrip('\n')
 
             if line.startswith(NWC_PREFIX_ADDSTAFF):
