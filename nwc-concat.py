@@ -25,6 +25,7 @@ Dependencies:
 
 import argparse
 import commentjson
+from datetime import date
 import sys
 from pathlib import Path
 import re
@@ -37,12 +38,270 @@ from constants import (NWC_PREFIX_ADDSTAFF, NWC_PREFIX_STAFF_PROPERTIES,
                         NWC_PREFIX_TIMESIG, NWC_PREFIX_TEMPO, NWC_PREFIX_BAR,
                         NWC_PREFIX_TEXT, NWC_END_MARKER, NWC_MARKER_LIEDSTART,
                         FOLDER_NWC, EXT_NWCTXT,
-                        EXT_JSONC, STAFF_NAME_BASS, STAFF_NAME_RITME,
+                        EXT_JSONC, STAFF_NAME_BASS, STAFF_NAME_RITME, STAFF_NAME_ZANG,
                         STAFF_NAME_BASE_DRUM, STAFF_NAME_SNARE_DRUM,
                         STAFF_NAME_HI_HAT, STAFF_NAME_CRASH_CYMBAL,
                         STAFF_NAME_RIDE_CYMBAL, STAFF_NAME_TOM_1,
                         STAFF_NAME_TOM_2, STAFF_NAME_FLOOR_TOM
                         )
+
+
+def _extract_staff_name(staff_lines):
+    """Extract the staff name from the |AddStaff|Name:"..." line.
+
+    Returns the name string (e.g. 'Bass') or None if not found.
+    """
+    for line in staff_lines:
+        if line.startswith(NWC_PREFIX_ADDSTAFF) and 'Name:"' in line:
+            try:
+                start = line.find('Name:"') + 6
+                end = line.find('"', start)
+                return line[start:end]
+            except (IndexError, ValueError):
+                pass
+    return None
+
+
+def _update_pipe_delimited_line(line, updates):
+    """Update key:value pairs in a pipe-delimited NWC line.
+
+    Args:
+        line: Original line such as '|PgSetup|StaffSize:16|Zoom:4|...'
+        updates: Dict of {key: value} pairs to set or replace.
+
+    Returns:
+        Modified line with updated and/or appended key:value pairs.
+    """
+    parts = line.split('|')
+    result_parts = parts[:2]          # empty string + command name (e.g. 'PgSetup')
+    updated_keys = set()
+
+    for part in parts[2:]:
+        if ':' in part:
+            key = part.split(':', 1)[0]
+            if key in updates:
+                result_parts.append(f'{key}:{updates[key]}')
+                updated_keys.add(key)
+            else:
+                result_parts.append(part)
+        else:
+            result_parts.append(part)
+
+    # Append keys that did not already exist on the line
+    for key, value in updates.items():
+        if key not in updated_keys:
+            result_parts.append(f'{key}:{value}')
+
+    return '|'.join(result_parts)
+
+
+def _trim_staff_to_liedstart(staff_lines, bars_to_remove=None):
+    """Remove pickup and vooraf measures from a single staff.
+
+    If the staff contains a 'liedstart' marker, the cut point is determined
+    by scanning backward from that marker to the nearest |Bar|.  The number
+    of |Bar markers in the removed section is returned as *bars_removed* so
+    that a sibling staff (e.g. Zang) without its own liedstart label can be
+    trimmed by the same amount.
+
+    If no liedstart marker is present but *bars_to_remove* is provided (from
+    the Bass staff), that many |Bar markers are skipped from the first Dur
+    element onward and the remainder is kept.
+
+    Staff-header lines (AddStaff, StaffProperties, Clef, TimeSig, Tempo, …)
+    that precede the first Dur are always preserved.
+
+    Args:
+        staff_lines:      List of raw lines for one staff.
+        bars_to_remove:   Optional int — number of bars to skip, obtained
+                          from a sibling staff that did have a liedstart
+                          marker.
+
+    Returns:
+        (trimmed_lines, bars_removed) where *bars_removed* is the number of
+        |Bar markers in the removed section, or None if nothing was trimmed.
+    """
+    # --- locate first Dur -------------------------------------------------
+    first_dur_idx = None
+    for i, line in enumerate(staff_lines):
+        if '|Dur:' in line:
+            first_dur_idx = i
+            break
+
+    if first_dur_idx is None:
+        return staff_lines, None                     # nothing to trim
+
+    # --- try liedstart-based trimming -------------------------------------
+    liedstart_idx = None
+    for i, line in enumerate(staff_lines):
+        if NWC_MARKER_LIEDSTART in line:
+            liedstart_idx = i
+            break
+
+    if liedstart_idx is not None:
+        # Find the bar that starts the liedstart measure
+        liedstart_bar_idx = None
+        for i in range(liedstart_idx - 1, -1, -1):
+            if staff_lines[i].startswith('|Bar|') or staff_lines[i] == '|Bar':
+                liedstart_bar_idx = i
+                break
+        if liedstart_bar_idx is None:
+            liedstart_bar_idx = liedstart_idx
+
+        if first_dur_idx >= liedstart_bar_idx:
+            return staff_lines, None                # first Dur already past liedstart
+
+        # Count bars in removed section
+        removed_section = staff_lines[first_dur_idx:liedstart_bar_idx]
+        bars_count = sum(1 for l in removed_section
+                         if l.startswith('|Bar|') or l == '|Bar')
+
+        result = staff_lines[:first_dur_idx] + staff_lines[liedstart_bar_idx:]
+        return result, bars_count
+
+    # --- no liedstart marker — use bars_to_remove -------------------------
+    if bars_to_remove is not None:
+        # Skip (bars_to_remove) bars, keep from the next one
+        target_bar = bars_to_remove + 1
+        bars_seen = 0
+        cut_idx = None
+        for i in range(first_dur_idx, len(staff_lines)):
+            if staff_lines[i].startswith('|Bar|') or staff_lines[i] == '|Bar':
+                bars_seen += 1
+                if bars_seen == target_bar:
+                    cut_idx = i
+                    break
+        if cut_idx is not None:
+            return staff_lines[:first_dur_idx] + staff_lines[cut_idx:], bars_to_remove
+
+    # No trimming possible
+    return staff_lines, None
+
+
+def create_print_sheet(output_nwctxt, build_folder, songtitle):
+    """Create a print-optimised .nwctxt containing only Bass and Zang.
+
+    Steps performed:
+      1. Parse the concatenated .nwctxt produced by nwc-concat.
+      2. Discard every staff except *Bass* and *Zang*.
+      3. Trim pickup + vooraf measures (Bass via liedstart label, Zang synced
+         by bar count from Bass).
+      4. Update |PgSetup| (StartingBar:1, BarNumbers:Boxed, PageNumbers:1).
+      5. Update |SongInfo| (Author:"s.koks", Lyricist:"", copyrights).
+      6. Write the result as '<stem> notenschrift bas- en zanglijn.nwctxt'.
+    """
+    print(f"\n🖨️  Generating print sheet (Bass + Zang)...")
+
+    header, staffs = parse_nwctxt(str(output_nwctxt))
+
+    # ---- 1. Filter staffs ---------------------------------------------------
+    keep_names = {STAFF_NAME_BASS, STAFF_NAME_ZANG}
+    staffs_to_keep = []          # list of (name, lines)
+    for staff_lines in staffs:
+        name = _extract_staff_name(staff_lines)
+        if name in keep_names:
+            staffs_to_keep.append((name, staff_lines))
+            print(f"  ✅ Keeping staff: {name}")
+        else:
+            print(f"  🗑️  Removing staff: {name or '(unknown)'}")
+
+    found_names = {n for n, _ in staffs_to_keep}
+    if STAFF_NAME_BASS not in found_names:
+        print(f"⚠️  Warning: Bass staff not found in concatenated file")
+    if STAFF_NAME_ZANG not in found_names:
+        print(f"⚠️  Warning: Zang staff not found in concatenated file")
+
+    # ---- 2. Trim: first pass — staffs with liedstart label ------------------
+    bars_removed = None
+    trimmed = {}                 # index → trimmed lines
+    for idx, (name, lines) in enumerate(staffs_to_keep):
+        has_liedstart = any(NWC_MARKER_LIEDSTART in line for line in lines)
+        if has_liedstart:
+            result, br = _trim_staff_to_liedstart(lines)
+            trimmed[idx] = result
+            if br is not None:
+                bars_removed = br
+            print(f"  ✂️  Trimmed {name}: removed {br} bar(s) via liedstart marker")
+
+    # ---- 3. Trim: second pass — staffs without label ------------------------
+    for idx, (name, lines) in enumerate(staffs_to_keep):
+        if idx not in trimmed:
+            result, br = _trim_staff_to_liedstart(lines, bars_removed)
+            trimmed[idx] = result
+            if bars_removed is not None:
+                print(f"  ✂️  Trimmed {name}: removed {bars_removed} bar(s) "
+                      f"(synced from Bass)")
+            else:
+                print(f"  ⚠️  Could not trim {name}: no liedstart marker and "
+                      f"no bar count from Bass")
+
+    kept_staffs = [trimmed[i] for i in range(len(staffs_to_keep))]
+
+    # ---- 4. Update header ---------------------------------------------------
+    current_year = date.today().year
+    pgsetup_updates = {
+        'StartingBar': '1',
+        'BarNumbers':  'Boxed',
+        'PageNumbers': '1',
+    }
+    songinfo_updates = {
+        'Author':     '"s.koks"',
+        'Lyricist':   '""',
+        'Copyright1': f'"Copyright © {current_year}"',
+        'Copyright2': '"All Rights Reserved"',
+    }
+
+    modified_header = []
+    pgsetup_found = False
+    songinfo_found = False
+
+    for line in header:
+        if line.startswith('|PgSetup|'):
+            modified_header.append(
+                _update_pipe_delimited_line(line, pgsetup_updates))
+            pgsetup_found = True
+        elif line.startswith('|SongInfo|'):
+            modified_header.append(
+                _update_pipe_delimited_line(line, songinfo_updates))
+            songinfo_found = True
+        else:
+            modified_header.append(line)
+
+    if not pgsetup_found:
+        default_pgsetup = (
+            '|PgSetup|StaffSize:16|Zoom:4|TitlePage:Y|JustifyVertically:Y|'
+            'PrintSystemSepMark:N|ExtendLastSystem:Y|DurationPadding:Y|'
+            'PageNumbers:1|StaffLabels:First System|BarNumbers:Boxed|'
+            'StartingBar:1'
+        )
+        modified_header.append(default_pgsetup)
+        print("  ℹ️  Added missing |PgSetup| line")
+
+    if not songinfo_found:
+        default_songinfo = (
+            f'|SongInfo|Title:"{songtitle}"|Author:"s.koks"|Lyricist:""|'
+            f'Copyright1:"Copyright © {current_year}"|'
+            f'Copyright2:"All Rights Reserved"'
+        )
+        modified_header.append(default_songinfo)
+        print("  ℹ️  Added missing |SongInfo| line")
+
+    # ---- 5. Build output filename ------------------------------------------
+    base_name = output_nwctxt.stem
+    print_filename = f"{base_name} notenschrift bas- en zanglijn.nwctxt"
+    print_output = Path(build_folder) / print_filename
+
+    # ---- 6. Write file -----------------------------------------------------
+    with open(print_output, 'w', encoding='utf-8') as f:
+        for line in modified_header:
+            f.write(line + '\n')
+        for staff_lines in kept_staffs:
+            for line in staff_lines:
+                f.write(line + '\n')
+        f.write(f'{NWC_END_MARKER}\n')
+
+    print(f"✅ Success! Created print sheet: {print_output}")
+    return print_output
 
 
 def _parse_timesig_value(line):
@@ -1187,6 +1446,9 @@ def main():
     parser.add_argument('songtitle', help='Title of the song')
     parser.add_argument('--keep-tempi', action='store_true',
                         help='Keep tempo indicators from all lieddelen (default: remove from lieddelen after first)')
+    parser.add_argument('--no-print-sheet', action='store_true',
+                        help='Skip generation of print-optimised sheet '
+                             '(Bass + Zang only). Default: print sheet is generated.')
     args = parser.parse_args()
 
     songtitle = args.songtitle
@@ -1246,6 +1508,12 @@ def main():
 
     update_liedtekst_tex_file(songtitle, tempo, timesig, song_folder)
     print(f"✅ Success! Updated liedtekst tempo and timesig in {songtitle}.tex")
+
+    # Generate print sheet (unless --no-print-sheet)
+    if not args.no_print_sheet:
+        create_print_sheet(output_nwctxt, paths.build_folder, songtitle)
+    else:
+        print("\n🖨️  Print sheet generation skipped (--no-print-sheet)")
 
 
 if __name__ == "__main__":

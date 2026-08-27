@@ -16,6 +16,7 @@ STAFF_NAME_TOM_1 = "Tom1"
 STAFF_NAME_TOM_2 = "Tom2"
 STAFF_NAME_FLOOR_TOM = "FloorTom"
 STAFF_NAME_DRUMS = "Drums"
+STAFF_NAME_ZANG = "Zang"
 
 
 # Staff names that pad-staffs.py leaves alone (not padded to match the Bass).
