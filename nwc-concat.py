@@ -95,6 +95,48 @@ def _update_pipe_delimited_line(line, updates):
     return '|'.join(result_parts)
 
 
+def _cleanup_first_measure(staff_lines):
+    """Remove initial bar, duplicate header lines and the liedstartlabel."""
+    # find first Dur 
+    first_dur_idx = None
+    for i, line in enumerate(staff_lines):
+        if '|Dur:' in line:
+            first_dur_idx = i
+            break
+
+    if first_dur_idx is None:
+        return staff_lines                     # nothing to trim
+
+    # Find all bars before first dur and remove them
+    for i in range(4, first_dur_idx, 1):
+        if staff_lines[i].startswith('|Bar|') or staff_lines[i] == '|Bar':
+            staff_lines = staff_lines[:i] + staff_lines[i+1:]
+        
+    first_bar_idx = None
+    for i in range(4, 50, 1):
+        if staff_lines[i].startswith('|Bar|') or staff_lines[i] == '|Bar':
+            first_bar_idx = i
+            break
+    if first_bar_idx is None:
+        raise ImportError("❌ No bar found in the first 50 lines of the file: is this really a music file?")
+
+    # Remove any duplicate key|signature (voortekens), from the first measure only.
+    first_key_idx = None
+    for i in range(0, first_bar_idx):
+        if staff_lines[i].startswith('|Key|Signature'):
+            if first_key_idx is None:
+                first_key_idx = i
+            else:
+                staff_lines = staff_lines[:i] + staff_lines[i+1:]
+
+    for i, line in enumerate(staff_lines):
+        if NWC_MARKER_LIEDSTART in line:
+            staff_lines = staff_lines[:i] + staff_lines[i+1:]
+            break
+    
+    return staff_lines
+
+
 def _trim_staff_to_liedstart(staff_lines, bars_to_remove=None):
     """Remove pickup and vooraf measures from a single staff.
 
@@ -139,6 +181,7 @@ def _trim_staff_to_liedstart(staff_lines, bars_to_remove=None):
             break
 
     if liedstart_idx is not None:
+
         # Find the bar that starts the liedstart measure
         liedstart_bar_idx = None
         for i in range(liedstart_idx - 1, -1, -1):
@@ -157,6 +200,10 @@ def _trim_staff_to_liedstart(staff_lines, bars_to_remove=None):
                         if l.startswith('|Bar|') or l == '|Bar')
 
         result = staff_lines[:first_dur_idx] + staff_lines[liedstart_bar_idx:]
+
+        # remove duplicate headerlines 
+        result = _cleanup_first_measure(result)
+
         return result, bars_count
 
     # --- no liedstart marker — use bars_to_remove -------------------------
@@ -172,7 +219,11 @@ def _trim_staff_to_liedstart(staff_lines, bars_to_remove=None):
                     cut_idx = i
                     break
         if cut_idx is not None:
-            return staff_lines[:first_dur_idx] + staff_lines[cut_idx:], bars_to_remove
+            staff_lines = staff_lines[:first_dur_idx] + staff_lines[cut_idx:]
+        # remove duplicate headerlines 
+        staff_lines = _cleanup_first_measure(staff_lines)
+
+        return staff_lines, bars_to_remove
 
     # No trimming possible
     return staff_lines, None
