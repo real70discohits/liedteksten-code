@@ -112,10 +112,10 @@ def _trim_staff_to_liedstart(staff_lines, bars_to_remove=None):
     that precede the first Dur are always preserved.
 
     Args:
-        staff_lines:      List of raw lines for one staff.
-        bars_to_remove:   Optional int — number of bars to skip, obtained
-                          from a sibling staff that did have a liedstart
-                          marker.
+        staff_lines:    List of raw lines for one staff.
+        bars_to_remove: Optional int — number of bars to skip, obtained
+                        from a sibling staff that did have a liedstart
+                        marker.
 
     Returns:
         (trimmed_lines, bars_removed) where *bars_removed* is the number of
@@ -154,7 +154,7 @@ def _trim_staff_to_liedstart(staff_lines, bars_to_remove=None):
         # Count bars in removed section
         removed_section = staff_lines[first_dur_idx:liedstart_bar_idx]
         bars_count = sum(1 for l in removed_section
-                         if l.startswith('|Bar|') or l == '|Bar')
+                        if l.startswith('|Bar|') or l == '|Bar')
 
         result = staff_lines[:first_dur_idx] + staff_lines[liedstart_bar_idx:]
         return result, bars_count
@@ -182,13 +182,13 @@ def create_print_sheet(output_nwctxt, build_folder, songtitle):
     """Create a print-optimised .nwctxt containing only Bass and Zang.
 
     Steps performed:
-      1. Parse the concatenated .nwctxt produced by nwc-concat.
-      2. Discard every staff except *Bass* and *Zang*.
-      3. Trim pickup + vooraf measures (Bass via liedstart label, Zang synced
-         by bar count from Bass).
-      4. Update |PgSetup| (StartingBar:1, BarNumbers:Boxed, PageNumbers:1).
-      5. Update |SongInfo| (Author:"s.koks", Lyricist:"", copyrights).
-      6. Write the result as '<stem> notenschrift bas- en zanglijn.nwctxt'.
+        1. Parse the concatenated .nwctxt produced by nwc-concat.
+        2. Discard every staff except *Bass* and *Zang*.
+        3. Trim pickup + vooraf measures (Bass via liedstart label, Zang synced
+        by bar count from Bass).
+        4. Update |PgSetup| (StartingBar:1, BarNumbers:Boxed, PageNumbers:1).
+        5. Update |SongInfo| (Author:"s.koks", Lyricist:"", copyrights).
+        6. Write the result as '<stem> notenschrift bas- en zanglijn.nwctxt'.
     """
     print(f"\n🖨️  Generating print sheet (Bass + Zang)...")
 
@@ -230,10 +230,10 @@ def create_print_sheet(output_nwctxt, build_folder, songtitle):
             trimmed[idx] = result
             if bars_removed is not None:
                 print(f"  ✂️  Trimmed {name}: removed {bars_removed} bar(s) "
-                      f"(synced from Bass)")
+                    f"(synced from Bass)")
             else:
                 print(f"  ⚠️  Could not trim {name}: no liedstart marker and "
-                      f"no bar count from Bass")
+                    f"no bar count from Bass")
 
     kept_staffs = [trimmed[i] for i in range(len(staffs_to_keep))]
 
@@ -245,6 +245,7 @@ def create_print_sheet(output_nwctxt, build_folder, songtitle):
         'PageNumbers': '1',
     }
     songinfo_updates = {
+        'Title':      f'"{songtitle}"',
         'Author':     '"s.koks"',
         'Lyricist':   '""',
         'Copyright1': f'"Copyright © {current_year}"',
@@ -1448,7 +1449,7 @@ def main():
                         help='Keep tempo indicators from all lieddelen (default: remove from lieddelen after first)')
     parser.add_argument('--no-print-sheet', action='store_true',
                         help='Skip generation of print-optimised sheet '
-                             '(Bass + Zang only). Default: print sheet is generated.')
+                            '(Bass + Zang only). Default: print sheet is generated.')
     args = parser.parse_args()
 
     songtitle = args.songtitle
