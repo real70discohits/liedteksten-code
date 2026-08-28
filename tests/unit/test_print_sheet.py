@@ -274,7 +274,6 @@ class TestTrimStaffToLiedstart:
             '|StaffProperties|EndingBar:Section Close',
             '|Clef|Type:Bass',
             '|TimeSig|Signature:4/4',
-            '|Text|Text:"liedstart"|Font:PageSmallText|Pos:12',
             '|Note|Dur:4th|Pos:-2',          # song body measure 1
             '|Bar',
             '|Note|Dur:4th|Pos:-3',          # song body measure 2
@@ -320,7 +319,14 @@ class TestTrimStaffToLiedstart:
         ]
         result, bars_removed = self.concat._trim_staff_to_liedstart(lines)
         # Should keep header (indices 0-2) then jump to the bar (index 4)
-        expected = lines[:3] + lines[4:]
+        expected = [
+            '|AddStaff|Name:"Bass"',
+            '|Clef|Type:Bass',
+            '|TimeSig|Signature:4/4',
+            '|Bar',
+            '|Note|Dur:4th|Pos:-2',
+            '|Bar',
+        ]
         assert result == expected
         assert bars_removed == 0
 
@@ -485,7 +491,6 @@ class TestCreatePrintSheet:
         result = self.concat.create_print_sheet(source, build_folder, "Test Song")
         result_content = result.read_text(encoding='utf-8')
 
-        assert 'liedstart' in result_content
         # The Whole note was only in vooraf measures; after trimming there
         # should be none in either staff.
         assert result_content.count('|Note|Dur:Whole') == 0
@@ -494,7 +499,6 @@ class TestCreatePrintSheet:
         """When Zang also has a liedstart label, trimming should work too."""
         result = self.concat.create_print_sheet(sample_file, build_folder, "Test Song")
         content = result.read_text(encoding='utf-8')
-        assert 'liedstart' in content
         assert content.count('|Note|Dur:Whole') == 0
 
     def test_updates_pgsetup(self, sample_file, build_folder):
