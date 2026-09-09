@@ -46,6 +46,78 @@ from constants import (NWC_PREFIX_ADDSTAFF, NWC_PREFIX_STAFF_PROPERTIES,
                         )
 
 
+# ---------------------------------------------------------------------------
+# Per-song configuratie (<songtitle> nwc-concat.jsonc)
+# ---------------------------------------------------------------------------
+
+_CONFIG_FILE_SUFFIX = 'nwc-concat'
+
+# Bekende configkeys van dit script. Onbekende keys leveren een warning op
+# (waarschijnlijk een typefout) maar breekt de run niet af.
+_KNOWN_CONFIG_KEYS = {'keep_tempi'}
+
+
+def get_song_config_filename(songtitle: str) -> str:
+    """Return de verwachte config-bestandsnaam, bv. 'MySong nwc-concat.jsonc'."""
+    return f"{songtitle} {_CONFIG_FILE_SUFFIX}{EXT_JSONC}"
+
+
+def load_song_config(songtitle: str, nwc_folder: Path) -> dict:
+    """Laad de optionele per-lied configuratie (platte keys, jsonc-formaat).
+
+    Locatie: <input_folder>/<songtitle>/nwc/<songtitle> nwc-concat.jsonc
+    De file hoeft niet te bestaan en mag leeg zijn (of alleen whitespace);
+    in beide gevallen wordt {} geretourneerd.
+
+    Fail-loudly: ongeldige JSON, een non-object als top-level waarde,
+    of een foutief value-type voor een bekende key stopt het script met
+    een heldere foutmelding en exit(1). Onbekende keys geven een warning.
+    """
+    config_path = nwc_folder / get_song_config_filename(songtitle)
+
+    if not config_path.exists():
+        return {}
+
+    raw = config_path.read_text(encoding='utf-8')
+    if not raw.strip():
+        return {}          # lege (of whitespace-only) file: geen overrides
+
+    try:
+        data = commentjson.loads(raw)
+    except (commentjson.JSONLibraryException, ValueError) as e:
+        print(f"❌ Error: ongeldige JSON in config file: {config_path}")
+        print(f"   {e}")
+        sys.exit(1)
+
+    if not isinstance(data, dict):
+        print(f"❌ Error: config file {config_path.name} moet een JSON-object "
+              f"bevatten, bv. {{ \"keep_tempi\": true }}, "
+              f"maar bevat een {type(data).__name__}.")
+        sys.exit(1)
+
+    if 'keep_tempi' in data and not isinstance(data['keep_tempi'], bool):
+        print(f"❌ Error: 'keep_tempi' in {config_path.name} moet true of false "
+              f"zijn, maar is: {data['keep_tempi']!r}")
+        sys.exit(1)
+
+    unknown = set(data.keys()) - _KNOWN_CONFIG_KEYS
+    if unknown:
+        print(f"⚠️  Warning: onbekende key(s) {sorted(unknown)} in "
+              f"{config_path.name} genegeerd "
+              f"(bekende keys: {sorted(_KNOWN_CONFIG_KEYS)})")
+
+    return {k: data[k] for k in _KNOWN_CONFIG_KEYS if k in data}
+
+
+def resolve_keep_tempi(cli_value, song_config: dict):
+    """Return (keep_tempi, bron) met prioriteit: commandline > config > default."""
+    if cli_value is not None:
+        return cli_value, 'commandline'
+    if 'keep_tempi' in song_config:
+        return song_config['keep_tempi'], 'config file'
+    return False, 'default'
+
+
 def _extract_staff_name(staff_lines):
     """Extract the staff name from the |AddStaff|Name:"..." line.
 
@@ -1498,7 +1570,8 @@ def main():
     parser.add_argument('songtitle', help='Title of the song')
     parser.add_argument('--keep-tempi', action=argparse.BooleanOptionalAction,
                     default=None,
-                    help='--keep-tempi: Behoud tempo-indicatoren van alle lieddelen. --no-keep-tempi: Verwijder tempo-indicatoren van lieddelen 2+ (default). Als niet opgegeven wordt lokale config gebruikt, als die bestaat.')
+                    help='--keep-tempi: Behoud tempo-indicatoren van alle lieddelen. --no-keep-tempi: Verwijder tempo-indicatoren van lieddelen 2+ (default). Als niet opgegeven wordt lokale config gebruikt, als die bestaat: '
+                             'zie "<songtitle> nwc-concat.jsonc" in de nwc folder van het lied.')
     parser.add_argument('--no-print-sheet', action='store_true',
                         help='Skip generation of print-optimised sheet '
                             '(Bass + Zang only). Default: print sheet is generated.')
@@ -1506,23 +1579,25 @@ def main():
 
     songtitle = args.songtitle
     keep_tempi = args.keep_tempi
-    if keep_tempi is None:
-        print("❌ Loading configfile not yet supported.")
-        sys.exit(1)
-        # keep_tempi = song_config.get('keep_tempi', False)  # hardcoded fallback
-
+    
     # Load and resolve path configuration
     paths = load_and_resolve_paths(songtitle)
 
     # Validate and setup folders
     song_folder, nwc_folder = validate_and_setup_folders(songtitle, paths)
 
+    # Per-lied configuratie laden en keep-tempi resolven
+    # (prioriteit: commandline > config file > hardcoded default)
+    song_config = load_song_config(songtitle, nwc_folder)
+    keep_tempi, keep_tempi_source = resolve_keep_tempi(args.keep_tempi, song_config)
+
     # Load song structure
     volgorde_lieddelen = load_song_structure(songtitle, nwc_folder)
 
     print(f"Processing song: {songtitle}")
     print(f"Sequence: {' - '.join(volgorde_lieddelen)}")
-    print(f"Tempo handling: {'Keep all tempi' if keep_tempi else 'Remove tempi from lieddelen 2+'}")
+    tempo_text = 'Keep all tempi' if keep_tempi else 'Remove tempi from lieddelen 2+'
+    print(f"Tempo handling: {tempo_text} (keep_tempi={keep_tempi}, source: {keep_tempi_source})")
 
     # Process all lieddelen
     (file_list, measurecount_and_starttime_per_lieddeel, chords_per_lieddeel, all_labels,
