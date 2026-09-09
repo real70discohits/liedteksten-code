@@ -481,10 +481,21 @@ def main():
                         choices=['left', 'right', 'traditional'],
                         default='left',
                         help='Tab orientation (default: left)')
-    parser.add_argument('-n', '--only', type=int, default=0,
-                        help='Generate only this variant (0 = all, -1 = only configured, 1-5 = specific variant)')
-
+    parser.add_argument(
+        '-n', '--only', type=str, default='0',
+        help=('Comma-separated list of variants to generate '
+              '(e.g. "-n 1,2,5"). 0 = all, -1 = only configured, '
+              '1-5 = specific variants (default: 0)')
+    )
     args = parser.parse_args()
+
+    # Parse the '--only' parameter: comma-separated list of integers.
+    try:
+        only_list = [int(x.strip()) for x in args.only.split(',') if x.strip()]
+    except ValueError:
+        parser.error(f"--only expects comma-separated integers, got: {args.only!r}")
+    if not only_list:
+        parser.error("--only requires at least one value")
 
     if args.large_print:
         print("Generating PDF's optimized for readability.")
@@ -526,21 +537,16 @@ def main():
     success = 0
     structuur_success = 0
 
-    # Helper to decide if a variant should be generated
+    # Helper to decide if a variant should be generated.
+    # only_list semantics: 0 = all, -1 = only configured, otherwise explicit list.
     def should_generate_variant(variant_num):
-        if only == 0:
-            return True  # Generate all variants
-        elif only == -1:
-            # Only generate if at least one song has config for this variant
-            return any(has_config_for_variant(song, paths.input_folder, variant_num, args.large_print, tab_orientation)
-                      for song in songtitles)
-        elif only == variant_num:
-            return True  # Generate only this specific variant
-        elif only == 1 and variant_num == 1:
-            # Special case: only < 2 includes variant 1
+        if only_list == [0]:
             return True
-        else:
-            return False
+        if only_list == [-1]:
+            return any(has_config_for_variant(song, paths.input_folder, variant_num,
+                                              args.large_print, tab_orientation)
+                       for song in songtitles)
+        return variant_num in only_list
 
     # If --only -1, show which variants will be generated per song
     if only == -1:
@@ -571,15 +577,12 @@ def main():
         else:
             print("\n⚠️  No configured variants found for selected songs.\n")
 
-    # Helper to get songs that should be processed for a given variant
     def get_songs_for_variant(variant_num):
-        if only == -1:
-            # Only return songs that have config for this variant
+        if only_list == [-1]:
             return [song for song in songtitles
-                    if has_config_for_variant(song, paths.input_folder, variant_num, args.large_print, tab_orientation)]
-        else:
-            # For other values of 'only', return all songs if variant should be generated
-            return songtitles if should_generate_variant(variant_num) else []
+                    if has_config_for_variant(song, paths.input_folder, variant_num,
+                                              args.large_print, tab_orientation)]
+        return songtitles if should_generate_variant(variant_num) else []
 
     # Generate variant 1: text only
     songs_v1 = get_songs_for_variant(1)
