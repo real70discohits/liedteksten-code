@@ -1496,8 +1496,9 @@ def main():
     enable_utf8_console()
     parser = argparse.ArgumentParser(description='Concatenate NoteWorthy Composer files')
     parser.add_argument('songtitle', help='Title of the song')
-    parser.add_argument('--keep-tempi', action='store_true',
-                        help='Keep tempo indicators from all lieddelen (default: remove from lieddelen after first)')
+    parser.add_argument('--keep-tempi', action=argparse.BooleanOptionalAction,
+                    default=None,
+                    help='--keep-tempi: Behoud tempo-indicatoren van alle lieddelen. --no-keep-tempi: Verwijder tempo-indicatoren van lieddelen 2+ (default). Als niet opgegeven wordt lokale config gebruikt, als die bestaat.')
     parser.add_argument('--no-print-sheet', action='store_true',
                         help='Skip generation of print-optimised sheet '
                             '(Bass + Zang only). Default: print sheet is generated.')
@@ -1505,6 +1506,10 @@ def main():
 
     songtitle = args.songtitle
     keep_tempi = args.keep_tempi
+    if keep_tempi is None:
+        print("❌ Loading configfile not yet supported.")
+        sys.exit(1)
+        # keep_tempi = song_config.get('keep_tempi', False)  # hardcoded fallback
 
     # Load and resolve path configuration
     paths = load_and_resolve_paths(songtitle)
