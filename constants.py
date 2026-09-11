@@ -66,7 +66,7 @@ NWC_DUR_SIXTEENTH = "16th"
 NWC_DUR_THIRTYSECOND = "32nd"
 
 # NWC duration → quarter-note value lookup
-NWC_DURATION_MAP = {
+NWC_DURATION_MAP_QN = {
     NWC_DUR_WHOLE: 4.0,
     NWC_DUR_HALF: 2.0,
     NWC_DUR_QUARTER: 1.0,

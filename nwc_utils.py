@@ -12,7 +12,7 @@ from constants import (
     NWC_PREFIX_ADDSTAFF, NWC_END_MARKER,
     NWC_BEAT_BASE_EIGHTH, NWC_BEAT_BASE_QUARTER,
     NWC_BEAT_BASE_QUARTER_DOTTED, NWC_BEAT_BASE_HALF,
-    NWC_DURATION_MAP,
+    NWC_DURATION_MAP_QN,
 )
 
 
@@ -285,7 +285,7 @@ def parse_duration(line: str) -> float:
         is_dotted = ',Dotted' in line
         is_dbl_dotted = ',DblDotted' in line
 
-        base_duration = NWC_DURATION_MAP.get(dur_base, 0.0)
+        base_duration = NWC_DURATION_MAP_QN.get(dur_base, 0.0)
 
         if base_duration == 0.0:
             return 0.0

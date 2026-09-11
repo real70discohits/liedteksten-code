@@ -8,13 +8,14 @@ Usage:
 
 import sys
 import re
+from fractions import Fraction
 from pathlib import Path
 from console_utf8 import enable_utf8_console
 from pathconfig import load_and_resolve_paths
 from nwc_utils import NwcFile, calc_timing, extract_tempo_from_rawdata 
 from constants import (STAFF_NAME_BASS, STAFF_NAME_ZANG, NWC_PREFIX_BAR,
-                       NWC_PREFIX_NOTE, NWC_PREFIX_REST, NWC_PREFIX_TEXT,
-                       NWC_MARKER_LIEDSTART)
+                        NWC_PREFIX_NOTE, NWC_PREFIX_REST, NWC_PREFIX_TEXT,
+                        NWC_MARKER_LIEDSTART)
 
 
 def parse_song_info(content):
@@ -118,10 +119,46 @@ def count_vooraf_measures_by_filepath(filepath):
 
 
 def count_vooraf_measures(staff_content):
-    """Count measures before the 'liedstart' marker.
+    """Count (full) measures before the 'liedstart' marker.
 
     Returns the number of measures before the song actually starts,
     excluding the begintel (first measure with single beat).
+
+    Args:
+        staff_content: a full or partial staff from an .nwctxt file.
+    """
+    # Find the position of "liedstart" marker
+    lines = staff_content.split('\n')
+    liedstart_index = -1
+
+    for i, line in enumerate(lines):
+        # todo: find the timesig: e.g. 3/4, then we have a criterion for min duration to count as a vooraf measure 
+        if line.strip().startswith(f'{NWC_PREFIX_TEXT}Text:"{NWC_MARKER_LIEDSTART}"'):
+            liedstart_index = i
+            break
+
+    if liedstart_index == -1:
+        # No liedstart marker found, return 0
+        return 0
+
+    # Collect all lines before liedstart
+    lines_vooraf = ""
+    for i in range(liedstart_index):
+        lines_vooraf += '\n'+ lines[i]
+
+    # Count real measures in that vooraf part
+    result = count_measures_in_staff(lines_vooraf, 2, 4)    # todo: see previous remark: we should not hardcode but deduce these minimum values.
+    return result
+
+
+def _count_vooraf_measures(staff_content):  # NOTE: ! OBSOLETE !
+    """Count (full) measures before the 'liedstart' marker.
+
+    Returns the number of measures before the song actually starts,
+    excluding the begintel (first measure with single beat).
+
+    Args:
+        staff_content: a full or partial staff from an .nwctxt file.
     """
     # Find the position of "liedstart" marker
     lines = staff_content.split('\n')
@@ -172,45 +209,266 @@ def find_section_in_line(startswith, line):
     return result
 
 
-def map_lyrics_to_measures(staff_content, syllables):
+def map_lyrics_to_measures(staff_content, syllables, measure_offset = 0):
     """Map lyrics syllables to measure numbers.
 
     Returns a dict: {measure_number: [syllables]}
+
+    Args:
+        staff_content: nwctxt contents of a staff
+        syllables: array of all text syllables, extracted from that same nwctxt file
+        measure_offset: means for correcting the measure number, e.g. in case the first measures should be ignored. 
+            Pass a negative number if you want to subtract.
     """
     measure_map = {}
-    current_measure = 0
+    current_measure = measure_offset - 1
     syllable_index = 0
     skip_next_note = False
 
-    # Split staff into elements
-    elements = staff_content.split('\n')
+    # Split staff into lines
+    lines = staff_content.split('\n')
 
-    for element in elements:
-        element = element.strip()
+    # For easy processing per measure, construct an array of measures: each entry contains all lines of a single array.
+    measures = to_measure_array(lines)  # any duration > 0 counts in
 
-        if element.startswith(NWC_PREFIX_BAR):
+    for measure in measures:
+        if duration_is_above_minimum(measure):
             current_measure += 1
+            if current_measure == 0:    # we skip measure 0! So, e.g.: -2, -1, 1, 2, 3, 4 ...
+                current_measure = 1
             if current_measure not in measure_map:
                 measure_map[current_measure] = []
-        elif element.startswith(NWC_PREFIX_NOTE) and syllable_index < len(syllables):
-            if skip_next_note:
-                if multiple_notes_count_as_one(element):
-                    skip_next_note = True
-                else:
-                    skip_next_note = False
-            else:
-                # Assign next syllable to current measure
-                if current_measure not in measure_map:
-                    measure_map[current_measure] = []
-                measure_map[current_measure].append(syllables[syllable_index])
-                syllable_index += 1
-                if multiple_notes_count_as_one(element):
-                    skip_next_note = True
-        elif element.startswith(NWC_PREFIX_REST):
-            # Skip rests - no syllable assignment
-            pass
+            for line in measure:    
+                line = line.strip()
+                if line.startswith(NWC_PREFIX_NOTE) and syllable_index < len(syllables):
+                    if skip_next_note:
+                        if multiple_notes_count_as_one(line):
+                            skip_next_note = True
+                        else:
+                            skip_next_note = False
+                    else:
+                        # Assign next syllable to current measure
+                        if current_measure not in measure_map:
+                            measure_map[current_measure] = []
+                        measure_map[current_measure].append(syllables[syllable_index])
+                        syllable_index += 1
+                        if multiple_notes_count_as_one(line):
+                            skip_next_note = True
+                elif line.startswith(NWC_PREFIX_REST):
+                    # Skip rests - no syllable assignment
+                    pass
 
     return measure_map
+
+
+def to_measure_array(lines, include_bar_marker=False):
+    """Split a list of staff lines into groups per measure.
+
+    Groups everything between two '|Bar ...' lines into one sublist.
+    Lines before the first bar (staff header lines such as |AddStaff|,
+    plus any pickup notes) end up in a separate leading group, so that
+    measure 1 of the result corresponds to the first real measure.
+
+    Args:
+        lines: List of raw lines for one staff (e.g. from
+                NwcFile(...).get_staff_by_name(STAFF_NAME_BASS).get_content().split('\n')).
+        include_bar_marker: If True, each measure group starts with its own
+                '|Bar ...' line (useful when the bar's Style/Repeat attributes
+                matter). If False (default), the bar marker is used purely as
+                a separator.
+
+    Returns:
+        List of lists of lines. result[0] contains the pre-first-bar lines
+        (header and/or pickup); result[1:] are the measures in order.
+        Trailing empty lines are dropped; a trailing bar with no content
+        after it yields no extra group.
+    """
+    BAR_PREFIXES = ('|Bar|', '|Bar')
+
+    measures = []
+    current = []
+
+    for line in lines:
+        is_bar = line.startswith('|Bar|') or line == '|Bar'
+        if is_bar:
+            # Start a new measure; keep the previous group if non-empty
+            # (skip trailing empties caused by consecutive bars)
+            if current:
+                measures.append(current)
+            current = [line] if include_bar_marker else []
+        else:
+            current.append(line)
+
+    if current:
+        measures.append(current)
+
+    return measures
+
+
+# Naast (Dbl)Dotted kent NWC nog meer duur-gerelateerde modifiers, o.a. Triplet=First/Mid/End en Grace.
+# Die hebben geen simpele factor (triplet = ×2/3 verdeeld over noten, grace is kort zonder vaste duur).
+DURATION_MODIFIERS = {'Dotted': 1.5, 'DblDotted': 1.75}     
+
+
+def get_single_duration_struct(line):
+    """Extracts (durationName, factor) from a single line (from an NWC (.nwctxt) file).
+    
+    * unittested *
+
+    Example inputs/outputs:
+        1. |Rest|Dur:4th                                   => ("4th", 1.0)
+        2. |Note|Dur:8th|Pos:0|Opts:Stem=Down,Beam=First   => ("8th", 1.0)
+        3. |Rest|Dur:4th|Opts:Stem=Down                    => ("4th", 1.0)
+        4. |Note|Dur:4th,Staccato|Pos:-4|Opts:Stem=Up      => ("4th", 1.0)
+        5. |Note|Dur:4th,Dotted|Pos:-4|Opts:Stem=Up        => ("4th", 1.5)
+        6. |Note|Dur:8th,Slur|Pos:-4|Opts:Stem=Up          => ("8th", 1.0)
+        7. |Note|Dur:Half,DblDotted|Pos:-4^                => ("Half", 1.75)
+        8. |Note|Dur:8th|Pos:1|Opts:Stem=Down,Beam=First   => ("8th", 1.0)
+
+    """
+    match = re.search(r'Dur:([^|]*)', line)
+    if match:
+        dur, *mods = match.group(1).split(',')
+        factor = 1.0
+        for m in mods:
+            factor *= DURATION_MODIFIERS.get(m, 1.0)
+        struct = (dur, factor)
+        return struct
+    else:
+        return None
+
+
+DURATIONS = {
+    'Whole':  Fraction(1),
+    'Half':   Fraction(1, 2),
+    '4th':    Fraction(1, 4),
+    '8th':    Fraction(1, 8),
+    '16th':   Fraction(1, 16),
+    '32nd':   Fraction(1, 32),
+}
+
+
+def convert_duration(dur, to_base_note):
+    """Converts a duration like 'Half', 'Whole' '4th' to a duration in terms of the desired base_note.
+    So "Give me the duration of 'Half' in quarternotes (4)" should return 2.
+
+    Args:
+        dur: 'Whole', 'Half', '4th', '8th', '16th', '32nd'
+        to_base_note: (int) 1, 2, 4, 8, 16, 32 where 1 stands for Whole, 2 for Half etc.
+
+    Examples:
+            |  input        |   output
+        1.  | '4th', 4      |   1.0
+        2.  | '8th', 8      |   1.0
+        3.  | '16th', 16    |   1.0
+        4.  | '32nd', 32    |   1.0
+        5.  | 'Half', 2     |   1.0
+        6.  | 'Whole', 1    |   1.0
+        7.  | '8th', 4      |   0.5
+        8.  | 'Half', 4     |   2.0
+        9.  | 'Half', 16    |   8.0
+        10. | '32nd', 8     |   0.25
+    """
+    if dur not in DURATIONS:
+        raise ValueError(f"Unknown duration: {dur!r}")
+    if to_base_note <= 0:
+        raise ValueError(f"to_base_note must be positive, got {to_base_note}")
+
+    return float(Fraction(to_base_note) * DURATIONS[dur])
+
+
+def get_duration_of_lines(lines, base_note):
+    """Determine for a set of nwctxt-lines its summed duration, in quarternotes.
+
+    Args:
+        lines: any set of lines from an .nwctxt file.
+        base_note = the note in which to express the duration (int) e.g. {1, 2, 4, 8, 16, 32, 64} for resp. whole, half, quarter, eighth etc.
+    """
+    # trick: call minimum-function with extremely high minimum: then the total
+    # duration is always calculated in the second result
+    return _duration_is_above_minimum(lines, 99999, base_note)[1]
+
+
+def duration_is_above_minimum(lines, minimum_duration = None, minimum_duration_base = None):
+    """Determine for a set of nwctxt-lines that its summed duration is more than a desired minimum.
+
+    As a side effect, the total duration is calculated, but only when it's less than the required minimum.
+    
+    Args:
+        lines: any set of lines, but the commonest case is all lines of a single measure 
+        minimum_duration = for a set of lines with less summed duration than the minimum, false is returned.
+        minimum_duration_base = unit of the duration (int) e.g. {1, 2, 4, 8, 16, 32, 64} for resp. whole, half, quarter, eighth etc.
+    """
+    return _duration_is_above_minimum(lines, minimum_duration, minimum_duration_base)[0]
+
+
+def _duration_is_above_minimum(lines, minimum_duration = None, minimum_duration_base = None):
+    """Determine for a set of nwctxt-lines that its summed duration is more than a desired minimum.
+
+    As a side effect, the total duration is calculated, but only when it's less than the required minimum.
+    
+    Args:
+        lines: any set of lines, but the commonest case is all lines of a single measure 
+        minimum_duration = for a set of lines with less summed duration than the minimum, false is returned.
+        minimum_duration_base = unit of the duration (int) e.g. {1, 2, 4, 8, 16, 32, 64} for resp. whole, half, quarter, eighth etc.
+    """
+    # Because we check >=, for 'any duration we cannot use 0 because then no-duration would pass as well. Therefor, we set min_duration to a fraction above 0.
+    if minimum_duration is None:
+        minimum_duration = 0.0001
+        minimum_duration_base = 4
+        
+    total_meas_dur_in_base = 0  # total counted duration, expressed in base
+    for line in lines:
+        if '|Dur:' in line:
+            dur = get_single_duration_struct(line)
+            dur_in_base = convert_duration(dur[0], minimum_duration_base)
+            total_meas_dur_in_base += dur_in_base
+            if total_meas_dur_in_base > minimum_duration:
+                return True, 0.0
+    return False, total_meas_dur_in_base
+
+
+def count_measures_in_staff(staff_content, minimum_duration = None, minimum_duration_base = None):
+    """Count the number of 'real' measures in a staff: if no value is given in parameter minimum_duration,
+    a bar is 'real' if it contains any duration; else the minimum_duration reckoned with.
+    
+    Args:
+            staff_content: can be partial. Obtain by NwcFile(file_path).get_staff_by_name(STAFF_NAME_BASS).get_content() > lines = %..split('\n')
+            minimum_duration = measures with less duration than the minimum are not counted.
+            minimum_duration_base = unit of the duration (int) e.g. {1, 2, 4, 8, 16, 32, 64} for resp. whole, half, quarter, eighth etc.
+    """
+
+    # NOTE: a value for minimum-duration is given by the timesig, but it can 
+    # change during the song so it requires a full mapping of measures to timesig
+    # ranges so we don't do that here and leave that up to the caller.
+
+    # Because we check >=, for 'any duration we cannot use 0 because then no-duration would pass as well. Therefor, we set min_duration to a fraction above 0.
+    if minimum_duration is None:
+        minimum_duration = 0.0001
+        minimum_duration_base = 4
+
+    # Init
+    lines = staff_content.split('\n')
+    all_lines_in_measure = []
+    total_measures = 0
+
+    # Walk the lines
+    for line in lines:
+        # Check for Bar marker
+        if line.startswith('|Bar|') or line == '|Bar':      # new bar found
+            # add current (=old) bar to measure_count, if it has duration
+            if duration_is_above_minimum(all_lines_in_measure, minimum_duration, minimum_duration_base):
+                total_measures += 1                         
+            # Reset lines array, because we enter a new measure
+            all_lines_in_measure = []
+        else:
+            all_lines_in_measure.append(line)
+
+    # Count the last measure if it has duration
+    if all_lines_in_measure and duration_is_above_minimum(all_lines_in_measure, minimum_duration, minimum_duration_base):
+        total_measures += 1
+
+    return total_measures
 
 
 def analyze_nwctxt(file_path):
@@ -226,6 +484,9 @@ def analyze_nwctxt(file_path):
     header_content = '\n'.join(nwc.header_lines)
     title = parse_song_info(header_content)
 
+    if not title:
+        print("⚠️ analyze_nwctxt(): title is missing from nwctxt file.")
+
     file_name = file_path.stem
 
     # Get Bass staff to count total measures
@@ -235,16 +496,25 @@ def analyze_nwctxt(file_path):
         return None
 
     bass_content = bass_staff.get_content()
-    total_bars = blindly_count_barmarkers_in_staff(bass_content)
+
+    # count measures that have duration >= minimum_duration (this can include vooraf- and begintel measures!)
+    total_meas_with_min_dur = count_measures_in_staff(bass_content) #, minimum_duration=1, minimum_duration_base=4)
+
+    # Determine how many measures at the beginning to discount.
+    # The 'at the beginning' is only to clarify some semantics, e.g. when passing the
+    # value to the lyrics mapper because measures at the end then don't matter much.
+    meas_at_beginning_to_subtract_count = 0
 
     # Detect begintel
     has_begintel = detect_begintel(bass_content)
-
-    # Adjust total if begintel exists
-    total_measures = total_bars if has_begintel else total_bars + 1    # BUG: this may include empty or incomplete measures
+    meas_at_beginning_to_subtract_count += 1 if has_begintel else 0
 
     # Count vooraf measures
-    vooraf = count_vooraf_measures(bass_content)
+    vooraf_meas_count = count_vooraf_measures(bass_content)
+    meas_at_beginning_to_subtract_count += vooraf_meas_count
+
+    # Now we can calculate the netto total ('netto' i.d. count requires min duration)
+    netto_total_measures = total_meas_with_min_dur - meas_at_beginning_to_subtract_count
 
     # Find Zang staff
     zang_staff = nwc.get_staff_by_name(STAFF_NAME_ZANG)
@@ -260,15 +530,15 @@ def analyze_nwctxt(file_path):
         syllables = parse_lyric_text(zang_content)
 
         # Map lyrics to measures
-        measure_map = map_lyrics_to_measures(zang_content, syllables)
+        measure_map = map_lyrics_to_measures(zang_content, syllables, -meas_at_beginning_to_subtract_count)
 
     return {
         'title': title,
         'file': file_path.name,
         'folder': file_path.parent,
-        'total_measures': total_measures,
+        'total_measures': netto_total_measures,
         'has_begintel': has_begintel,
-        'vooraf': vooraf,
+        'vooraf': vooraf_meas_count,
         'measure_map': measure_map,
     }
 
@@ -294,8 +564,8 @@ def analyze_complete_song(file_path, tempo: tuple[int, int] | None =None, timesi
         - total_bars: Raw bar count from file
         - has_begintel: Boolean - true if pickup measure exists
         - vooraf: Number of count-in measures before "liedstart"
-        - total_measures: Corrected total (excluding begintel and vooraf)
-        - total_duration: Duration in seconds (excluding vooraf, or None if tempo/timesig missing)
+        - total_measures: netto count of non-empty measures (and excluding begintel and vooraf measures)
+        - total_duration: Duration in seconds (only approximately, excluding vooraf, or None if tempo/timesig missing)
         - measure_map: Dict mapping measure numbers to lyrics (renumbered: maat 1 = liedstart)    => good to know! The measure with the 'liedstart' label gets '1', so this should become my standard numbering.
 
         Returns None if analysis fails.
@@ -333,29 +603,14 @@ def analyze_complete_song(file_path, tempo: tuple[int, int] | None =None, timesi
                         except (IndexError, ValueError):
                             pass
 
-    # Calculate corrected total measures (excluding begintel and vooraf)
-    total_measures_corrected = basic_analysis['total_measures'] - basic_analysis['vooraf']    # BUG: note that basic_analysis[total_measures] doesn't reckon with empty or incomplete measures. This value is used for calculating songduration so that will generally render a too hogh value. 
-
     # Calculate total duration (excluding vooraf measures)
     total_duration = None
     if tempo and timesig:
         try:
             _, measure_duration, _, _ = calc_timing(tempo, timesig)
-            # Duration = only the 'real' measures (excluding vooraf)
-            total_duration = total_measures_corrected * measure_duration    # BUG: see previous bug, that's why the result of this calculation can't be trusted either.
+            total_duration = basic_analysis['total_measures'] * measure_duration    # BUG: currently, timesig/tempo variations are not reckoned with.
         except (ValueError, ZeroDivisionError):
             total_duration = None
-
-    # Renumber measure_map so that the measure containing "liedstart" becomes maat 1
-    # Subtract vooraf from all measure numbers
-    measure_map_renumbered = {}
-    vooraf = basic_analysis['vooraf']
-    if basic_analysis['measure_map']:
-        for original_maat_num, syllables in basic_analysis['measure_map'].items():
-            # New measure number = original - vooraf
-            # This makes the measure containing "liedstart" become maat 1
-            new_maat_num = original_maat_num - vooraf
-            measure_map_renumbered[new_maat_num] = syllables
 
     # Build complete analysis result
     return {
@@ -366,10 +621,10 @@ def analyze_complete_song(file_path, tempo: tuple[int, int] | None =None, timesi
         'timesig': timesig,
         'total_bars': blindly_count_barmarkers_in_staff(NwcFile(file_path).get_staff_by_name(STAFF_NAME_BASS).get_content()),
         'has_begintel': basic_analysis['has_begintel'],
-        'vooraf': vooraf,
-        'total_measures': total_measures_corrected,
-        'total_duration': total_duration,
-        'measure_map': measure_map_renumbered,
+        'vooraf': basic_analysis['vooraf'],
+        'total_measures': basic_analysis['total_measures'],
+        'total_duration': total_duration,               # BUG: see above
+        'measure_map': basic_analysis['measure_map']
     }
 
 
@@ -419,7 +674,7 @@ def write_analysis_to_file(songtitle, nwctxt_file_path,  tempo=None, timesig=Non
         tempo: Optional tempo (BPM) for complete analysis
         timesig: Optional time signature (e.g. "4/4") for complete analysis
         use_complete_analysis: If True (default), use analyze_complete_song() with corrected totals.
-                              If False, use legacy analyze_nwctxt() with raw data.
+                                If False, use legacy analyze_nwctxt() with raw data.
 
     Returns:
         tuple: (Path to created analysis file or None, analysis dict or None)

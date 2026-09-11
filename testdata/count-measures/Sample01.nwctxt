@@ -1,0 +1,233 @@
+!NoteWorthyComposer(2.751)
+|Editor|ActiveStaff:3|CaretIndex:15|CaretPos:0
+|SongInfo|Title:"Sample"|Author:"s.koks"|Lyricist:""|Copyright1:"Copyright © 2026"|Copyright2:"All Rights Reserved"
+|PgSetup|StaffSize:16|Zoom:4|TitlePage:Y|JustifyVertically:Y|PrintSystemSepMark:N|ExtendLastSystem:N|DurationPadding:Y|PageNumbers:1|StaffLabels:First System|BarNumbers:Plain|StartingBar:1
+|Font|Style:StaffItalic|Typeface:"Times New Roman"|Size:10|Bold:Y|Italic:Y|CharSet:0
+|Font|Style:StaffBold|Typeface:"Times New Roman"|Size:8|Bold:Y|Italic:N|CharSet:0
+|Font|Style:StaffLyric|Typeface:"Times New Roman"|Size:7.2|Bold:N|Italic:N|CharSet:0
+|Font|Style:PageTitleText|Typeface:"Times New Roman"|Size:24|Bold:Y|Italic:N|CharSet:0
+|Font|Style:PageText|Typeface:"Times New Roman"|Size:12|Bold:N|Italic:N|CharSet:0
+|Font|Style:PageSmallText|Typeface:"Times New Roman"|Size:8|Bold:N|Italic:N|CharSet:0
+|Font|Style:User1|Typeface:"Times New Roman"|Size:8|Bold:N|Italic:N|CharSet:0
+|Font|Style:User2|Typeface:"Times New Roman"|Size:8|Bold:N|Italic:N|CharSet:0
+|Font|Style:User3|Typeface:"Times New Roman"|Size:8|Bold:N|Italic:N|CharSet:0
+|Font|Style:User4|Typeface:"Times New Roman"|Size:8|Bold:N|Italic:N|CharSet:0
+|Font|Style:User5|Typeface:"Times New Roman"|Size:8|Bold:N|Italic:N|CharSet:0
+|Font|Style:User6|Typeface:"Times New Roman"|Size:8|Bold:N|Italic:N|CharSet:0
+|PgMargins|Left:1.27|Top:1.27|Right:1.27|Bottom:1.27|Mirror:N
+|AddStaff|Name:"Bass"|Label:"Bass"|LabelAbbr:"BASS"|Group:"Standard"
+|StaffProperties|EndingBar:Section Close|Visible:Y|BoundaryTop:16|BoundaryBottom:16|Lines:5|WithNextStaff:ConnectBars|Color:Default
+|StaffProperties|Muted:N|Volume:127|StereoPan:64|Device:0|Channel:1
+|StaffInstrument|Name:"Electric Bass (finger)"|Patch:33|Trans:0|DynVel:10,30,45,60,75,92,108,127
+|Clef|Type:Bass|OctaveShift:Octave Down
+|TimeSig|Signature:4/4
+|Text|Text:"intro"|Font:PageSmallText|Pos:13
+|Key|Signature:C|Tonic:C
+|Tempo|Tempo:144|Pos:8
+|Rest|Dur:4th
+|Bar
+|Rest|Dur:Whole
+|Bar
+|Rest|Dur:Whole
+|Bar
+|Text|Text:"liedstart"|Font:PageSmallText|Pos:-8
+|Rest|Dur:Whole
+|Bar
+|AddStaff|Name:"Zang"|Label:"Zang"|LabelAbbr:"ZANG"|Group:"Standard"
+|StaffProperties|EndingBar:Section Close|Visible:Y|BoundaryTop:16|BoundaryBottom:16|Lines:5|WithNextStaff:ConnectBars|Color:Default
+|StaffProperties|Muted:N|Volume:60|StereoPan:64|Device:0|Channel:2
+|StaffInstrument|Trans:0|DynVel:10,30,45,60,75,92,108,127
+|Clef|Type:Treble
+|TimeSig|Signature:4/4
+|Key|Signature:C|Tonic:C
+|Rest|Dur:4th
+|Bar
+|Rest|Dur:Whole
+|Bar
+|Rest|Dur:Whole
+|Bar
+|Rest|Dur:Whole
+|Bar
+|AddStaff|Name:"Crash"|Label:"Crash"|LabelAbbr:"CRASH"|Group:"drums"
+|StaffProperties|EndingBar:Section Close|Visible:Y|BoundaryTop:12|BoundaryBottom:10|Lines:5|WithNextStaff:ConnectBars|Color:Default
+|StaffProperties|Muted:N|Volume:127|StereoPan:64|Device:0|Channel:10
+|StaffInstrument|Trans:48|DynVel:10,30,45,60,75,92,108,127
+|User|DrumStaff.fso|Pos:5|Class:StaffSig
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Clef|Type:Percussion
+|TimeSig|Signature:4/4
+|Rest|Dur:4th
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Rest|Dur:Whole
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Rest|Dur:Whole
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Rest|Dur:Whole
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|AddStaff|Name:"HiHat"|Label:"Hi-Hat"|LabelAbbr:"HH"|Group:"drums"
+|StaffProperties|EndingBar:Section Close|Visible:Y|BoundaryTop:16|BoundaryBottom:14|Lines:5|WithNextStaff:ConnectBars|Color:Default
+|StaffProperties|Muted:N|Volume:127|StereoPan:64|Device:0|Channel:10
+|StaffInstrument|Trans:48|DynVel:10,30,45,60,75,92,108,127
+|User|DrumStaff.fso|Pos:5|Class:StaffSig
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Clef|Type:Percussion
+|TimeSig|Signature:4/4
+|Rest|Dur:4th
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Note|Dur:4th|Pos:5x|Opts:Stem=Up
+|Rest|Dur:4th
+|Note|Dur:4th|Pos:5x|Opts:Stem=Up
+|Rest|Dur:4th
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Note|Dur:4th|Pos:5x|Opts:Stem=Up
+|Note|Dur:4th|Pos:5x|Opts:Stem=Up
+|Note|Dur:4th|Pos:5x|Opts:Stem=Up
+|Note|Dur:4th|Pos:5x|Opts:Stem=Up
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Rest|Dur:Whole
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|AddStaff|Name:"Ride"|Label:"Ride"|LabelAbbr:"RIDE"|Group:"drums"
+|StaffProperties|EndingBar:Section Close|Visible:Y|BoundaryTop:12|BoundaryBottom:10|Lines:5|WithNextStaff:ConnectBars|Color:Default
+|StaffProperties|Muted:N|Volume:127|StereoPan:64|Device:0|Channel:10
+|StaffInstrument|Trans:48|DynVel:10,30,45,60,75,92,108,127
+|User|DrumStaff.fso|Pos:5|Class:StaffSig
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Clef|Type:Percussion
+|TimeSig|Signature:4/4
+|Rest|Dur:4th
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Rest|Dur:Whole
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Rest|Dur:Whole
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Rest|Dur:Whole
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|AddStaff|Name:"Tom1"|Label:"Tom1"|LabelAbbr:"TOM1"|Group:"drums"
+|StaffProperties|EndingBar:Section Close|Visible:Y|BoundaryTop:10|BoundaryBottom:10|Lines:5|WithNextStaff:ConnectBars|Color:Default
+|StaffProperties|Muted:N|Volume:127|StereoPan:64|Device:0|Channel:10
+|StaffInstrument|Trans:48|DynVel:10,30,45,60,75,92,108,127
+|User|DrumStaff.fso|Pos:5|Class:StaffSig
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Clef|Type:Percussion
+|TimeSig|Signature:4/4
+|Rest|Dur:4th
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Rest|Dur:Whole
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Rest|Dur:Whole
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Rest|Dur:Whole
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|AddStaff|Name:"Tom2"|Label:"Tom2"|LabelAbbr:"TOM2"|Group:"drums"
+|StaffProperties|EndingBar:Section Close|Visible:Y|BoundaryTop:10|BoundaryBottom:10|Lines:5|WithNextStaff:ConnectBars|Color:Default
+|StaffProperties|Muted:N|Volume:127|StereoPan:64|Device:0|Channel:10
+|StaffInstrument|Trans:48|DynVel:10,30,45,60,75,92,108,127
+|User|DrumStaff.fso|Pos:5|Class:StaffSig
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Clef|Type:Percussion
+|TimeSig|Signature:4/4
+|Rest|Dur:4th
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Rest|Dur:Whole
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Rest|Dur:Whole
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Rest|Dur:Whole
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|AddStaff|Name:"Snare"|Label:"Snare"|LabelAbbr:"SNARE"|Group:"drums"
+|StaffProperties|EndingBar:Section Close|Visible:Y|BoundaryTop:10|BoundaryBottom:10|Lines:5|WithNextStaff:ConnectBars|Color:Default
+|StaffProperties|Muted:N|Volume:127|StereoPan:64|Device:0|Channel:10
+|StaffInstrument|Trans:48|DynVel:10,30,45,60,75,92,108,127
+|User|DrumStaff.fso|Pos:5|Class:StaffSig
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Clef|Type:Percussion
+|TimeSig|Signature:4/4
+|Rest|Dur:4th
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Rest|Dur:Whole
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Rest|Dur:Whole
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Rest|Dur:Whole
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|AddStaff|Name:"FloorTom"|Label:"FloorTom"|LabelAbbr:"FLOOR"|Group:"drums"
+|StaffProperties|EndingBar:Section Close|Visible:Y|BoundaryTop:10|BoundaryBottom:10|Lines:5|WithNextStaff:ConnectBars|Color:Default
+|StaffProperties|Muted:N|Volume:127|StereoPan:64|Device:0|Channel:10
+|StaffInstrument|Trans:48|DynVel:10,30,45,60,75,92,108,127
+|User|DrumStaff.fso|Pos:5|Class:StaffSig
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Clef|Type:Percussion
+|TimeSig|Signature:4/4
+|Rest|Dur:4th
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Rest|Dur:Whole
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Rest|Dur:Whole
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Rest|Dur:Whole
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|AddStaff|Name:"Basedrum"|Label:"Basedrum"|LabelAbbr:"BASE"|Group:"drums"
+|StaffProperties|EndingBar:Section Close|Visible:Y|BoundaryTop:10|BoundaryBottom:10|Lines:5|WithNextStaff:ConnectBars|Color:Default
+|StaffProperties|Muted:N|Volume:127|StereoPan:64|Device:0|Channel:10
+|StaffInstrument|Trans:48|DynVel:10,30,45,60,75,92,108,127
+|User|DrumStaff.fso|Pos:5|Class:StaffSig
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Clef|Type:Percussion
+|TimeSig|Signature:4/4
+|Rest|Dur:4th
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Rest|Dur:Whole
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Rest|Dur:Whole
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Rest|Dur:Whole
+|User|DrumStaff_AUDIO.fso|Pos:1|Class:StaffSig|InOut:Y
+|Bar
+!NoteWorthyComposer-End

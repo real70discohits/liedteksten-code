@@ -120,14 +120,14 @@ def test_count_vooraf_measures_subtracts_begintel():
         [
             "|Rest|Dur:4th",            # begintel (pickup)
             "|Bar",
-            "|Note|Dur:4th|Pos:0",      # one count-in measure
+            "|Note|Dur:Whole|Pos:0",      # one count-in measure
             "|Bar",
             '|Text|Text:"liedstart"',   # song really starts here
             "|Note|Dur:4th|Pos:0",
             "|Bar",
         ]
     )
-    # 2 bars before liedstart, minus 1 for the begintel -> 1 vooraf measure.
+    # 2 bars before liedstart, with above minimum duration, minus 1 for the begintel -> 1 vooraf measure.
     assert nwc_analyze.count_vooraf_measures(content) == 1
 
 
@@ -135,3 +135,127 @@ def test_count_vooraf_measures_subtracts_begintel():
 def test_count_vooraf_measures_zero_without_liedstart():
     content = "|Rest|Dur:4th\n|Bar\n|Note|Dur:4th\n|Bar"
     assert nwc_analyze.count_vooraf_measures(content) == 0
+
+
+# --------------------------------------------------------------------------- #
+# get_single_duration_struct
+# --------------------------------------------------------------------------- #
+@pytest.mark.unit
+def test_get_single_duration_struct_01():
+    content = "|Rest|Dur:4th"
+    assert nwc_analyze.get_single_duration_struct(content) == ("4th", 1.0)
+
+@pytest.mark.unit
+def test_get_single_duration_struct_02():
+    content = "|Note|Dur:8th|Pos:0|Opts:Stem=Down,Beam=First"
+    assert nwc_analyze.get_single_duration_struct(content) == ("8th", 1.0)
+
+@pytest.mark.unit
+def test_get_single_duration_struct_03():
+    content = "|Rest|Dur:4th|Opts:Stem=Down"
+    assert nwc_analyze.get_single_duration_struct(content) == ("4th", 1.0)
+
+@pytest.mark.unit
+def test_get_single_duration_struct_04():
+    content = "|Note|Dur:4th,Staccato|Pos:-4|Opts:Stem=Up"
+    assert nwc_analyze.get_single_duration_struct(content) == ("4th", 1.0)
+
+@pytest.mark.unit
+def test_get_single_duration_struct_05():
+    content = "|Note|Dur:4th,Dotted|Pos:-4|Opts:Stem=Up"
+    assert nwc_analyze.get_single_duration_struct(content) == ("4th", 1.5)
+
+@pytest.mark.unit
+def test_get_single_duration_struct_06():
+    content = "|Note|Dur:8th,Slur|Pos:-4|Opts:Stem=Up"
+    assert nwc_analyze.get_single_duration_struct(content) == ("8th", 1.0)
+
+@pytest.mark.unit
+def test_get_single_duration_struct_07():
+    content = "|Note|Dur:Half,DblDotted|Pos:-4^"
+    assert nwc_analyze.get_single_duration_struct(content) == ("Half", 1.75)
+
+@pytest.mark.unit
+def test_get_single_duration_struct_08():
+    content = "|Note|Dur:8th|Pos:1|Opts:Stem=Down,Beam=First"
+    assert nwc_analyze.get_single_duration_struct(content) == ("8th", 1.0)
+
+
+# --------------------------------------------------------------------------- #
+# convert_duration
+# --------------------------------------------------------------------------- #
+
+# a-serie: base conversions
+@pytest.mark.unit
+def test_convert_duration_a01():
+    dur = "4th"
+    to_base_note = 4
+    assert nwc_analyze.convert_duration(dur, to_base_note) == 1.0
+
+@pytest.mark.unit
+def test_convert_duration_a02():
+    dur = "8th"
+    to_base_note = 8
+    assert nwc_analyze.convert_duration(dur, to_base_note) == 1.0
+
+@pytest.mark.unit
+def test_convert_duration_a03():
+    dur = "16th"
+    to_base_note = 16
+    assert nwc_analyze.convert_duration(dur, to_base_note) == 1.0
+
+@pytest.mark.unit
+def test_convert_duration_a04():
+    dur = "32nd"
+    to_base_note = 32
+    assert nwc_analyze.convert_duration(dur, to_base_note) == 1.0
+
+@pytest.mark.unit
+def test_convert_duration_a05():
+    dur = "Whole"
+    to_base_note = 1
+    assert nwc_analyze.convert_duration(dur, to_base_note) == 1.0
+
+@pytest.mark.unit
+def test_convert_duration_a06():
+    dur = "Half"
+    to_base_note = 2
+    assert nwc_analyze.convert_duration(dur, to_base_note) == 1.0
+
+# b-serie: advanced conversions
+@pytest.mark.unit
+def test_convert_duration_b01():
+    dur = "8th"
+    to_base_note = 4
+    assert nwc_analyze.convert_duration(dur, to_base_note) == 0.5
+
+@pytest.mark.unit
+def test_convert_duration_b02():
+    dur = "Half"
+    to_base_note = 4
+    assert nwc_analyze.convert_duration(dur, to_base_note) == 2.0
+
+@pytest.mark.unit
+def test_convert_duration_b03():
+    dur = "Half"
+    to_base_note = 16
+    assert nwc_analyze.convert_duration(dur, to_base_note) == 8.0
+
+@pytest.mark.unit
+def test_convert_duration_b04():
+    dur = "32nd"
+    to_base_note = 8
+    assert nwc_analyze.convert_duration(dur, to_base_note) == 0.25
+
+# c-serie: erroneous input
+def test_convert_duration_invalid_message_c01():
+    dur = "32th"    # wrong value!
+    to_base_note = 4
+    with pytest.raises(ValueError, match="Unknown duration"):
+        nwc_analyze.convert_duration(dur, to_base_note)
+
+def test_convert_duration_invalid_message_c02():
+    dur = "32nd"
+    to_base_note = 0  # wrong value!
+    with pytest.raises(ValueError, match="to_base_note must be positive, got"):
+        nwc_analyze.convert_duration(dur, to_base_note)

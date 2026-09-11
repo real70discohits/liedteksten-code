@@ -568,7 +568,6 @@ def get_measure_count_by_bass_staff(filepath, include_vooraf_measures = True):
     if not bass_staff:
         return None
 
-    # Get Ritme staff content for the repeat marker
     bass_staff_lines = bass_staff.lines
 
     # Detect pickup: content before first bar that doesn't fill a complete measure

@@ -10,6 +10,8 @@ heeft begintel: ja
 aantal maten vooraf: 2
 
 maat	tekst
+-3	
+-2	
 -1	
 1	
 2	
