@@ -31,5 +31,9 @@
     // Path to FluidSynth soundfont file (.sf2)
     // Can be absolute path or just filename (will default to current folder if no path)
     // Default: "FluidR3_GM_GS.sf2" (looks in current folder)
-    "soundfont_path": "c:/temp/FluidR3_GM_GS.sf2"
+    "soundfont_path": "c:/temp/FluidR3_GM_GS.sf2",
+
+    // Path to local Proton Drive folder used for a.o. checking 
+    // obsoleteness of remote liedteksten.
+    "pdrive_folder": "C:/Users/sjef/Proton Drive/_Creatie/_Muziek/_Liedjes"
 }

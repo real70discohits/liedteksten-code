@@ -22,7 +22,7 @@ class PathConfig:
     """Container for path configuration settings."""
 
     def __init__(self, input_folder: str, build_folder: str, distributie_folder: str,
-                 audio_output_folder: str, soundfont_path: Optional[str] = None):
+                 audio_output_folder: str, soundfont_path: Optional[str] = None, pdrive_folder: Optional[str] = None):
         """Initialize PathConfig with folder paths.
 
         Args:
@@ -31,12 +31,14 @@ class PathConfig:
             distributie_folder: Path to distribution folder for final PDFs (relative or absolute)
             audio_output_folder: Path to audio output folder (relative or absolute)
             soundfont_path: Path to soundfont file (optional, relative or absolute)
+            pdrive_folder: Path to local Proton Drive folder (optional, relative or absolute)
         """
         self.input_folder = input_folder
         self.build_folder = build_folder
         self.distributie_folder = distributie_folder
         self.audio_output_folder = audio_output_folder
         self.soundfont_path = soundfont_path
+        self.pdrive_folder = pdrive_folder
 
     def __repr__(self) -> str:
         """Return string representation of configuration."""
@@ -44,7 +46,8 @@ class PathConfig:
                 f"build_folder='{self.build_folder}', "
                 f"distributie_folder='{self.distributie_folder}', "
                 f"audio_output_folder='{self.audio_output_folder}', "
-                f"soundfont_path='{self.soundfont_path}')")
+                f"soundfont_path='{self.soundfont_path}', "
+                f"pdrive_folder='{self.pdrive_folder}')")
 
 
 def load_jsonc(filepath: Path) -> dict:
@@ -128,15 +131,17 @@ def load_path_config(config_file: Optional[Path] = None) -> PathConfig:
         build_folder = data['build_folder']
         distributie_folder = data['distributie_folder']
         audio_output_folder = data['audio_output_folder']
+        
     except KeyError as e:
         print(f"❌ Error: Missing required field in configuration: {e}")
-        print(f"   Required fields: input_folder, build_folder, distributie_folder, audio_output_folder")
+        print(f"   Required fields: input_folder, build_folder, distributie_folder, audio_output_folder, pdrive_folder")
         sys.exit(1)
 
     # Extract optional fields
     soundfont_path = data.get('soundfont_path', None)
+    pdrive_folder = data.get('pdrive_folder', None)
 
-    return PathConfig(input_folder, build_folder, distributie_folder, audio_output_folder, soundfont_path)
+    return PathConfig(input_folder, build_folder, distributie_folder, audio_output_folder, soundfont_path, pdrive_folder)
 
 
 def resolve_path(base_path: str, config_dir: Path) -> Path:
@@ -292,11 +297,15 @@ class ResolvedPaths:
         self.build_folder = resolve_path(config.build_folder, config_dir)
         self.distributie_folder = resolve_path(config.distributie_folder, config_dir)
         self.audio_output_folder = resolve_path(config.audio_output_folder, config_dir)
-
+        
         # Resolve optional paths
         self.soundfont_path = None
         if config.soundfont_path:
             self.soundfont_path = resolve_path(config.soundfont_path, config_dir)
+
+        if config.pdrive_folder:
+            self.pdrive_folder = resolve_path(config.pdrive_folder, config_dir)
+
 
     def validate_input_folder(self) -> bool:
         """Validate that input folder exists and is accessible.
@@ -324,7 +333,8 @@ class ResolvedPaths:
                 f"build_folder={self.build_folder}, "
                 f"distributie_folder={self.distributie_folder}, "
                 f"audio_output_folder={self.audio_output_folder}, "
-                f"soundfont_path={self.soundfont_path})")
+                f"soundfont_path={self.soundfont_path}, "
+                f"pdrive_folder={self.pdrive_folder})")
 
 
 def load_and_resolve_paths(songtitle) -> ResolvedPaths:
