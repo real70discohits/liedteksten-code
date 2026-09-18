@@ -28,7 +28,7 @@ from pathconfig import load_and_resolve_paths, validate_folder_exists
 
 # Sync-delay tussen Drive en lokale map, plus klokafwijkingen, opvangen:
 # verschillen kleiner dan dit venster gelden als actueel.
-SYNC_TOLERANCE_SECONDS = 120
+SYNC_TOLERANCE_SECONDS = 4*24*60*60         # 24x60x60 is 1 day. Ik zet m op 4 dagen omdat een voorkomende tijdspanne is tussen een push en een pull op een ander device.
 
 _DRIVE_FOLDER_RE = re.compile(r'^(\d{2,})\.\s+(.+)$')
 

@@ -118,7 +118,7 @@ class TestCheckSong:
     def test_mix_is_stale(self, tmp_path):
         fresh = tmp_path / "fresh.pdf"; fresh.write_text("x")
         old = tmp_path / "old.pdf"; old.write_text("x")
-        past = time.time() - 10000
+        past = time.time() - (5*24*60*60)  # 5 days ago
         os.utime(old, (past, past))
         status, stale = self.checkdrive.check_song([fresh, old], time.time())
         assert status == 'VEROUDERD'
