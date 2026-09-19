@@ -1,0 +1,56 @@
+{
+    // =====================================================================
+    // paths.jsonc — Padconfiguratie voor de liedteksten-scripts
+    // =====================================================================
+    //
+    // Dit is een VOORBEELDBESTAND. Maak er een werkende configuratie van
+    // door het te kopiëren naar de parent-folder van de git-repository:
+    //
+    //     Kopieer dit bestand naar: ../paths.jsonc
+    //
+    // (dus precies één niveau BOVEN de map waarin de .git-folder staat)
+    //
+    // De scripts zoeken dit bestand in deze volgorde:
+    //   1. ../paths.jsonc  (parent van de repo-root — aanbevolen)
+    //   2. de omgevingsvariabele LT_PATHS_CONFIG (alternatief)
+    //   3. Zo niet gevonden: afbreken met foutmelding
+    //
+    // Relatieve paden worden opgelost t.o.v. de locatie van dit bestand
+    // (de parent-folder). Absolute paden werken ook, maar maken de
+    // configuratie minder portable tussen machines.
+    //
+    // Let op: commentjson ondersteunt // en /* */ comments.
+    // =====================================================================
+
+    // Map met alle liedmappen. Elke liedmap bevat <liedtitel>.tex en
+    // een nwc-submap met .nwctxt sectiebestanden.
+    "input_folder": "../liederen",
+
+    // Map voor tussentijdse bouwbestanden (gegenereerde .nwctxt,
+    // structuur.tex, print sheets). Per lied wordt een submap aangemaakt.
+    // Deze map mag geleegd worden; alles is hergenerabel.
+    "build_folder": "../build",
+
+    // Map waar de uiteindelijke PDF's terechtkomen (per lied een submap).
+    // Dit is de map die je synchroniseert/uploadt naar Proton Drive.
+    "distributie_folder": "../dist",
+
+    // Map voor gegenereerde audio (midi/wav) en labeltracks (Audacity/
+    // Tenacity). Per lied een submap.
+    "audio_output_folder": "../audio",
+
+    // Map met de lokale Proton Drive-sync (alleen gebruikt door
+    // lt-checkdrive.py). Moet verwijzen naar de map die "_Liedjes"
+    // bevat op _Liedjes zélf. Optioneel: weglaten kan als je
+    // lt-checkdrive.py niet gebruikt.
+    "pdrive_folder": "C:/Users/JOUWNAAM/Proton Drive/_Liedjes",
+
+    // Pad naar het soundfont-bestand voor midi-rendering. Optioneel.
+    "soundfont_path": "C:/sounds/GeneralUser.sf2"
+
+    // Pad naar een extern bestand met mapping van lokale liedtitels (zonder
+    // moeilijke karakters) naar originele titels met apostroffen e.d.
+    // Optioneel; alleen nodig voor lt-checkdrive.py als Drive-namen afwijken.
+    // Zie de documentatie van lt-checkdrive.py.
+    // "song_mapping_file": "../song_mapping.json"
+}

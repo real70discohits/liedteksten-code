@@ -240,3 +240,6 @@ __marimo__/
 
 # ignore .exe (installers needed for docker images)
 *.exe
+
+# Prevent accidentally commit of config inside repo:
+paths.jsonc

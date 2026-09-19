@@ -22,7 +22,7 @@ class PathConfig:
     """Container for path configuration settings."""
 
     def __init__(self, input_folder: str, build_folder: str, distributie_folder: str,
-                 audio_output_folder: str, soundfont_path: Optional[str] = None, pdrive_folder: Optional[str] = None):
+                audio_output_folder: str, soundfont_path: Optional[str] = None, pdrive_folder: Optional[str] = None):
         """Initialize PathConfig with folder paths.
 
         Args:
@@ -72,37 +72,85 @@ def load_jsonc(filepath: Path) -> dict:
         return commentjson.load(f)
 
 
+def _find_repo_root(start_dir: Path) -> Optional[Path]:
+    """Walk upward from start_dir and return the closest ancestor with a .git entry.
+
+    Uses .exists() rather than .is_dir() so that git submodules and worktrees
+    are also detected: there .git is a *file* (a pointer to the real gitdir),
+    not a directory.
+    """
+    candidate = start_dir
+    while candidate != candidate.parent:      # stop at filesystem root
+        if (candidate / ".git").exists():
+            return candidate
+        candidate = candidate.parent
+    return None
+
+
 def resolve_config_file(config_file: Optional[Path] = None) -> Path:
     """Determine which paths config file to load.
 
     Resolution order:
-    1. Explicit ``config_file`` argument.
-    2. ``LT_PATHS_CONFIG`` environment variable (test/sandbox override).
-    3. ``paths.jsonc`` in the same directory as this module (default).
+    1. Explicit ``config_file`` argument (if provided).
+    2. ``LT_PATHS_CONFIG`` environment variable.
+    3. ``paths.jsonc`` in the parent of the *nearest* git repository —
+        for a submodule layout this is the root of the outer (songs)
+        repository, where the config is expected to live.
 
-    Args:
-        config_file: Explicit path to a configuration file, or None.
-
-    Returns:
-        Path to the configuration file to load.
+    Exits with a clear, actionable error if no config file can be found.
     """
+    # 1. Explicit argument
     if config_file is not None:
         return Path(config_file)
 
+    # 2. Environment variable (persistent, recommended for non-standard setups)
     env_value = os.environ.get(ENV_PATHS_CONFIG)
     if env_value:
-        return Path(env_value)
+        env_config = Path(env_value)
+        if env_config.exists():
+            return env_config
+        print(f"❌ Error: Configuration file from environment variable not found.")
+        print(f"   {ENV_PATHS_CONFIG}={env_value}")
+        print(f"   But the file does not exist at that location.")
+        print(f"   Fix the value or unset the variable and let the script resolve "
+                f"the config automatically.")
+        sys.exit(1)
 
-    return Path(__file__).parent / "paths.jsonc"
+    # 3. Parent of the nearest git repository
+    module_dir = Path(__file__).parent
+    repo_root = _find_repo_root(module_dir)
 
+    if repo_root is not None:
+        expected_dir = repo_root.parent
+        expected_config = expected_dir / "paths.jsonc"
+
+        if expected_config.exists():
+            return expected_config
+
+        print(f"❌ Error: No configuration file found.")
+        print(f"   Nearest git repository root : {repo_root}")
+        print(f"   Expected config location   : {expected_config}")
+        print()
+        print(f"   Fix:")
+        print(f"   1. Place 'paths.jsonc' in: {expected_dir}")
+        print(f"      (a template can be found in 'paths.jsonc.example')")
+        print(f"   2. Or set the environment variable {ENV_PATHS_CONFIG} to the "
+                f"full path of your config file.")
+        sys.exit(1)
+
+    # 4. No git repo found at all
+    print(f"❌ Error: No configuration file found and no git repository detected "
+            f"above {module_dir}.")
+    print(f"   Fix: set the environment variable {ENV_PATHS_CONFIG} to the full "
+            f"path of your paths.jsonc.")
+    sys.exit(1)
 
 def load_path_config(config_file: Optional[Path] = None) -> PathConfig:
     """Load path configuration from JSONC file.
 
     Args:
         config_file: Path to configuration file. If None, falls back to the
-                     ``LT_PATHS_CONFIG`` environment variable and then to
-                     'paths.jsonc' in the same directory as this module.
+                    resolution logic in resolve_config_file().
 
     Returns:
         PathConfig object with loaded settings
