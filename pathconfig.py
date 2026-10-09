@@ -22,7 +22,9 @@ class PathConfig:
     """Container for path configuration settings."""
 
     def __init__(self, input_folder: str, build_folder: str, distributie_folder: str,
-                audio_output_folder: str, soundfont_path: Optional[str] = None, pdrive_folder: Optional[str] = None):
+                audio_output_folder: str, soundfont_path: Optional[str] = None,
+                pdrive_folder: Optional[str] = None,
+                song_mapping_file: Optional[str] = None):
         """Initialize PathConfig with folder paths.
 
         Args:
@@ -32,6 +34,7 @@ class PathConfig:
             audio_output_folder: Path to audio output folder (relative or absolute)
             soundfont_path: Path to soundfont file (optional, relative or absolute)
             pdrive_folder: Path to local Proton Drive folder (optional, relative or absolute)
+            song_mapping_file: Paths that maps official songtitles to windows valid foldernames
         """
         self.input_folder = input_folder
         self.build_folder = build_folder
@@ -39,6 +42,16 @@ class PathConfig:
         self.audio_output_folder = audio_output_folder
         self.soundfont_path = soundfont_path
         self.pdrive_folder = pdrive_folder
+        self.song_mapping_file = song_mapping_file
+
+    def __repr__(self) -> str:
+        return (f"PathConfig(input_folder='{self.input_folder}', "
+                f"build_folder='{self.build_folder}', "
+                f"distributie_folder='{self.distributie_folder}', "
+                f"audio_output_folder='{self.audio_output_folder}', "
+                f"soundfont_path='{self.soundfont_path}', "
+                f"pdrive_folder='{self.pdrive_folder}', "
+                f"song_mapping_file='{self.song_mapping_file}')")
 
     def __repr__(self) -> str:
         """Return string representation of configuration."""
@@ -47,7 +60,8 @@ class PathConfig:
                 f"distributie_folder='{self.distributie_folder}', "
                 f"audio_output_folder='{self.audio_output_folder}', "
                 f"soundfont_path='{self.soundfont_path}', "
-                f"pdrive_folder='{self.pdrive_folder}')")
+                f"pdrive_folder='{self.pdrive_folder}', "
+                f"song_mapping_file='{self.song_mapping_file}')")
 
 
 def load_jsonc(filepath: Path) -> dict:
@@ -188,8 +202,9 @@ def load_path_config(config_file: Optional[Path] = None) -> PathConfig:
     # Extract optional fields
     soundfont_path = data.get('soundfont_path', None)
     pdrive_folder = data.get('pdrive_folder', None)
+    song_mapping_file = data.get('song_mapping_file', None)
 
-    return PathConfig(input_folder, build_folder, distributie_folder, audio_output_folder, soundfont_path, pdrive_folder)
+    return PathConfig(input_folder, build_folder, distributie_folder, audio_output_folder, soundfont_path, pdrive_folder, song_mapping_file)
 
 
 def resolve_path(base_path: str, config_dir: Path) -> Path:
@@ -354,6 +369,13 @@ class ResolvedPaths:
         if config.pdrive_folder:
             self.pdrive_folder = resolve_path(config.pdrive_folder, config_dir)
 
+        # Song mapping (optioneel; verwijst naar een bestand buiten de repo met
+        # mapping van lokale liedtitels naar originele Drive-titels).
+        # Wordt ALTIJD gezet (ook None), zodat attribuuttoegang nooit crasht.
+        if config.song_mapping_file:
+            self.song_mapping_file = resolve_path(config.song_mapping_file, config_dir)
+        
+
 
     def validate_input_folder(self) -> bool:
         """Validate that input folder exists and is accessible.
@@ -382,7 +404,8 @@ class ResolvedPaths:
                 f"distributie_folder={self.distributie_folder}, "
                 f"audio_output_folder={self.audio_output_folder}, "
                 f"soundfont_path={self.soundfont_path}, "
-                f"pdrive_folder={self.pdrive_folder})")
+                f"pdrive_folder={self.pdrive_folder}, "
+                f"song_mapping_file={self.song_mapping_file})")
 
 
 def load_and_resolve_paths(songtitle) -> ResolvedPaths:

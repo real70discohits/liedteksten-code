@@ -48,9 +48,10 @@
     // Pad naar het soundfont-bestand voor midi-rendering. Optioneel.
     "soundfont_path": "C:/sounds/GeneralUser.sf2"
 
-    // Pad naar een extern bestand met mapping van lokale liedtitels (zonder
-    // moeilijke karakters) naar originele titels met apostroffen e.d.
-    // Optioneel; alleen nodig voor lt-checkdrive.py als Drive-namen afwijken.
-    // Zie de documentatie van lt-checkdrive.py.
-    // "song_mapping_file": "../song_mapping.json"
+    // Pad naar het song mapping-bestand (optioneel, alleen gebruikt door
+    // lt-checkdrive.py): vertaalt gesaneerde lokale liedtitels naar de
+    // originele titels zoals op Proton Drive. Bestand staat in dezelfde
+    // map als dit bestand (root van de liedjesrepo). Zie song_mapping.jsonc
+    // voor het formaat.
+    "song_mapping_file": "song_mapping.jsonc"
 }

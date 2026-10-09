@@ -1,0 +1,33 @@
+{
+    // =====================================================================
+    // song_mapping.jsonc — Mapping lokale liedtitel -> Proton Drive titel
+    // =====================================================================
+    //
+    // DOEL: Lieftitels in de repo zijn mogelijk gesaneerd t.b.v. automatisering
+    // (bijv. apostroffen verwijderd: "Shes such a beauty"), terwijl de
+    // foldernamen op Proton Drive de originele schrijfwijze gebruiken
+    // ("She's such a beauty"). Dit bestand legt die vertaling vast.
+    //
+    // FORMAAT: { "<lokale titel (id)>": "<originele Drive-titel (id)>" }
+    // - De key is de map-/bestandsnaam zoals die in de liedjesrepo staat
+    //   (dus zonder apostroffen).
+    // - De value is de titel zoals de Drive-foldernaam en de PDF-bestandsnamen
+    //   op Proton Drive die gebruiken.
+    // - De id tussen haakjes hoort in key én value voor te komen (zelfde id!).
+    // - Liederen waarvan de titel identiek is, hoeven NIET genoemd te worden.
+    // - Ongebruikte entries worden stilzwijgend genegeerd (geen fout).
+    //
+    // LOCATIE: root van de (private) liedjesrepo, naast paths.jsonc.
+    // Verwijs ernaar in paths.jsonc met:
+    //   "song_mapping_file": "song_mapping.jsonc"
+    //
+    // LET OP: wordt alleen gebruikt door lt-checkdrive.py (Drive-check).
+    // De lokale _dist-check gebruikt altijd de lokale (gesaneerde) titel.
+    // =====================================================================
+
+    "C est Dificile":               "C'est Dificile",
+    "John Hasnt Any Guts (49)":     "John Hasn't Any Guts (49)"
+
+    // Voeg hier nieuwe mappings toe, telkens afgesloten met een komma
+    // (behalve na de laatste entry).
+}
