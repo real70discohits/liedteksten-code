@@ -301,7 +301,7 @@ def _trim_staff_to_liedstart(staff_lines, bars_to_remove=None):
     return staff_lines, None
 
 
-def create_print_sheet(output_nwctxt, build_folder, songtitle):
+def create_print_sheet(output_nwctxt, build_folder, songtitle, bass_staff_name: str | None = None):
     """Create a print-optimised .nwctxt containing only Bass and Zang.
 
     Steps performed:
@@ -317,8 +317,12 @@ def create_print_sheet(output_nwctxt, build_folder, songtitle):
 
     header, staffs = parse_nwctxt(str(output_nwctxt))
 
+    # ---- 0. check if a preferred bass staff is passed on
+    bass_staff = bass_staff_name or STAFF_NAME_BASS
+
+
     # ---- 1. Filter staffs ---------------------------------------------------
-    keep_names = {STAFF_NAME_BASS, STAFF_NAME_ZANG}
+    keep_names = {bass_staff, STAFF_NAME_ZANG}
     staffs_to_keep = []          # list of (name, lines)
     for staff_lines in staffs:
         name = _extract_staff_name(staff_lines)
@@ -1574,10 +1578,13 @@ def main():
     parser.add_argument('--no-print-sheet', action='store_true',
                         help='Skip generation of print-optimised sheet '
                             '(Bass + Zang only). Default: print sheet is generated.')
+    parser.add_argument('--bass-staff-name', default=None,
+                            help='Use specified Bass staff on print-sheet. Default: staff with name "Bass" is used.')
     args = parser.parse_args()
 
     songtitle = args.songtitle
     keep_tempi = args.keep_tempi
+    bass_staff_name: str | None  = args.bass_staff_name
     
     # Load and resolve path configuration
     paths = load_and_resolve_paths(songtitle)
@@ -1642,7 +1649,7 @@ def main():
 
     # Generate print sheet (unless --no-print-sheet)
     if not args.no_print_sheet:
-        create_print_sheet(output_nwctxt, paths.build_folder, songtitle)
+        create_print_sheet(output_nwctxt, paths.build_folder, songtitle, bass_staff_name)
     else:
         print("\n🖨️  Print sheet generation skipped (--no-print-sheet)")
 
