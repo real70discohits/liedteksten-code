@@ -166,6 +166,9 @@ python nwc-concat.py <liedtitel> [opties]
 | Parameter | Waarden | Standaard | Beschrijving |
 |-----------|---------|-----------|--------------|
 | `--keep-tempi` | (vlag) | Uit | Behoud tempo-indicaties in alle liedsecties. Standaard worden tempo-markeringen uit liedsecties na het eerste verwijderd, omdat alleen het eerste liedsectie het tempo bepaalt |
+| `--no-print-sheet` | (vlag) | Uit | Genereer geen print sheet | 
+| `--bass_staff_name` | name of staff | 'Bass' | Gebruik opgegeven bass staff op de print sheet | 
+
 
 #### Tempo en Maatsoort tijdens samenvoegen
 
